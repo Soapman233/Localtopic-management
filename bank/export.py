@@ -492,6 +492,49 @@ _RM_SUPERSCRIPT_RE = re.compile(
 #: **注意**：``\begin{array}`` 环境内的 ``&`` 有真实对齐语义，本规则不处理
 #: （该环境本身不受桥接支持，属已知限制，导出会如实降级并告警）。
 _STRAY_AMP_RE = re.compile(r"\s*&\s*")
+#: ``\mathrm{`` / ``\rm{`` 的起始（后面必须紧跟花括号）。
+_RM_START_RE = re.compile(r"\\(?:mathrm|rm)\s*(?=\{)")
+
+#: 需要展开 ``\rm`` 外壳的阈值：内容中出现嵌套花括号。
+def unwrap_nested_rm(latex: str) -> str:
+    """把**内容含嵌套花括号**的 ``\\mathrm{...}`` / ``\\rm{...}`` 展开为 ``{...}``。
+
+    背景：``sanitize_latex`` 的 ``\\rm`` 展开规则（:data:`_RM_WRAP_RE`）要求花括号内
+    **无嵌套**，故 ``\\mathrm{{\\text{若}}{\\text{形}}}`` 这类漏网，桥接报
+    ``ToCommands returned empty``（实测 ``\\xrightarrow{\\mathrm{{\\text{若}}...}}`` 无法渲染，
+    而 ``\\xrightarrow{{\\text{若}}...}`` 可以）。本函数**只去掉 ``\\rm`` 外壳**、保留内容，
+    不改变任何字符语义；无嵌套的情况原样保留，交给既有规则处理。
+    """
+    if "\\rm" not in latex and "\\mathrm" not in latex:
+        return latex
+    out: list[str] = []
+    i = 0
+    while True:
+        m = _RM_START_RE.search(latex, i)
+        if not m:
+            out.append(latex[i:])
+            return "".join(out)
+        out.append(latex[i:m.start()])
+        j = m.end()                     # 指向 '{'
+        depth = 0
+        k = j
+        while k < len(latex):
+            if latex[k] == "{":
+                depth += 1
+            elif latex[k] == "}":
+                depth -= 1
+                if depth == 0:
+                    break
+            k += 1
+        if k >= len(latex):             # 括号不平衡：原样保留
+            out.append(latex[m.start():])
+            return "".join(out)
+        inner = latex[j:k + 1]          # 含最外层花括号
+        if "{" in inner[1:-1]:          # 有嵌套 → 去掉 \rm 外壳
+            out.append(inner)
+        else:                           # 无嵌套 → 原样（交给既有规则）
+            out.append(latex[m.start():k + 1])
+        i = k + 1
 
 
 def repair_latex(latex: str | None) -> str | None:
@@ -513,7 +556,9 @@ def repair_latex(latex: str | None) -> str | None:
     # 规则二先行：这些命令内部含 ``\`` 与空花括号，先归一避免干扰规则一的包裹逻辑。
     latex = _TILDE_CMD_RE.sub(r"\\sim", latex)
     latex = _RM_SUPERSCRIPT_RE.sub(r"^{\\text{\1}}", latex)
-    # 规则三：剔除游离对齐符（数组环境内的 ``&`` 有真实语义，不动）。
+    # 规则三：展开「内容含嵌套花括号」的 \rm/\mathrm 外壳（sanitize 的规则要求无嵌套）。
+    latex = unwrap_nested_rm(latex)
+    # 规则四：剔除游离对齐符（数组环境内的 ``&`` 有真实语义，不动）。
     if "\\begin{" not in latex:
         latex = _STRAY_AMP_RE.sub("", latex)
     protected: list[str] = []

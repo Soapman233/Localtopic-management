@@ -193,6 +193,29 @@ class TestRepairLatex(unittest.TestCase):
         src = "\\begin{array}{cc} a & b \\end{array}"
         self.assertIn("&", export.repair_latex(src))
 
+    def test_nested_rm_unwrapped(self):
+        """``\\rm`` 内含**嵌套花括号**时 sanitize 的展开规则漏网，需展开外壳。"""
+        out = export.repair_latex("F_{{\\rm{{\\text{浮}}}}}")
+        self.assertNotIn("\\rm", out)
+        self.assertIn("\\text{浮}", out)
+
+    def test_nested_rm_inside_xrightarrow(self):
+        """``\\xrightarrow{\\mathrm{{\\text{若}}...}}`` 曾无法渲染（实测）。"""
+        out = export.repair_latex("\\xrightarrow {\\mathrm{{\\text{若}}{\\text{形}}}}")
+        self.assertNotIn("\\mathrm", out)
+        self.assertIn("\\xrightarrow", out)
+        self.assertIn("\\text{若}", out)
+
+    def test_simple_rm_untouched(self):
+        """无嵌套的 ``\\rm`` 交给既有规则，本函数不动。"""
+        self.assertEqual(export.repair_latex("{\\rm{N}}"), "{\\rm{N}}")
+        self.assertEqual(export.repair_latex("\\mathrm{A}"), "\\mathrm{A}")
+
+    def test_unbalanced_braces_left_alone(self):
+        """括号不平衡时原样保留，不猜。"""
+        src = "{\\rm{{\\text{浮}}"
+        self.assertEqual(export.unwrap_nested_rm(src), src)
+
 
 class TestPlaceholders(unittest.TestCase):
     """占位符解析与降级。"""
