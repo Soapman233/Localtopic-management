@@ -20,6 +20,8 @@ import { useMutation, useQuery } from '@tanstack/react-query'
 import { getExportData, startExport, startPreview } from '../api/export'
 import { getPaper } from '../api/papers'
 import { ApiError } from '../api/client'
+import { isContentGuardCode, isContentGuardError } from '../api/errors'
+import { qk } from '../api/queryKeys'
 import { useJob } from './useJob'
 import { useUiStore, previewSettingsKey, type PreviewTicket } from '../store/uiStore'
 import { detectEnvFailure, extractPages, type EnvFailure } from './exportGateShared'
@@ -92,13 +94,13 @@ export function useExportGate(options: ExportGateOptions) {
   const [elapsed, setElapsed] = useState(0)
 
   const paperQ = useQuery({
-    queryKey: ['paper', paperId],
+    queryKey: qk.paper(paperId),
     queryFn: () => getPaper(paperId),
     enabled: enabled && paperId > 0,
   })
 
   const exportDataQ = useQuery({
-    queryKey: ['export-data', paperId, answerMode, template],
+    queryKey: qk.exportData(paperId, answerMode, template),
     queryFn: () => getExportData(paperId, answerMode ?? undefined, template ?? undefined),
     enabled: enabled && paperId > 0 && answerMode !== null && template !== null,
   })
@@ -130,7 +132,7 @@ export function useExportGate(options: ExportGateOptions) {
 
   const handleContentError = useCallback(
     (err: unknown) => {
-      if (err instanceof ApiError && (err.code === 40904 || err.code === 40905)) {
+      if (isContentGuardError(err)) {
         setEnvFail(null)
         refreshDiagnostics()
       }
@@ -205,7 +207,7 @@ export function useExportGate(options: ExportGateOptions) {
     onError: (err, ticket) => {
       if (!accepts(ticket)) return
       handleContentError(err)
-      const t = err instanceof ApiError && (err.code === 40904 || err.code === 40905) ? null : detectEnvFailure(err)
+      const t = isContentGuardError(err) ? null : detectEnvFailure(err)
       setEnvFail(t)
       setPreviewError((err as Error).message)
       setPreviewJobId(null)
@@ -276,7 +278,7 @@ export function useExportGate(options: ExportGateOptions) {
       setPreviewJobId(null)
     } else if (info.status === 'error') {
       setPreviewError(info.error || '预览作业失败')
-      if (info.error_code === 40904 || info.error_code === 40905) {
+      if (isContentGuardCode(info.error_code)) {
         setEnvFail(null)
         refreshDiagnostics()
       } else setEnvFail(detectEnvFailure(new Error(info.error || '')))
@@ -328,7 +330,7 @@ export function useExportGate(options: ExportGateOptions) {
     const info = exportJob.data
     if (info?.status === 'error') {
       invalidatePreview(paperId)
-      if (info.error_code === 40904 || info.error_code === 40905) refreshDiagnostics()
+      if (isContentGuardCode(info.error_code)) refreshDiagnostics()
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [exportJob.data])

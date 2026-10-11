@@ -79,9 +79,10 @@ import { useUiStore } from '../store/uiStore'
 import { useSettingsStore } from '../store/settingsStore'
 import { readFiltersFromUrl, writeFiltersToUrl } from '../api/searchParams'
 import type { SearchParams } from '../api/search'
-import { ApiError } from '../api/client'
+import { ErrorCode, errorCodeOf, errorDataOf } from '../api/errors'
 import type { ExportDiagnostics } from '../api/types'
 import type { SearchItem } from '../api/types'
+import { qk } from '../api/queryKeys'
 
 const PAGE_SIZE = 15
 /** 排版视图缩放（仅展示；测量层不受影响）。A4 宽 ≈ 794px × 0.72 ≈ 572px，适配右栏。 */
@@ -95,10 +96,10 @@ function usePaperMutations(paperId: number | null, onError: (error: unknown) => 
   const qc = useQueryClient()
   const invalidate = () => {
     if (paperId == null) return
-    qc.invalidateQueries({ queryKey: ['paper', paperId] })
-    qc.invalidateQueries({ queryKey: ['papers'] })
+    qc.invalidateQueries({ queryKey: qk.paper(paperId) })
+    qc.invalidateQueries({ queryKey: qk.papers() })
     // 结构预览（排版视图）随内容变化刷新。
-    qc.invalidateQueries({ queryKey: ['export-data'] })
+    qc.invalidateQueries({ queryKey: qk.exportDataRoot() })
     // ★ 强制预览门禁：任何影响内容的操作都重新锁定导出（§5-Q3②）。
     useUiStore.getState().invalidatePreview(paperId)
   }
@@ -206,19 +207,24 @@ export default function PaperBuilderPage() {
   const searchQ = useSearchQuery(queryParams)
   const facetsQ = useFacetsQuery(facetsParams)
   const paperQ = useQuery({
-    queryKey: ['paper', currentPaperId],
+    queryKey: qk.paper(currentPaperId),
     queryFn: () => getPaper(currentPaperId as number),
     enabled: currentPaperId != null,
   })
   const papersQ = useQuery({
-    queryKey: ['papers'],
+    queryKey: qk.papers(),
     queryFn: () => listPapers(),
     // 顶部切换器始终需要列表；抽屉打开时复用同一份缓存。
     enabled: true,
   })
 
   const paperId = currentPaperId
-  const mut = usePaperMutations(paperId, e => { setError((e as Error).message); setErrorDiagnostics(e instanceof ApiError && e.code === 40904 ? e.data as ExportDiagnostics : null) })
+  const mut = usePaperMutations(paperId, e => {
+    setError((e as Error).message)
+    setErrorDiagnostics(errorCodeOf(e) === ErrorCode.ExportContentBlocked
+      ? (errorDataOf(e) as ExportDiagnostics)
+      : null)
+  })
 
   // 门禁状态（响应式订阅，供顶部提示 / 诊断）。
   const previewFresh = useUiStore((s) => (paperId != null ? s.previewFresh[paperId] ?? false : false))
@@ -227,7 +233,7 @@ export default function PaperBuilderPage() {
   // 排版视图：结构预览数据（复用现有 #27 端点；answer_mode 取试卷属性）。
   const answerModeForPreview = paperQ.data?.answer_mode
   const exportDataQ = useQuery({
-    queryKey: ['export-data', paperId, answerModeForPreview, paperQ.data?.template],
+    queryKey: qk.exportData(paperId, answerModeForPreview, paperQ.data?.template),
     queryFn: () => getExportData(paperId as number, answerModeForPreview, paperQ.data?.template),
     enabled: paperId != null && paperQ.data != null,
   })
@@ -236,7 +242,7 @@ export default function PaperBuilderPage() {
     // P0-2：新建试卷套用设置页的「默认模板」（此前该设置无消费方）。
     mutationFn: (title: string) => createPaper({ title, template: useSettingsStore.getState().defaultTemplate }),
     onSuccess: (p) => {
-      qc.invalidateQueries({ queryKey: ['papers'] })
+      qc.invalidateQueries({ queryKey: qk.papers() })
       setCurrentPaperId(p.id)
       setNewTitle('')
     },
@@ -250,7 +256,7 @@ export default function PaperBuilderPage() {
       return full
     },
     onSuccess: (full, id) => {
-      qc.invalidateQueries({ queryKey: ['papers'] })
+      qc.invalidateQueries({ queryKey: qk.papers() })
       if (currentPaperId === id) setCurrentPaperId(null)
       // 撤销 = 重建同内容副本（新试卷 id）。后端无恢复接口，故如实标注为「副本」。
       setUndo({
@@ -259,7 +265,7 @@ export default function PaperBuilderPage() {
           void (async () => {
             try {
               const copy = await recreatePaperCopy(full)
-              qc.invalidateQueries({ queryKey: ['papers'] })
+              qc.invalidateQueries({ queryKey: qk.papers() })
               setCurrentPaperId(copy.id)
             } catch (e) {
               setError(`撤销（重建副本）失败：${(e as Error).message}`)

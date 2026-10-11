@@ -29,6 +29,8 @@ import BarChartIcon from '@mui/icons-material/BarChart'
 import SettingsIcon from '@mui/icons-material/Settings'
 import { Outlet, useLocation, useNavigate } from 'react-router-dom'
 import api from './api/client'
+import { qk } from './api/queryKeys'
+import ErrorBoundary from './components/ErrorBoundary'
 import type { HealthData } from './api/types'
 
 const DRAWER_WIDTH = 232
@@ -54,7 +56,7 @@ export const NAV_ITEMS: NavItem[] = [
 
 function HealthBanner() {
   const { data, isError } = useQuery({
-    queryKey: ['health'],
+    queryKey: qk.health(),
     queryFn: () => api.get<HealthData>('/api/health'),
     retry: 1,
   })
@@ -156,7 +158,10 @@ export default function App() {
       <Box component="main" sx={{ flexGrow: 1, minWidth: 0, p: { xs: 1.5, md: 3 } }}>
         <Toolbar variant="dense" />
         <HealthBanner />
-        <Outlet />
+        {/* 页面级错误边界：单页异常不再整站白屏；切换路由自动重置。 */}
+        <ErrorBoundary resetKeys={[location.pathname]}>
+          <Outlet />
+        </ErrorBoundary>
       </Box>
     </Box>
   )

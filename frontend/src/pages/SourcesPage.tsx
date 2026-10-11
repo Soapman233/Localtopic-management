@@ -39,6 +39,7 @@ import { getSource, getSourceImpact, listSources, updateSourceMetadata } from '.
 import type { SourceDetail, SourceFileMeta, SourceRow } from '../api/types'
 import { ConfirmDialog } from '../components/ConfirmDialog'
 import { MissingBadge } from '../components/StatusBadges'
+import { qk } from '../api/queryKeys'
 
 /** 判断文件级字段是否缺失（``NULL`` / 空串 / 哨兵值「待补充」）。 */
 function isMissing(v: string | null | undefined): boolean {
@@ -73,7 +74,7 @@ function SourceDetailDialog({
   } | null>(null)
 
   const detailQ = useQuery({
-    queryKey: ['source', sourceId],
+    queryKey: qk.source(sourceId),
     queryFn: () => getSource(sourceId as number),
     enabled: sourceId != null,
   })
@@ -99,11 +100,11 @@ function SourceDetailDialog({
     onSuccess: (res) => {
       onToast('success', `已更新文件级元数据，影响 ${res.affected_questions} 道题`)
       setConfirmState(null)
-      qc.invalidateQueries({ queryKey: ['source', sourceId] })
-      qc.invalidateQueries({ queryKey: ['sources'] })
-      qc.invalidateQueries({ queryKey: ['coverage'] })
-      qc.invalidateQueries({ queryKey: ['stats'] })
-      qc.invalidateQueries({ queryKey: ['facets'] })
+      qc.invalidateQueries({ queryKey: qk.source(sourceId) })
+      qc.invalidateQueries({ queryKey: qk.sources() })
+      qc.invalidateQueries({ queryKey: qk.coverage() })
+      qc.invalidateQueries({ queryKey: qk.stats() })
+      qc.invalidateQueries({ queryKey: qk.facetsRoot() })
     },
     onError: (err) => {
       onToast('error', `保存失败：${(err as Error).message}`)
@@ -271,7 +272,7 @@ export default function SourcesPage() {
   const [activeId, setActiveId] = useState<number | null>(null)
   const [toast, setToast] = useState<{ kind: 'success' | 'error'; text: string } | null>(null)
 
-  const sourcesQ = useQuery({ queryKey: ['sources'], queryFn: () => listSources(0) })
+  const sourcesQ = useQuery({ queryKey: qk.sources(), queryFn: () => listSources(0) })
 
   const rows = useMemo(() => {
     const all = sourcesQ.data ?? []

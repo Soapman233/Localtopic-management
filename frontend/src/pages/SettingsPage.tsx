@@ -24,6 +24,7 @@ import SaveIcon from '@mui/icons-material/Save'
 import { getSettings, updateSettings } from '../api/settings'
 import { TEMPLATES } from '../api/types'
 import type { SettingsData } from '../api/types'
+import { qk } from '../api/queryKeys'
 
 interface FormState {
   db_path: string
@@ -50,7 +51,7 @@ function toForm(s: SettingsData): FormState {
 /** P9 系统设置页。 */
 export default function SettingsPage() {
   const qc = useQueryClient()
-  const settingsQ = useQuery({ queryKey: ['settings'], queryFn: () => getSettings() })
+  const settingsQ = useQuery({ queryKey: qk.settings(), queryFn: () => getSettings() })
   const [form, setForm] = useState<FormState | null>(null)
   const [toast, setToast] = useState<{ kind: 'success' | 'error'; text: string } | null>(null)
 
@@ -72,7 +73,7 @@ export default function SettingsPage() {
       setForm(toForm(res))
       setToast({ kind: 'success', text: '设置已保存' })
       qc.setQueryData(['settings'], res)
-      qc.invalidateQueries({ queryKey: ['settings'] })
+      qc.invalidateQueries({ queryKey: qk.settings() })
     },
     onError: (err) => setToast({ kind: 'error', text: `保存失败：${(err as Error).message}` }),
   })

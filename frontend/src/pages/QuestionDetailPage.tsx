@@ -38,7 +38,8 @@ import { FormulaText, KatexFormula } from '../components/KatexFormula'
 import { AnswerBadge, AnalysisBadge, DifficultyBadge, LabelStatusBadge, ReviewBadge } from '../components/StatusBadges'
 import { QuestionEditor } from '../components/QuestionEditor'
 import { VersionHistory } from '../components/VersionHistory'
-import { ApiError } from '../api/client'
+import { ErrorCode, errorCodeOf, errorDataOf } from '../api/errors'
+import { qk } from '../api/queryKeys'
 
 /** 单条公式展示块（点击可查看 latex 源码）。 */
 function FormulaRow({ formula }: { formula: Formula }) {
@@ -69,7 +70,7 @@ export default function QuestionDetailPage() {
   const [saveMsg, setSaveMsg] = useState<string | null>(null)
 
   const qQuery = useQuery({
-    queryKey: ['question', questionId],
+    queryKey: qk.question(questionId),
     queryFn: () => getQuestion(questionId),
     enabled: Number.isFinite(questionId),
   })
@@ -80,8 +81,8 @@ export default function QuestionDetailPage() {
       setEditing(false)
       setConflict(null)
       qc.setQueryData(['question', questionId], data.question)
-      qc.invalidateQueries({ queryKey: ['question', questionId] })
-      qc.invalidateQueries({ queryKey: ['search'] })
+      qc.invalidateQueries({ queryKey: qk.question(questionId) })
+      qc.invalidateQueries({ queryKey: qk.searchRoot() })
       setSaveMsg(
         data.warnings && data.warnings.length > 0
           ? `已保存（v${data.version}）。${data.warnings.join('；')}`
@@ -90,8 +91,8 @@ export default function QuestionDetailPage() {
       window.setTimeout(() => setSaveMsg(null), 4000)
     },
     onError: (err) => {
-      if (err instanceof ApiError && err.code === 40901) {
-        const d = err.data as { question_id?: number; number?: string; snippet?: string } | null
+      if (errorCodeOf(err) === ErrorCode.ContentConflict) {
+        const d = errorDataOf(err) as { question_id?: number; number?: string; snippet?: string } | null
         setConflict(
           `内容冲突：该修改与同一来源文件内的另一题（第 ${d?.number ?? '?'} 题）内容重复。${d?.snippet ? `片段：${d.snippet}` : ''}`,
         )
@@ -105,8 +106,8 @@ export default function QuestionDetailPage() {
     mutationFn: () => setDifficulty(questionId, level),
     onSuccess: (data) => {
       qc.setQueryData(['question', questionId], data.question)
-      qc.invalidateQueries({ queryKey: ['question', questionId] })
-      qc.invalidateQueries({ queryKey: ['search'] })
+      qc.invalidateQueries({ queryKey: qk.question(questionId) })
+      qc.invalidateQueries({ queryKey: qk.searchRoot() })
       setAnnotateOpen(false)
     },
   })

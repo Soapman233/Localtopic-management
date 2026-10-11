@@ -44,6 +44,7 @@ import type { DecisionBody } from '../api/labels'
 import type { LabelDecisionPreview, LabelImportResult } from '../api/types'
 import { ConfirmDialog } from '../components/ConfirmDialog'
 import { LabelStatusBadge } from '../components/StatusBadges'
+import { qk } from '../api/queryKeys'
 
 const ITEM_PAGE_SIZE = 50
 const STATUS_TABS: { key: string; label: string }[] = [
@@ -71,12 +72,12 @@ export default function KnowledgeReviewPage() {
   )
 
   const summaryQ = useQuery({
-    queryKey: ['labels', 'summary'],
+    queryKey: qk.labelsSummary(),
     queryFn: () => getReviewSummary({ status: null }),
   })
 
   const itemsQ = useQuery({
-    queryKey: ['labels', 'items', selected, itemStatus, page],
+    queryKey: qk.labelsItems(selected, itemStatus, page),
     queryFn: () =>
       getReviewItems({
         label_name: selected as string,
@@ -94,9 +95,9 @@ export default function KnowledgeReviewPage() {
       const scope = body.question_id ? '该题该标签' : `标签「${body.label_name}」全部待复核`
       setToast({ kind: 'success', text: `已${verb} ${res.updated} 条（${scope}）` })
       setBatch(null)
-      qc.invalidateQueries({ queryKey: ['labels'] })
-      qc.invalidateQueries({ queryKey: ['coverage'] })
-      qc.invalidateQueries({ queryKey: ['facets'] })
+      qc.invalidateQueries({ queryKey: qk.labelsRoot() })
+      qc.invalidateQueries({ queryKey: qk.coverage() })
+      qc.invalidateQueries({ queryKey: qk.facetsRoot() })
     },
     onError: (err) => {
       setToast({ kind: 'error', text: `操作失败：${(err as Error).message}` })
@@ -112,8 +113,8 @@ export default function KnowledgeReviewPage() {
         kind: res.errors.length > 0 ? 'error' : 'success',
         text: `CSV 导入完成：共 ${res.total} 行，应用 ${res.applied}，跳过 ${res.skipped}`,
       })
-      qc.invalidateQueries({ queryKey: ['labels'] })
-      qc.invalidateQueries({ queryKey: ['coverage'] })
+      qc.invalidateQueries({ queryKey: qk.labelsRoot() })
+      qc.invalidateQueries({ queryKey: qk.coverage() })
     },
     onError: (err) => setToast({ kind: 'error', text: `CSV 导入失败：${(err as Error).message}` }),
   })

@@ -5,9 +5,10 @@ import { Alert, Box, Button, Checkbox, Dialog, DialogActions, DialogContent, Dia
 import type { ExportPayload, ExportIssue } from '../../api/types'
 import { getExportData } from '../../api/export'
 import { createRevision } from '../../api/papers'
-import { ApiError } from '../../api/client'
+import { ErrorCode, errorCodeOf } from '../../api/errors'
 import { usePaperStore } from '../../store/paperStore'
 import { useUiStore } from '../../store/uiStore'
+import { qk } from '../../api/queryKeys'
 
 export function IssueDetails({ issue }: { issue: ExportIssue }) {
   const s = issue.source
@@ -38,7 +39,7 @@ export function ExportDiagnosticsPanel({ paperId, data, onRevised }: { paperId: 
   const [token, setToken] = useState('')
   const [message, setMessage] = useState('')
   const candidateQ = useQuery({
-    queryKey: ['export-data', paperId, '答案解析版', String(data.paper.template ?? '考试')],
+    queryKey: qk.exportData(paperId, '答案解析版', String(data.paper.template ?? '考试')),
     queryFn: () => getExportData(paperId, '答案解析版', String(data.paper.template ?? '考试')),
     enabled: open,
   })
@@ -51,8 +52,8 @@ export function ExportDiagnosticsPanel({ paperId, data, onRevised }: { paperId: 
       useUiStore.getState().invalidatePreview(paperId)
       useUiStore.getState().invalidatePreview(result.paper_id)
       qc.setQueryData(['paper', result.paper_id], result.paper)
-      qc.invalidateQueries({ queryKey: ['papers'] })
-      qc.invalidateQueries({ queryKey: ['export-data'] })
+      qc.invalidateQueries({ queryKey: qk.papers() })
+      qc.invalidateQueries({ queryKey: qk.exportDataRoot() })
       usePaperStore.getState().setCurrentPaperId(result.paper_id)
       usePaperStore.getState().setTargetSectionId(null)
       setOpen(false)
@@ -61,8 +62,8 @@ export function ExportDiagnosticsPanel({ paperId, data, onRevised }: { paperId: 
     onError: error => {
       setMessage(error.message)
       useUiStore.getState().invalidatePreview(paperId)
-      if (error instanceof ApiError && error.code === 40905) {
-        qc.invalidateQueries({ queryKey: ['export-data', paperId] })
+      if (errorCodeOf(error) === ErrorCode.ExportEvidenceStale) {
+        qc.invalidateQueries({ queryKey: qk.exportDataForPaper(paperId) })
         setMessage('诊断依据已变化。请关闭候选窗口，刷新诊断后重新审阅。')
       }
     },

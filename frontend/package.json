@@ -5,7 +5,8 @@
   "type": "module",
   "description": "题库 Web 界面前端（Vite + React + TypeScript + MUI + Tailwind + KaTeX）",
   "scripts": {
-    "test": "node --test tests/preview-and-theme.test.cjs tests/frontend-fixes.test.cjs",
+    "test": "node --test tests/preview-and-theme.test.cjs tests/frontend-fixes.test.cjs && vitest run",
+    "test:unit": "vitest run",
     "dev": "vite",
     "build": "tsc --noEmit && vite build && node scripts/prune-stale-assets.mjs",
     "preview": "vite preview"

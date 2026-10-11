@@ -1,6 +1,7 @@
 /** 作业轮询 hook：预览/导出作业提交后，轮询 ``GET /api/jobs/{job_id}`` 直到终态。 */
 import { useQuery } from '@tanstack/react-query'
 import { getJob } from '../api/export'
+import { qk } from '../api/queryKeys'
 import type { JobInfo } from '../api/types'
 
 export interface UseJobOptions {
@@ -12,7 +13,7 @@ export interface UseJobOptions {
 export function useJob(jobId: string | null, options: UseJobOptions = {}) {
   const interval = options.intervalMs ?? 1200
   return useQuery<JobInfo>({
-    queryKey: ['job', jobId],
+    queryKey: qk.job(jobId),
     queryFn: () => getJob(jobId as string),
     enabled: Boolean(jobId),
     refetchInterval: (query) => {

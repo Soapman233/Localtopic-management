@@ -23,6 +23,7 @@ import ExpandMoreIcon from '@mui/icons-material/ExpandMore'
 import { getVersion } from '../api/questions'
 import type { QuestionVersionRow } from '../api/types'
 import { FormulaText } from './KatexFormula'
+import { qk } from '../api/queryKeys'
 
 function fmtTime(iso?: string | null): string {
   if (!iso) return '—'
@@ -42,7 +43,7 @@ function VersionRow({
   onToggle: () => void
 }) {
   const { data, isLoading, isError, error } = useQuery({
-    queryKey: ['question-version', questionId, row.version],
+    queryKey: qk.questionVersion(questionId, row.version),
     queryFn: () => getVersion(questionId, row.version),
     enabled: expanded,
     staleTime: Infinity,

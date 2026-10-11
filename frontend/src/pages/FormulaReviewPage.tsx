@@ -34,6 +34,7 @@ import { useNavigate } from 'react-router-dom'
 import { getReviewQueueSummary, listReview, resolveReview } from '../api/review'
 import type { ReviewItem } from '../api/types'
 import { KatexFormula } from '../components/KatexFormula'
+import { qk } from '../api/queryKeys'
 
 const PAGE_SIZE = 50
 
@@ -77,12 +78,12 @@ export default function FormulaReviewPage() {
   const [toast, setToast] = useState<{ kind: 'success' | 'error'; text: string } | null>(null)
 
   const summaryQ = useQuery({
-    queryKey: ['review', 'summary'],
+    queryKey: qk.reviewSummary(),
     queryFn: () => getReviewQueueSummary(),
   })
 
   const listQ = useQuery({
-    queryKey: ['review', 'list', tab, showResolved, page],
+    queryKey: qk.reviewList(tab, showResolved, page),
     queryFn: () =>
       listReview({
         resolved: showResolved,
@@ -97,9 +98,9 @@ export default function FormulaReviewPage() {
       resolveReview(rqId, resolved),
     onSuccess: (res) => {
       setToast({ kind: 'success', text: res.resolved ? '已标记为已处理' : '已恢复为待处理' })
-      qc.invalidateQueries({ queryKey: ['review'] })
-      qc.invalidateQueries({ queryKey: ['stats'] })
-      qc.invalidateQueries({ queryKey: ['coverage'] })
+      qc.invalidateQueries({ queryKey: qk.reviewRoot() })
+      qc.invalidateQueries({ queryKey: qk.stats() })
+      qc.invalidateQueries({ queryKey: qk.coverage() })
     },
     onError: (err) => setToast({ kind: 'error', text: `操作失败：${(err as Error).message}` }),
   })

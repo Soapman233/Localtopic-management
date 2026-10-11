@@ -33,8 +33,10 @@ import { DIFFICULTIES, type SearchItem } from '../api/types'
 import { usePaperStore } from '../store/paperStore'
 import { useUiStore } from '../store/uiStore'
 import { useSettingsStore } from '../store/settingsStore'
+import { notify } from '../lib/feedback'
 import { readFiltersFromUrl, writeFiltersToUrl } from '../api/searchParams'
 import type { SearchParams } from '../api/search'
+import { qk } from '../api/queryKeys'
 
 const PAGE_SIZE = 20
 
@@ -110,7 +112,7 @@ function PickPaperDialog({
     // P0-2：新建试卷套用设置页的「默认模板」。
     mutationFn: () => createPaper({ title: title.trim() || '未命名试卷', template: useSettingsStore.getState().defaultTemplate }),
     onSuccess: (p) => {
-      qc.invalidateQueries({ queryKey: ['papers'] })
+      qc.invalidateQueries({ queryKey: qk.papers() })
       onPick(p.id)
       onClose()
     },
@@ -175,7 +177,6 @@ export default function SearchPage() {
   // P1-3：批量加题——待加入的题目 id（无当前试卷时先选/建卷）+ 已勾选的题目 id。
   const [pendingAddIds, setPendingAddIds] = useState<number[]>([])
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set())
-  const [toast, setToast] = useState<string | null>(null)
   const [addedPaperId, setAddedPaperId] = useState<number | null>(null)
 
   // 关键词防抖 300ms
@@ -216,15 +217,15 @@ export default function SearchPage() {
     mutationFn: ({ paperId, questionIds }: { paperId: number; questionIds: number[] }) =>
       addQuestions(paperId, { question_ids: questionIds, section_id: targetSectionId ?? undefined }),
     onSuccess: (_data, vars) => {
-      qc.invalidateQueries({ queryKey: ['paper', vars.paperId] })
-      qc.invalidateQueries({ queryKey: ['papers'] })
-      qc.invalidateQueries({ queryKey: ['export-data'] })
+      qc.invalidateQueries({ queryKey: qk.paper(vars.paperId) })
+      qc.invalidateQueries({ queryKey: qk.papers() })
+      qc.invalidateQueries({ queryKey: qk.exportDataRoot() })
       // 加入即改变试卷内容 → 重新锁定导出（§5-Q3②）。
       useUiStore.getState().invalidatePreview(vars.paperId)
       setAddedPaperId(vars.paperId)
       setSelectedIds(new Set())
     },
-    onError: (err) => setToast(`加入失败：${(err as Error).message}`),
+    onError: (err) => notify.errorFrom(err, { persist: false }),
   })
 
   const handleAdd = (item: SearchItem) => {
@@ -284,12 +285,6 @@ export default function SearchPage() {
         dismissed={coverageDismissed}
         onDismiss={() => setCoverageDismissed(true)}
       />
-
-      {toast && (
-        <Alert severity={toast.startsWith('加入失败') ? 'error' : 'success'} sx={{ mb: 1 }}>
-          {toast}
-        </Alert>
-      )}
 
       {/* 加入成功后的「已加入 · 去看看试卷 →」入口（§1.3①，新增交互） */}
       {addedPaperId != null && (
@@ -423,8 +418,8 @@ export default function SearchPage() {
         target={annotateTarget}
         onClose={() => setAnnotateTarget(null)}
         onDone={() => {
-          qc.invalidateQueries({ queryKey: ['search'] })
-          qc.invalidateQueries({ queryKey: ['facets'] })
+          qc.invalidateQueries({ queryKey: qk.searchRoot() })
+          qc.invalidateQueries({ queryKey: qk.facetsRoot() })
         }}
       />
 

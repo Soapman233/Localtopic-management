@@ -20,6 +20,7 @@ import {
 import { useNavigate } from 'react-router-dom'
 import { getStats } from '../api/stats'
 import type { CountRow, CoverageBucket, StatsData } from '../api/types'
+import { qk } from '../api/queryKeys'
 
 /** 总览卡。 */
 function StatCard({
@@ -121,7 +122,7 @@ function DistributionList({ title, rows, onItemClick }: {
 /** P8 题库统计页。 */
 export default function StatsPage() {
   const navigate = useNavigate()
-  const statsQ = useQuery({ queryKey: ['stats'], queryFn: () => getStats() })
+  const statsQ = useQuery({ queryKey: qk.stats(), queryFn: () => getStats() })
 
   if (statsQ.isLoading) {
     return (

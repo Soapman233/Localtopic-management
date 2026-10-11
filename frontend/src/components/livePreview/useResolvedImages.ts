@@ -19,6 +19,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { useQueries } from '@tanstack/react-query'
 import { getQuestion, mediaUrl } from '../../api/questions'
 import type { ExportPayload, ImageRef, Question } from '../../api/types'
+import { qk } from '../../api/queryKeys'
 
 /** 收集 payload 里所有去重后的 `question_id`。 */
 export function collectQuestionIds(data: ExportPayload): number[] {
@@ -40,7 +41,7 @@ export function useQuestionImageIndex(data: ExportPayload): {
   const ids = useMemo(() => collectQuestionIds(data), [data])
   const results = useQueries({
     queries: ids.map((id) => ({
-      queryKey: ['question', id],
+      queryKey: qk.question(id),
       queryFn: () => getQuestion(id),
       staleTime: 5 * 60 * 1000,
     })),
