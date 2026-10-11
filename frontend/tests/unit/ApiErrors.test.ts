@@ -8,6 +8,7 @@ import { describe, it, expect } from 'vitest'
 import { ApiError } from '../../src/api/client'
 import {
   ErrorCode,
+  PERMISSION_DENIED_MESSAGE,
   describeApiError,
   errorCodeOf,
   errorDataOf,
@@ -15,6 +16,8 @@ import {
   isContentGuardCode,
   isContentGuardError,
   isNotFoundError,
+  isPermissionDenied,
+  isPermissionDeniedCode,
   isUnauthorized,
 } from '../../src/api/errors'
 
@@ -69,12 +72,37 @@ describe('api/errors · 分类判定', () => {
     expect(isUnauthorized(new ApiError('', ErrorCode.Unauthorized, 401, null))).toBe(true)
     expect(isUnauthorized(new ApiError('', ErrorCode.Internal, 500, null))).toBe(false)
   })
+
+  it('权限不足：403xx 段命中（含 HTTP 403 兜底）', () => {
+    expect(isPermissionDenied(new ApiError('', ErrorCode.PermissionDenied, 403, null))).toBe(true)
+    expect(isPermissionDenied(new ApiError('', 40399, 403, null))).toBe(true)
+    expect(isPermissionDenied(new ApiError('', 40300, 403, null))).toBe(true)
+    expect(isPermissionDeniedCode(40301)).toBe(true)
+    expect(isPermissionDeniedCode(40401)).toBe(false)
+    expect(isPermissionDenied(new ApiError('', ErrorCode.QuestionNotFound, 404, null))).toBe(false)
+  })
 })
 
 describe('api/errors · 文案', () => {
   it('优先使用后端 message（后端已是中文可读文案）', () => {
     expect(describeApiError(new ApiError('试卷不存在，可能已被删除。', ErrorCode.PaperNotFound, 404, null)))
       .toBe('试卷不存在，可能已被删除。')
+  })
+
+  it('权限不足一律用前端教师文案，绝不透传后端内部标识（paper.edit）', () => {
+    const backendMsg = '权限不足：viewer 角色无权执行该操作（需要 paper.edit 权限）'
+    const msg = describeApiError(new ApiError(backendMsg, ErrorCode.PermissionDenied, 403, null))
+    expect(msg).toBe(PERMISSION_DENIED_MESSAGE)
+    // 关键：不能把 `paper.edit` 这种内部权限标识甩给老师
+    expect(msg).not.toContain('paper.edit')
+    expect(msg).not.toMatch(/[a-z]+\.[a-z]+/)
+    expect(msg).toContain('管理员')
+  })
+
+  it('403xx 段任意码都走前端文案（即便后端 message 非空）', () => {
+    const msg = describeApiError(new ApiError('需要 paper.edit 权限', 40307, 403, null))
+    expect(msg).toBe(PERMISSION_DENIED_MESSAGE)
+    expect(msg).not.toContain('paper.edit')
   })
 
   it('message 为空时按码兜底', () => {

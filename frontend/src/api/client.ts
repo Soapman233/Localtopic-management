@@ -112,8 +112,13 @@ async function request<T>(
   // 会话失效（401）→ 通知 AuthProvider 清除本地会话并跳登录页。
   // ⚠️ 登录接口自身要传 `skipAuthRedirect: true`，否则"密码错"会连带触发一次跳转，
   // 把页面上的错误提示冲掉。
+  //
+  // ⚠️ 去重/节流（P0-1 风暴修复的第二道保险）：**仅当本次请求确实带着令牌**却仍被拒时，
+  // 才视为会话失效并回调。令牌已清（登出后 / 上一次失效已处理）再收到的 401 一律不再回调——
+  // 否则多个并发请求的 401 会各触发一次清会话，而清会话又可能触发重取，
+  // 形成"401 → 清会话 → 重取 → 401"的自我循环（实测曾达 12 秒 7328 次）。
   if (resp.status === 401 && !options.skipAuthRedirect) {
-    onUnauthorized?.()
+    if (authToken) onUnauthorized?.()
   }
 
   const text = await resp.text()

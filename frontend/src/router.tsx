@@ -74,8 +74,9 @@ const legacyChildren = Object.entries(LEGACY_REDIRECTS).map(([from, to]) => ({
 
 const router = createHashRouter([
   // 登录页**不套 RequireAuth**（否则未登录时跳登录页会无限重定向）。
-  // 本地版：`RequireAuth` 恒真透传，所以这个路由存在但不会被用到——
-  // 有人手动访问 `#/login` 也会被下面的 `RequireAuth` 逻辑放行到主界面。
+  // ⚠️ 因此"本地版访问 /login 要透传"**不能**依赖下面的 RequireAuth——它是顶层路由，
+  // 根本走不到 RequireAuth。真正的兜底在 `LoginPage` 内部：本地版（auth_enabled=false）
+  // 会自行 `<Navigate>` 回默认落地页。此处仅登记路由。
   { path: '/login', element: <LoginPage /> },
   {
     path: '/',

@@ -2,12 +2,14 @@
  *
  * 设计要点
  * --------
- * 1. **本地版必须零感知**：本地版后端返回 `auth_enabled: false`，此时
- *    `role` 视为 `admin`（单机全权）、路由**恒真透传**、不显示任何登录入口。
- *    这与改造前的行为**完全一致**。
+ * 1. **本地版必须零感知**：构建期即为本地版（`VITE_DEPLOY_MODE=local`）时，
+ *    **完全不请求** `/api/auth/me`，`role` 视为 `admin`（单机全权）、
+ *    路由**恒真透传**、不显示任何登录入口。这与改造前的行为**完全一致**。
  * 2. **令牌集中管理**：令牌存在 `localStorage`，并同步给 `api/client.ts`
  *    （全局自动附加 `Authorization` 头），避免每个 api 函数各传一遍、漏一个就出洞。
- * 3. **401 统一处理**：任何请求返回 401 → 清除本地会话并让 `RequireAuth` 跳登录页。
+ * 3. **401 统一处理且幂等**：任何请求返回 401 → **只处理一次**地清除本地会话，
+ *    并让 `RequireAuth` 跳登录页。清会话时用 `setQueryData` 写入确定值，
+ *    **不**触发 `/api/auth/me` 重取——否则会形成请求风暴（详见 `clearSession`）。
  *    ⚠️ 登录接口自身传了 `skipAuthRedirect`，否则"密码错"会连带触发跳转、冲掉错误提示。
  * 4. **前端只负责体验，不负责安全**：这里做的是"不显示注定失败的操作"，
  *    **真正的权限强制在后端**。前端隐藏按钮不等于安全。
@@ -22,8 +24,16 @@ import {
   type ReactNode,
 } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { getAuthMe, login as apiLogin, logout as apiLogout, type AuthUser, type Role } from '../../api/auth'
-import { setAuthToken, setUnauthorizedHandler } from '../../api/client'
+import {
+  getAuthMe,
+  login as apiLogin,
+  logout as apiLogout,
+  type AuthMeData,
+  type AuthMode,
+  type AuthUser,
+  type Role,
+} from '../../api/auth'
+import { getAuthToken, setAuthToken, setUnauthorizedHandler } from '../../api/client'
 import { qk } from '../../api/queryKeys'
 import { IS_ONLINE } from '../../lib/deployMode'
 
@@ -55,6 +65,10 @@ export interface AuthContextValue {
   loading: boolean
   /** 生效角色：未启用鉴权时按 `admin`（单机全权）。 */
   role: Role
+  /** 后端鉴权模式（诊断用）；`error` = 鉴权库不可用。 */
+  authMode: AuthMode
+  /** 后端在线但尚未初始化管理员 → 应给运维指引而不是登录表单。 */
+  needsSetup: boolean
   login: (username: string, password: string) => Promise<void>
   logout: () => Promise<void>
 }
@@ -83,13 +97,29 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // 鉴权状态在会话内基本不变；登录/登出时我们主动失效它。
     staleTime: Infinity,
     retry: false,
+    // 构建期开关真正生效：**本地版（VITE_DEPLOY_MODE=local）完全不请求**
+    // `/api/auth/me`——本地版没有用户体系，这一步既省一次启动请求，也让本地版
+    // 从根本上不可能卷入"401 请求风暴"。线上版才查询，以运行时 `auth_enabled` 为准。
+    enabled: IS_ONLINE,
   })
 
   const clearSession = useCallback(() => {
+    // ⚠️ 幂等 + 断环：令牌已清（登出后 / 上一次失效已处理）时直接返回。
+    // 若不幂等，401 回调会反复触发下面的清会话逻辑，而清会话又会触发重取，
+    // 形成"401 → 清会话 → 重取 /api/auth/me → 401"的自我循环
+    // （实测曾达 12 秒 7328 次，约 610 次/秒）。
+    if (getAuthToken() === null) return
     setAuthToken(null)
     storeToken(null)
     setToken(null)
-    qc.invalidateQueries({ queryKey: qk.authMe() })
+    // ⚠️ 关键：用 `setQueryData` 写入"已登出"的**确定值**，**绝不要** `invalidateQueries`——
+    // 后者会立即把该 query 标记为 stale 并触发 `/api/auth/me` 重新请求，
+    // 而该请求在会话失效时又会 401，正是风暴的闭环。
+    // 保留 `auth_enabled` 等既有字段（否则会把"线上版"误降级为"本地版"），仅清空 `user`。
+    qc.setQueryData<AuthMeData>(qk.authMe(), (prev) => ({
+      ...(prev ?? { auth_enabled: false }),
+      user: null,
+    }))
   }, [qc])
 
   // 401 → 清会话（`RequireAuth` 会据此跳登录页）。
@@ -104,7 +134,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setAuthToken(res.token)
       storeToken(res.token)
       setToken(res.token)
-      // 令牌变了 → 之前缓存的（未登录态）数据必须作废
+      // 令牌变了 → 之前缓存的（未登录态）数据必须作废；同时重取 `me` 拿到新身份。
       await qc.invalidateQueries()
     },
     [qc],
@@ -117,11 +147,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       // 后端幂等；网络失败也不该把用户卡在"登不出去"的状态
     }
     clearSession()
-    await qc.invalidateQueries()
+    // 令牌变了 → 作废既有缓存；但**排除** `authMe`：登出后重取它只会白白再打一次
+    // `/api/auth/me`（在会话已失效的后端上还会 401），没有收益只有风险。
+    await qc.invalidateQueries({ predicate: (q) => q.queryKey[0] !== qk.authMe()[0] })
   }, [clearSession, qc])
 
   const authEnabled = meQ.data?.auth_enabled === true
   const user = meQ.data?.user ?? null
+  const authMode: AuthMode = meQ.data?.auth_mode ?? 'off'
+  // `needs_setup` 为后端新增字段；兼容尚未返回它的旧后端：`uninitialized` 模式同样意味着"待初始化"。
+  const needsSetup = meQ.data?.needs_setup === true || authMode === 'uninitialized'
 
   const value = useMemo<AuthContextValue>(
     () => ({
@@ -130,16 +165,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       loading: meQ.isLoading,
       // ⚠️ 未启用鉴权 = 本地版单机 → 全权。这正是"本地版零感知"的关键。
       role: authEnabled ? (user?.role ?? 'viewer') : 'admin',
+      authMode,
+      needsSetup,
       login,
       logout,
     }),
-    [authEnabled, user, meQ.isLoading, login, logout],
+    [authEnabled, user, meQ.isLoading, authMode, needsSetup, login, logout],
   )
 
-  // 本地版（构建期即为 local）**不需要**等待后端答复就能渲染——
-  // 避免"纯本地部署因后端慢/不可用而卡在加载态"。
+  // 令牌 state 的用途仅是「登录/登出时触发一次重渲染」，其值不参与渲染。
   void token
-  void IS_ONLINE
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
 }

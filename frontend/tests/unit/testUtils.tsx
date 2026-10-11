@@ -32,10 +32,10 @@ export function renderWithTheme(ui: ReactElement, options?: Omit<RenderOptions, 
 /**
  * 与生产同构的包裹：主题 + QueryClient + AuthProvider。
  *
- * 说明：`AuthProvider` 会请求 `/api/auth/me`。测试环境没有后端，该请求失败 →
- * `authEnabled` 为 `false` → 各组件按**本地版**语义渲染（不显示登录相关 UI）。
- * 这正好与被测的默认部署形态一致，且**不需要**在测试里额外打桩。
- * （`retry: false` 保证失败态立刻落定，不会拖慢用例。）
+ * 说明：测试环境未注入 `VITE_DEPLOY_MODE` → `IS_ONLINE` 为 `false` → `AuthProvider`
+ * **完全不请求** `/api/auth/me`（P1-3 修复后本地版跳过该查询），`authEnabled` 恒为 `false`，
+ * 各组件按**本地版**语义渲染（不显示登录相关 UI）。这正好与被测的默认部署形态一致，
+ * 且**不需要**在测试里额外打桩。
  */
 export function renderWithProviders(ui: ReactElement, options?: Omit<RenderOptions, 'wrapper'>) {
   const theme = buildTheme()

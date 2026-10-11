@@ -16,18 +16,40 @@ export interface AuthUser {
   role: Role
 }
 
+/**
+ * 后端鉴权模式（与 `webui/auth.py` 的 `resolve_mode` 对齐）。
+ *
+ * - `off`：未启用（本地版），单机全权；
+ * - `token`：仅共享令牌、无用户 → 浏览器端**无法登录**（`auth_enabled` 为 `false`）；
+ * - `session` / `token+session`：存在用户体系 → 需要登录；
+ * - `uninitialized`：**仅线上版**，鉴权库尚无用户（全新部署，未建号）；
+ * - `error`：**仅线上版**，鉴权库存在但读取失败（损坏 / 权限不足）。
+ */
+export type AuthMode = 'off' | 'token' | 'session' | 'token+session' | 'uninitialized' | 'error'
+
 export interface AuthMeData {
   /**
    * 后端是否**启用了鉴权**。
    *
-   * - `false`（本地版 / 未配置用户）→ 前端**透传**，不拦任何路由、不显示登录入口；
+   * - `false`（本地版 / 未配置用户 / 仅共享令牌）→ 前端**透传**，不拦任何路由；
    * - `true` → 线上版，未登录时 `user` 为 `null`，由 `RequireAuth` 跳登录页。
    *
-   * ⚠️ 这个字段是两版适配的**唯一开关**。若它缺失或该端点返回 401，
+   * ⚠️ 这个字段是两版适配的**唯一运行时开关**。若它缺失或该端点返回 401，
    * 前端就无法区分"没登录"和"没启用鉴权"，会出现"本地版也被要求登录"的最糟结果。
    */
   auth_enabled: boolean
   user: AuthUser | null
+  /** 鉴权模式（诊断用；`error` 表示鉴权库不可用）。旧后端可能不返回，按 `off` 处理。 */
+  auth_mode?: AuthMode
+  /**
+   * 后端在线但**尚未初始化管理员**（鉴权库无用户）。
+   *
+   * 为 `true` 时前端应给运维**明确指引**（用 CLI 建首个管理员），而不是显示登录表单——
+   * 否则运维会反复输错密码却不知道"根本还没有账号"。
+   */
+  needs_setup?: boolean
+  /** 角色 → 权限列表（后端权威矩阵，供将来前端展示 / 调试；当前前端不消费）。 */
+  roles?: Record<string, string[]>
 }
 
 export interface LoginResult {
