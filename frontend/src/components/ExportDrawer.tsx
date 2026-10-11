@@ -42,17 +42,20 @@ import { ExportResultPanel } from './ExportResultPanel'
 import { EmptyState } from './EmptyState'
 import { ErrorState } from './ErrorState'
 import { LoadingState } from './LoadingState'
-import { ProgressStages, stageFromElapsed } from './ProgressStages'
-import { envReason, useExportGate, type EnvFailure } from '../hooks/useExportGate'
-import { describeExportGate } from '../lib/glossary'
+import { ProgressStages } from './ProgressStages'
+import { describeEnvFailure, useExportGate, type EnvFailure } from '../hooks/useExportGate'
+import {
+  GLOSSARY,
+  describeExportGate,
+  describeExportGateAction,
+  describeJobTimeout,
+  describePreviewRetention,
+  describePreviewReused,
+  exportGateState,
+} from '../lib/glossary'
 
 const ANSWER_MODES = ['学生版', '答案解析版', '仅答案']
 const TEMPLATES = ['考试', '测验', '作业']
-
-/** 像素预览的长任务阶段（约 3–8 秒）。 */
-const PREVIEW_STAGES = ['正在渲染文档', '正在转换为 PDF', '正在生成预览图']
-/** 导出的长任务阶段（约 3–8 秒）。 */
-const EXPORT_STAGES = ['正在排版文档', '正在生成导出文件', '正在写入导出目录']
 
 export type { EnvFailure }
 
@@ -98,6 +101,8 @@ function ExportDrawerForPaper(props: ExportDrawerProps) {
     envFail,
     elapsed,
     runPreview,
+    previewStages,
+    previewStage,
     exportMut,
     exportJob,
     exportResult,
@@ -106,7 +111,16 @@ function ExportDrawerForPaper(props: ExportDrawerProps) {
     exportFormats,
     setExportFormats,
     showStale,
+    exportStages,
+    exportStage,
+    exportRunning,
+    exportElapsed,
+    exportTimedOut,
   } = gate
+
+  // 门禁三态 key 与文案**唯一来源**：抽屉与导出中心共用 `exportGateState` + `describeExportGate`，
+  // 保证「同一状态下两个入口说法一致」（T3-2）。
+  const gateState = exportGateState(unlocked, degradedOk)
 
   const handleClose = useCallback(() => {
     onClose()
@@ -128,22 +142,35 @@ function ExportDrawerForPaper(props: ExportDrawerProps) {
         {exportDataQ.isFetching && <Alert severity="info">正在检查当前锁定内容…</Alert>}
         {exportDataQ.isError && <Alert severity="error" action={<Button onClick={refreshDiagnostics}>重试</Button>}>内容检查失败：{(exportDataQ.error as Error).message}</Alert>}
         {exportDataQ.data && <ExportDiagnosticsPanel paperId={paperId} data={exportDataQ.data} onRevised={id => { props.onRevised?.(id); usePaperStore.getState().setCurrentPaperId(id); onClose() }} />}
-        {/* 门禁状态徽标 */}
-        <Stack direction="row" spacing={1} alignItems="center" flexWrap="wrap" useFlexGap sx={{ mb: 1.5 }}>
-          {unlocked ? (
-            degradedOk ? (
-              <Chip size="small" color="warning" variant="outlined" label={describeExportGate('degraded')} />
-            ) : (
-              <Chip size="small" color="success" variant="outlined" label={describeExportGate('ready')} />
-            )
+        {/* 门禁状态徽标（三态文案与导出中心同源；锁定态**就地给出可执行动作**） */}
+        <Stack direction="row" spacing={1} alignItems="center" flexWrap="wrap" useFlexGap sx={{ mb: 0.5 }}>
+          {gateState === 'degraded' ? (
+            <Chip size="small" color="warning" variant="outlined" label={describeExportGate('degraded')} />
+          ) : gateState === 'ready' ? (
+            <Chip size="small" color="success" variant="outlined" label={describeExportGate('ready')} />
           ) : (
             <Chip size="small" color="default" variant="outlined" label={describeExportGate('locked')} />
           )}
-          {previewCached && <Chip size="small" color="success" variant="outlined" label="命中缓存" />}
-          <Typography variant="caption" color="text.secondary">
-            预览通常秒回；仅当内容有改动时才需约 3–8 秒。
-          </Typography>
+          {/* 锁定态：直接把「生成预览」按钮摆在门禁提示旁，老师无需自己找预览入口。 */}
+          {gateState === 'locked' && (
+            <Button
+              size="small"
+              variant="contained"
+              startIcon={<RefreshIcon />}
+              disabled={previewing || !contentAllowed}
+              onClick={() => runPreview()}
+              data-testid="gate-generate-preview"
+            >
+              {describeExportGateAction('locked')}
+            </Button>
+          )}
+          {previewCached && <Chip size="small" color="success" variant="outlined" label={describePreviewReused()} />}
         </Stack>
+        <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1.5 }}>
+          {gateState === 'locked'
+            ? `${describePreviewRetention()}（预览通常秒回，仅内容有改动时需约 3–8 秒）。`
+            : '预览通常秒回；仅当内容有改动时才需约 3–8 秒。'}
+        </Typography>
 
         {/* 导出设置 */}
         <Stack direction="row" spacing={2} flexWrap="wrap" useFlexGap alignItems="center" sx={{ mb: 1.5 }}>
@@ -217,7 +244,7 @@ function ExportDrawerForPaper(props: ExportDrawerProps) {
             onClick={() => runPreview()}
             data-testid="regen-button"
           >
-            {previewPages.length > 0 ? '重新生成预览' : '生成预览'}
+            {previewPages.length > 0 ? GLOSSARY.regeneratePreview : GLOSSARY.generatePreview}
           </Button>
         </Stack>
 
@@ -227,9 +254,10 @@ function ExportDrawerForPaper(props: ExportDrawerProps) {
         <Box sx={{ flex: 1, overflow: 'auto', minHeight: 0 }}>
           {previewing && (
             <Box sx={{ mb: 1 }}>
+              {/* L4：使用 hook 暴露的**前端推断**阶段（内容检查→渲染文档→生成 PDF→生成预览图）。 */}
               <ProgressStages
-                stages={PREVIEW_STAGES}
-                currentStage={stageFromElapsed(elapsed, PREVIEW_STAGES.length)}
+                stages={previewStages}
+                currentStage={previewStage}
                 elapsedSec={elapsed}
                 title="正在生成像素预览"
               />
@@ -243,7 +271,7 @@ function ExportDrawerForPaper(props: ExportDrawerProps) {
                 当前电脑无法生成像素预览，已改用结构预览确认
               </Typography>
               <Typography variant="body2" sx={{ mb: 1 }}>
-                原因：{envReason(envFail)}。
+                原因：{describeEnvFailure(envFail)}。
                 {previewError ? `（${previewError}）` : ''}
               </Typography>
               {!degradedOk ? (
@@ -293,12 +321,14 @@ function ExportDrawerForPaper(props: ExportDrawerProps) {
           {showStale && (
             <Alert severity="warning" icon={<WarningAmberIcon />} sx={{ mb: 1.5 }}>
               ⚠ 内容已变更，此为旧版本预览，导出已锁定
-              {previewing ? '（正在重新生成…）' : '；请点「重新生成预览」'}。
+              {previewing ? '（正在重新生成…）' : `；请点「${GLOSSARY.regeneratePreview}」`}。
             </Alert>
           )}
 
           {previewPages.length > 0 ? (
-            <PreviewViewer pages={previewPages} cached={previewCached} />
+            // L2：不再把 `cached` 透传给 PreviewViewer（其内部会渲染技术词「命中缓存」），
+            // 改为在本组件用教师语言 Chip（见上方 describePreviewReused）。
+            <PreviewViewer pages={previewPages} />
           ) : (
             !previewing &&
             envFail === null && (
@@ -309,7 +339,7 @@ function ExportDrawerForPaper(props: ExportDrawerProps) {
                     ? '生成后在此展示 A4 分页预览。'
                     : '请先处理上方阻断项，通过内容检查后可生成预览。'
                 }
-                actionLabel={contentAllowed ? '生成预览' : undefined}
+                actionLabel={contentAllowed ? GLOSSARY.generatePreview : undefined}
                 onAction={contentAllowed ? () => runPreview() : undefined}
               />
             )
@@ -344,10 +374,16 @@ function ExportDrawerForPaper(props: ExportDrawerProps) {
             />
           </Box>
         )}
-        {exportJob.data?.status === 'running' && (
+        {(exportRunning || exportMut.isPending) && (
           <Box sx={{ mt: 1 }}>
-            {/* 导出作业未上报细粒度阶段，用中段阶段做粗粒度提示（3–8 秒）。 */}
-            <ProgressStages stages={EXPORT_STAGES} currentStage={1} title="正在导出" />
+            {/* L4：导出阶段（内容检查→渲染文档→写出 DOCX/PDF），**前端推断**，后端不上报阶段名。 */}
+            <ProgressStages stages={exportStages} currentStage={exportStage} elapsedSec={exportElapsed} title="正在导出" />
+          </Box>
+        )}
+        {exportTimedOut && (
+          // L5 接线：作业超时不再无限转圈，给出可重试出路。
+          <Box sx={{ mt: 1 }}>
+            <ErrorState error={new Error(describeJobTimeout())} title="导出超时" onRetry={() => exportMut.mutate()} />
           </Box>
         )}
         {exportJob.data?.status === 'error' && (

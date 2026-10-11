@@ -1,13 +1,15 @@
 /**
- * PaperSwitcher —— 组卷工作台**顶部试卷切换器**（P3，§5-Q8 附「多份试卷并行」）。
+ * PaperSwitcher —— **全局顶栏**试卷切换器（P3 §5-Q8「多份试卷并行」；P1-6 提升为全站可达）。
  *
- * 把原本藏在左抽屉里的「试卷列表」入口**显性化**到工作台顶部：
+ * 原仅出现在组卷工作台顶部，其它页面要换试卷必须先回组卷页；现提升到全局 `AppBar`，
+ * 让**任意页面**都能一键切换 / 新建试卷。
  *  - 下拉一键切换当前试卷，每项显示「题数 · 总分 · 未设分」；
- *  - 保留「试卷列表」按钮（新建 / 删除）入口。
+ *  - 保留「试卷列表」入口（新建 / 选择）。
  *
  * 仅承载 UI 选择，数据由父级（react-query）提供；**不缓存整卷内容**（沿用 paperStore 约定）。
+ * 因宿主是深色 `primary.main` 顶栏，文本/描边统一用 `inherit`（白色）保证对比度。
  */
-import { Box, Button, Chip, MenuItem, Select, Stack } from '@mui/material'
+import { Box, Button, Chip, IconButton, MenuItem, Select, Stack } from '@mui/material'
 import ListAltIcon from '@mui/icons-material/ListAlt'
 import type { Paper } from '../api/types'
 
@@ -17,19 +19,31 @@ export interface PaperSwitcherProps {
   currentPaperId: number | null
   onSwitch: (id: number) => void
   onOpenList: () => void
+  /** 窄屏（AppBar 空间紧张）：隐藏统计 Chip、缩窄下拉、列表入口改为图标按钮。 */
+  compact?: boolean
 }
 
-/** 顶部试卷切换器。 */
-export function PaperSwitcher({ papers, currentPaperId, onSwitch, onOpenList }: PaperSwitcherProps) {
+/** 全局顶栏试卷切换器。 */
+export function PaperSwitcher({ papers, currentPaperId, onSwitch, onOpenList, compact = false }: PaperSwitcherProps) {
   const current = papers.find((p) => p.id === currentPaperId) ?? null
   return (
-    <Stack direction="row" spacing={1} alignItems="center" flexWrap="wrap" useFlexGap>
+    <Stack direction="row" spacing={1} alignItems="center" useFlexGap sx={{ minWidth: 0 }}>
       <Select
         size="small"
         value={currentPaperId ?? ''}
         displayEmpty
         onChange={(e) => onSwitch(Number(e.target.value))}
-        sx={{ minWidth: 260 }}
+        sx={{
+          minWidth: compact ? 132 : 260,
+          maxWidth: compact ? 200 : 360,
+          color: 'inherit',
+          // 深色顶栏上把描边/下拉箭头统一为白色系，保证可读与可点击感。
+          '& .MuiOutlinedInput-notchedOutline': { borderColor: 'rgba(255,255,255,0.5)' },
+          '&:hover .MuiOutlinedInput-notchedOutline': { borderColor: 'rgba(255,255,255,0.85)' },
+          '&.Mui-focused .MuiOutlinedInput-notchedOutline': { borderColor: '#fff' },
+          '& .MuiSelect-select': { color: 'inherit' },
+          '& .MuiSvgIcon-root': { color: 'inherit' },
+        }}
         data-testid="paper-switcher"
         renderValue={() =>
           current ? current.title : currentPaperId != null ? `试卷 #${currentPaperId}` : '选择试卷…'
@@ -47,19 +61,27 @@ export function PaperSwitcher({ papers, currentPaperId, onSwitch, onOpenList }: 
           </MenuItem>
         ))}
       </Select>
-      {current && (
+      {!compact && current && (
         <Box sx={{ display: 'flex', gap: 0.5, alignItems: 'center' }}>
-          <Chip size="small" variant="outlined" label={`${current.item_count ?? 0} 题`} />
-          <Chip size="small" variant="outlined" label={`${current.total_score ?? 0} 分`} />
+          <Chip size="small" variant="outlined" sx={{ color: 'inherit', borderColor: 'currentColor' }} label={`${current.item_count ?? 0} 题`} />
+          <Chip size="small" variant="outlined" sx={{ color: 'inherit', borderColor: 'currentColor' }} label={`${current.total_score ?? 0} 分`} />
           {(current.unscored_count ?? 0) > 0 && (
             <Chip size="small" color="warning" variant="outlined" label={`未设分 ${current.unscored_count}`} />
           )}
         </Box>
       )}
-      <Box sx={{ flex: 1 }} />
-      <Button size="small" startIcon={<ListAltIcon />} onClick={onOpenList}>
-        试卷列表
-      </Button>
+      {compact ? (
+        <IconButton size="small" color="inherit" aria-label="试卷列表" onClick={onOpenList} data-testid="open-paper-list">
+          <ListAltIcon fontSize="small" />
+        </IconButton>
+      ) : (
+        <>
+          <Box sx={{ flex: 1 }} />
+          <Button size="small" color="inherit" startIcon={<ListAltIcon />} onClick={onOpenList}>
+            试卷列表
+          </Button>
+        </>
+      )}
     </Stack>
   )
 }

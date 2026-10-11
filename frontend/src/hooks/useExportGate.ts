@@ -24,12 +24,33 @@ import { isContentGuardCode, isContentGuardError } from '../api/errors'
 import { qk } from '../api/queryKeys'
 import { useJob } from './useJob'
 import { useUiStore, previewSettingsKey, type PreviewTicket } from '../store/uiStore'
-import { detectEnvFailure, extractPages, type EnvFailure } from './exportGateShared'
+import { describeJobTimeout } from '../lib/glossary'
+import {
+  detectEnvFailure,
+  extractPages,
+  inferExportStage,
+  inferPreviewStage,
+  EXPORT_STAGES,
+  PREVIEW_STAGES,
+  type EnvFailure,
+} from './exportGateShared'
 import type { ExportJobResult, ExportPayload, PreviewPage } from '../api/types'
 
-// 环境失败判定 / 预览页归一化为**纯函数**，抽到 `exportGateShared.ts` 以便独立测试；
-// 这里 re-export，保持既有 `import { envReason } from '../hooks/useExportGate'` 不变。
-export { detectEnvFailure, extractPages, envReason, type EnvFailure } from './exportGateShared'
+// 环境失败判定 / 预览页归一化 / 环境失败教师语言（L1）/ 长任务阶段（L4）均为**纯函数或常量**，
+// 抽到 `exportGateShared.ts` 以便独立测试；这里 re-export，保持既有 import 路径不变，
+// 并让导出抽屉与导出中心**共用同一份阶段定义与推断**（避免两处各写一份阶段名）。
+export {
+  detectEnvFailure,
+  describeEnvFailure,
+  extractPages,
+  envReason,
+  PREVIEW_STAGES,
+  EXPORT_STAGES,
+  inferPreviewStage,
+  inferExportStage,
+  type EnvFailure,
+  type StageInput,
+} from './exportGateShared'
 
 export interface ExportGateOptions {
   paperId: number
@@ -92,6 +113,8 @@ export function useExportGate(options: ExportGateOptions) {
   const [envFail, setEnvFail] = useState<EnvFailure>(null)
   const [exportJobId, setExportJobId] = useState<string | null>(null)
   const [elapsed, setElapsed] = useState(0)
+  /** 导出作业已用秒数（与预览分开计时，供 L4 阶段推断）。 */
+  const [exportElapsed, setExportElapsed] = useState(0)
 
   const paperQ = useQuery({
     queryKey: qk.paper(paperId),
@@ -250,6 +273,16 @@ export function useExportGate(options: ExportGateOptions) {
     }
   }, [previewJob.isError, previewJob.error, paperId, invalidatePreview])
 
+  // L5 接线：预览作业超时（后端作业线程消失 → 永远 running）→ 停止等待、**重新锁定**并提示重试。
+  // 不再无限转圈：`previewJob.timedOut` 由 useJob 在超过最大轮询时长后置真。
+  useEffect(() => {
+    if (!previewJob.timedOut) return
+    if (!accepts(activePreview.current)) return
+    setPreviewError(describeJobTimeout())
+    invalidatePreview(paperId) // 从未拿到像素预览 → 保持锁定
+    setPreviewJobId(null) // 停止轮询（jobId 置空即停）
+  }, [previewJob.timedOut, paperId, invalidatePreview])
+
   // 预览作业完成 → 提取页面 + 解锁；失败 → 锁定 + 错误。
   useEffect(() => {
     const info = previewJob.data
@@ -305,6 +338,19 @@ export function useExportGate(options: ExportGateOptions) {
     return () => window.clearInterval(id)
   }, [previewing])
 
+  /**
+   * L4：预览当前阶段索引（0 起）——**前端推断**，非后端真实阶段。
+   *
+   * 输入全部是前端**可观测**的调用状态；后端作业不上报阶段名（见 `exportGateShared.ts` 注释）。
+   * 抽屉与导出中心共用同一推断，保证两处阶段一致。
+   */
+  const previewStage = inferPreviewStage({
+    checking: exportDataQ.isFetching,
+    requesting: previewMut.isPending,
+    running: Boolean(previewJobId) && (previewJob.data?.status === 'pending' || previewJob.data?.status === 'running'),
+    elapsedSec: elapsed,
+  })
+
   /** 环境降级逃生：用户确认「结构预览」后以之替代像素预览解锁导出。 */
   const confirmDegraded = useCallback(
     () => markPreviewDegraded(paperId, settingsKey, contentDigest),
@@ -335,6 +381,39 @@ export function useExportGate(options: ExportGateOptions) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [exportJob.data])
 
+  /** L5 接线：导出作业超时（后端作业线程消失 → 永远 running）→ 不再无限转圈。 */
+  const exportTimedOut = exportJob.timedOut
+
+  /** 导出作业是否在运行（pending/running）；超时后视为已停止（供进度条与禁用判定）。 */
+  const exportRunning =
+    exportJobId !== null &&
+    !exportTimedOut &&
+    (exportJob.data?.status === 'pending' || exportJob.data?.status === 'running')
+
+  // 导出进行中：单独计时（供 L4 阶段推断）。
+  useEffect(() => {
+    if (!exportRunning) {
+      setExportElapsed(0)
+      return
+    }
+    const t0 = Date.now()
+    const id = window.setInterval(() => setExportElapsed(Math.round((Date.now() - t0) / 1000)), 500)
+    return () => window.clearInterval(id)
+  }, [exportRunning])
+
+  /**
+   * L4：导出当前阶段索引（0 起）——**前端推断**，非后端真实阶段。
+   *
+   * `内容检查`（诊断请求）→ `渲染文档`（POST /export 已发出）→ `写出 DOCX/PDF`（作业运行）。
+   * 后端不上报阶段名，运行内部按已用时长推断（见 `exportGateShared.ts` 注释）。
+   */
+  const exportStage = inferExportStage({
+    checking: exportDataQ.isFetching,
+    requesting: exportMut.isPending,
+    running: exportRunning,
+    elapsedSec: exportElapsed,
+  })
+
   const exportResult = useMemo<ExportJobResult | null>(() => {
     const info = exportJob.data
     if (info?.status === 'done' && info.result && typeof info.result === 'object') {
@@ -349,7 +428,8 @@ export function useExportGate(options: ExportGateOptions) {
     previewing ||
     noFormats ||
     exportMut.isPending ||
-    (exportJobId !== null && exportJob.data?.status !== 'done' && exportJob.data?.status !== 'error')
+    // 作业进行中禁用；但**超时**后应放行以便重试（否则超时会永久锁死导出按钮）。
+    (exportJobId !== null && !exportTimedOut && exportJob.data?.status !== 'done' && exportJob.data?.status !== 'error')
 
   const exportHint = useMemo(() => {
     if (!contentAllowed) return '请先完成内容检查并处理阻断条目'
@@ -381,6 +461,7 @@ export function useExportGate(options: ExportGateOptions) {
       contentAllowed,
       exportStatus: exportJob.data?.status ?? null,
       exportResult: exportResult ?? null,
+      exportTimedOut,
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   })
@@ -412,6 +493,14 @@ export function useExportGate(options: ExportGateOptions) {
     envFail,
     elapsed,
     runPreview,
+    // L4：长任务阶段（**前端推断**，非后端真实阶段）——抽屉与导出中心共用。
+    previewStages: PREVIEW_STAGES,
+    previewStage,
+    exportStages: EXPORT_STAGES,
+    exportStage,
+    exportRunning,
+    exportElapsed,
+    exportTimedOut,
     // 导出
     exportMut,
     exportJob,

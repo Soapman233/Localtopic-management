@@ -147,7 +147,29 @@ export function buildTheme(preferences?: { primary?: string; dark?: boolean }) {
     // 完整 token 引用：字号、间距、阴影等纯数据入口。
     designTokens: tokens,
     components: {
-      MuiButton: { defaultProps: { disableElevation: true } },
+      MuiButton: {
+        defaultProps: { disableElevation: true },
+        styleOverrides: {
+          /**
+           * 补回**键盘焦点指示**（L3 键盘 e2e 发现的真实缺陷）。
+           *
+           * 根因：MUI `Button` 的焦点样式是 `&.Mui-focusVisible { boxShadow: shadows[6] }`
+           * （见 `@mui/material/Button/Button.js:114`），但 `disableElevation: true` 走的分支是
+           * `&.Mui-focusVisible { boxShadow: 'none' }`（同文件 :176）——**把焦点指示抹掉了**；
+           * 而 `ButtonBase` 又设了 `outline: 0`（`ButtonBase.js:51`）。
+           * 两者叠加 ⇒ **所有 MUI Button 的键盘焦点完全不可见**（实测 `outline: none 0px`、背景与阴影无变化）。
+           *
+           * 这里补一个明确的焦点环。用 `outline` 而非 `box-shadow`：不受 disableElevation 影响，
+           * 且不占据布局空间（`outlineOffset` 让它稍微外扩，视觉更清晰）。
+           */
+          root: ({ theme }) => ({
+            '&.Mui-focusVisible': {
+              outline: `2px solid ${theme.palette.primary.main}`,
+              outlineOffset: 2,
+            },
+          }),
+        },
+      },
       MuiPaper: { styleOverrides: { root: { backgroundImage: 'none' } } },
     },
   })

@@ -7,7 +7,7 @@
  *
  * ⚠️ 状态一致性：所有写操作**以后端返回的整卷为准**（前端不做乐观累加）。
  */
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import {
   Alert,
   Box,
@@ -40,6 +40,7 @@ import { EmptyState } from './EmptyState'
 import { ErrorState } from './ErrorState'
 import { LoadingState } from './LoadingState'
 import { GLOSSARY, describeSnapshotStale } from '../lib/glossary'
+import { usePaperStore } from '../store/paperStore'
 
 const TEMPLATES = ['考试', '测验', '作业']
 const ANSWER_MODES = ['学生版', '答案解析版', '仅答案']
@@ -113,6 +114,15 @@ export function PaperPanel({
 
   const { setNodeRef, isOver } = useDroppable({ id: 'paper-dropzone', data: { type: 'paper-panel' } })
 
+  // L6：`targetSectionId` 是持久化的——目标大题被删除后它仍指向不存在的 id，
+  // 老师点「加入」时题目会落到不存在的大题、被后端拒绝。此处（本组件能拿到最新
+  // 大题列表）在每次 sections 变化后调用 store 守卫，失效即置 null（回到「卷末/未分组」）。
+  const validateTargetSection = usePaperStore((s) => s.validateTargetSection)
+  useEffect(() => {
+    if (!paper) return
+    validateTargetSection((paper.sections ?? []).map((s) => s.id))
+  }, [paper, validateTargetSection])
+
   const ordered = useMemo(
     () => (paper?.items ?? []).slice().sort((a, b) => a.seq - b.seq),
     [paper],
@@ -137,7 +147,7 @@ export function PaperPanel({
           <EmptyState
             dense
             title="还没有试卷"
-            description="点右上角「试卷列表」新建或选择一份试卷。"
+            description="点右上角「切换试卷」新建或选择一份试卷。"
           />
         )}
         <Button sx={{ mt: 2 }} variant="outlined" onClick={onOpenDrawer}>
@@ -181,7 +191,7 @@ export function PaperPanel({
           sx={{ flex: 1, minWidth: 140 }}
         />
         <Button size="small" onClick={onOpenDrawer}>
-          试卷列表
+          试卷管理
         </Button>
       </Stack>
       <Stack direction="row" spacing={1} sx={{ mb: 1 }} flexWrap="wrap" useFlexGap>

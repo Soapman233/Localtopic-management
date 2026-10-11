@@ -3,7 +3,7 @@
  * 覆盖需求：P0-1（关键词检索 + 分页）、P0-2（左侧固定筛选栏）、P0-3（结果卡 + 状态徽章）、
  * P0-13（数据状态可见性：覆盖率提示 + 待补充桶 + 徽章）、P1-6（严格模式）、P1-4（难度标注入口）。
  */
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import {
   Alert,
@@ -21,7 +21,7 @@ import {
   TextField,
   Typography,
 } from '@mui/material'
-import { useNavigate, useSearchParams } from 'react-router-dom'
+import { useNavigate } from 'react-router-dom'
 import { FilterSidebar } from '../components/FilterSidebar'
 import { CoverageBanner } from '../components/CoverageBanner'
 import { GradeGapNotice } from '../components/GradeGapNotice'
@@ -36,8 +36,7 @@ import { usePaperStore } from '../store/paperStore'
 import { useUiStore } from '../store/uiStore'
 import { useSettingsStore } from '../store/settingsStore'
 import { notify } from '../lib/feedback'
-import { readFiltersFromUrl, writeFiltersToUrl } from '../api/searchParams'
-import type { SearchParams } from '../api/search'
+import { useQuestionFilters } from '../hooks/useQuestionFilters'
 import { qk } from '../api/queryKeys'
 
 const PAGE_SIZE = 20
@@ -168,45 +167,26 @@ export default function SearchPage() {
   const { currentPaperId, targetSectionId, setCurrentPaperId } = usePaperStore()
   const { coverageDismissed, setCoverageDismissed, strictKp, setStrictKp } = useUiStore()
 
-  const [searchParams, setSearchParams] = useSearchParams()
-  const [keywordInput, setKeywordInput] = useState(() => searchParams.get('keyword') ?? '')
-  const [filters, setFilters] = useState<SearchParams>(() => readFiltersFromUrl(searchParams))
-  const [page, setPage] = useState(() => Number(searchParams.get('page')) || 1)
+  // 检索条件状态（关键词防抖 / URL 同步 / query 与 facets 参数）——与组卷页共用同一实现（§1.6）。
+  const {
+    keywordInput,
+    setKeywordInput,
+    filters,
+    setFilters,
+    page,
+    setPage,
+    queryParams,
+    facetsParams,
+    reset: resetFilters,
+    hasActiveFilters,
+  } = useQuestionFilters({ pageSize: PAGE_SIZE })
+
   const [annotateTarget, setAnnotateTarget] = useState<SearchItem | null>(null)
   const [pickOpen, setPickOpen] = useState(false)
   // P1-3：批量加题——待加入的题目 id（无当前试卷时先选/建卷）+ 已勾选的题目 id。
   const [pendingAddIds, setPendingAddIds] = useState<number[]>([])
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set())
   const [addedPaperId, setAddedPaperId] = useState<number | null>(null)
-
-  // 关键词防抖 300ms
-  useEffect(() => {
-    const t = window.setTimeout(() => {
-      setFilters((f) => ({ ...f, keyword: keywordInput.trim() || undefined }))
-      setPage(1)
-    }, 300)
-    return () => window.clearTimeout(t)
-  }, [keywordInput])
-
-  // 检索条件写入 URL（replace，避免污染历史）；刷新/回退/分享可保留（§Q6）。
-  useEffect(() => {
-    setSearchParams(writeFiltersToUrl(filters, page), { replace: true })
-  }, [filters, page, setSearchParams])
-
-  const queryParams: SearchParams = useMemo(
-    () => ({
-      ...filters,
-      kp_confirmed_only: strictKp || undefined,
-      limit: PAGE_SIZE,
-      offset: (page - 1) * PAGE_SIZE,
-    }),
-    [filters, strictKp, page],
-  )
-
-  const facetsParams: SearchParams = useMemo(
-    () => ({ ...filters, kp_confirmed_only: strictKp || undefined }),
-    [filters, strictKp],
-  )
 
   const searchQ = useSearchQuery(queryParams)
   const facetsQ = useFacetsQuery(facetsParams)
@@ -264,22 +244,6 @@ export default function SearchPage() {
   // 答案/解析徽章；此判断仅作防御性兜底——若后端某次未下发，则不展示徽章（绝不猜成「无答案」）。
   const answerStatusAvailable = items.some((i) => i.has_answer !== undefined || i.answer != null)
 
-  /** 是否存在任何生效中的筛选（用于空态是否给出「清除筛选」行动）。 */
-  const hasActiveFilters = useMemo(
-    () =>
-      Object.entries(filters as Record<string, unknown>).some(([, v]) =>
-        Array.isArray(v) ? v.length > 0 : v !== undefined && v !== null && v !== '',
-      ),
-    [filters],
-  )
-
-  /** 清空关键词与全部筛选（空态行动 / 侧栏重置共用同一行为）。 */
-  const resetFilters = () => {
-    setFilters({})
-    setKeywordInput('')
-    setPage(1)
-  }
-
   return (
     <Box>
       <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 2 }} flexWrap="wrap" useFlexGap>
@@ -334,11 +298,7 @@ export default function SearchPage() {
           }}
           strictKp={strictKp}
           onStrictKpChange={setStrictKp}
-          onReset={() => {
-            setFilters({})
-            setKeywordInput('')
-            setPage(1)
-          }}
+          onReset={resetFilters}
         />
 
         <Box sx={{ flex: 1, minWidth: 0 }}>

@@ -10,7 +10,7 @@
  * **强制预览门禁（§5-Q3）**：任何组卷编辑动作（加/删/调序/设分/大题增删改移/刷新快照/改元数据）
  * 成功后都会 `useUiStore.invalidatePreview(paperId)` → **重新锁定导出**。漏一个即等于门禁失效。
  */
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   Alert,
@@ -45,12 +45,11 @@ import {
   type DragEndEvent,
 } from '@dnd-kit/core'
 import { sortableKeyboardCoordinates } from '@dnd-kit/sortable'
-import { useNavigate, useSearchParams } from 'react-router-dom'
+import { useNavigate } from 'react-router-dom'
 import { FilterSidebar } from '../components/FilterSidebar'
 import { QuestionCard } from '../components/QuestionCard'
 import { ConfirmDialog } from '../components/ConfirmDialog'
 import { PaperPanel, type PaperActions } from '../components/PaperPanel'
-import { PaperSwitcher } from '../components/PaperSwitcher'
 import { LivePreviewPanel } from '../components/LivePreviewPanel'
 import { ExportDrawer } from '../components/ExportDrawer'
 import { EmptyState } from '../components/EmptyState'
@@ -80,8 +79,7 @@ import { recreatePaperCopy } from '../api/paperRestore'
 import { usePaperStore } from '../store/paperStore'
 import { useUiStore } from '../store/uiStore'
 import { useSettingsStore } from '../store/settingsStore'
-import { readFiltersFromUrl, writeFiltersToUrl } from '../api/searchParams'
-import type { SearchParams } from '../api/search'
+import { useQuestionFilters } from '../hooks/useQuestionFilters'
 import { ErrorCode, errorCodeOf, errorDataOf } from '../api/errors'
 import type { ExportDiagnostics } from '../api/types'
 import type { SearchItem } from '../api/types'
@@ -161,14 +159,10 @@ function usePaperMutations(paperId: number | null, onError: (error: unknown) => 
 export default function PaperBuilderPage() {
   const navigate = useNavigate()
   const qc = useQueryClient()
+  const theme = useTheme()
   const { currentPaperId, targetSectionId, setCurrentPaperId, setTargetSectionId } = usePaperStore()
   const { strictKp, setStrictKp, builderView, setBuilderView } = useUiStore()
 
-  // 检索条件 ↔ URL（P1-4，与检索页共用实现）：跳详情页返回 / 刷新后条件不丢。
-  const [searchParams, setSearchParams] = useSearchParams()
-  const [keywordInput, setKeywordInput] = useState(() => searchParams.get('keyword') ?? '')
-  const [filters, setFilters] = useState<SearchParams>(() => readFiltersFromUrl(searchParams))
-  const [page, setPage] = useState(() => Number(searchParams.get('page')) || 1)
   const [drawerOpen, setDrawerOpen] = useState(false)
   const [newTitle, setNewTitle] = useState('')
   const [error, setError] = useState<string | null>(null)
@@ -178,34 +172,31 @@ export default function PaperBuilderPage() {
   // 删除试卷二次确认（P0-1）：单击不再直接 force 删除，必须先确认（显示将删除的题数）。
   const [confirmDeletePaper, setConfirmDeletePaper] = useState<{ id: number; title: string; itemCount: number } | null>(null)
 
-  // P1-1 响应式：窄屏（<1440px，覆盖 1366×768 教师笔记本主流分辨率）时，
-  // 右栏折叠为抽屉、筛选栏可收起，避免固定 640px 右栏把结果区压到 ≈166px。
-  const narrow = useMediaQuery('(max-width:1439px)')
+  // P0-3 响应式（断点统一）：窄屏用 MUI 标准断点 `<lg`（<1200px）折叠右栏，
+  // **不再用 1439 魔法值**——否则 1366×768（教师笔记本主流分辨率）会被误判为窄屏，
+  // 把默认「排版」视图折进默认关闭的抽屉，与《流程重构设计》Q8「默认排版视图」直接冲突。
+  // 改用标准断点后：1366 与 1440 都保持双栏「边组边看」，仅 <1200 才折叠。
+  const narrow = useMediaQuery(theme.breakpoints.down('lg'))
+  // 「紧凑」= 视口不足以同时舒适容纳「筛选栏(248) + 题目列表 + 右栏」。
+  // 实测题卡宽度：1366→338px、1280→281px、1440→386px、1920→716px。
+  // 这里给老师一个**可收回 264px**（筛选栏 248 + 间距 16）的开关；
+  // 默认**保持展开**——不改变既有默认行为，只在需要更宽结果区时手动收起。
+  const compact = useMediaQuery('(max-width:1439px)')
   const [rightOpen, setRightOpen] = useState(false)
-  const [filtersOpen, setFiltersOpen] = useState(false)
+  const [filtersOpen, setFiltersOpen] = useState(true)
 
-  // P1-3：关键词 300ms 防抖（与检索页一致），避免每击键触发 search + facets。
-  useEffect(() => {
-    const t = window.setTimeout(() => {
-      setFilters((f) => ({ ...f, keyword: keywordInput.trim() || undefined }))
-      setPage(1)
-    }, 300)
-    return () => window.clearTimeout(t)
-  }, [keywordInput])
-
-  // P1-4：筛选条件 / 页码写入 URL（replace，避免污染历史）。
-  useEffect(() => {
-    setSearchParams(writeFiltersToUrl(filters, page), { replace: true })
-  }, [filters, page, setSearchParams])
-
-  const queryParams: SearchParams = useMemo(
-    () => ({ ...filters, kp_confirmed_only: strictKp || undefined, limit: PAGE_SIZE, offset: (page - 1) * PAGE_SIZE }),
-    [filters, strictKp, page],
-  )
-  const facetsParams: SearchParams = useMemo(
-    () => ({ ...filters, kp_confirmed_only: strictKp || undefined }),
-    [filters, strictKp],
-  )
+  // 检索条件状态（关键词防抖 / URL 同步 / query 与 facets 参数）——与检索页共用同一实现（§1.6）。
+  const {
+    keywordInput,
+    setKeywordInput,
+    filters,
+    setFilters,
+    page,
+    setPage,
+    queryParams,
+    facetsParams,
+    reset: resetFilters,
+  } = useQuestionFilters({ pageSize: PAGE_SIZE })
 
   const searchQ = useSearchQuery(queryParams)
   const facetsQ = useFacetsQuery(facetsParams)
@@ -220,6 +211,13 @@ export default function PaperBuilderPage() {
     // 顶部切换器始终需要列表；抽屉打开时复用同一份缓存。
     enabled: true,
   })
+
+  // L6：`targetSectionId` 是**持久化**的——目标大题被删除后，它仍可能指向一个不存在的 section id，
+  // 老师点「加入」就会落到不存在的大题而报错。这里在**整卷加载后立即校验**，
+  // 不依赖用户是否切到「清单」视图（`PaperPanel` 里那处只在渲染清单时才触发）。
+  useEffect(() => {
+    usePaperStore.getState().validateTargetSection((paperQ.data?.sections ?? []).map((s) => s.id))
+  }, [paperQ.data])
 
   const paperId = currentPaperId
   const mut = usePaperMutations(paperId, e => {
@@ -367,7 +365,22 @@ export default function PaperBuilderPage() {
 
   // 右栏内容（宽屏内联；窄屏放进右侧抽屉，P1-1）。抽成变量避免重复 JSX。
   const rightPanel = (
-    <Box sx={{ width: narrow ? '100%' : builderView === 'layout' ? 640 : 420, flexShrink: 0, minHeight: 0, display: 'flex', flexDirection: 'column' }}>
+    <Box
+      sx={{
+        // P0-3：右栏宽度改为**自适应**（原为固定 640 / 420，会在 1366 把左栏题库压到 ≈166px）。
+        // 宽屏（≥1200px）用 clamp：下限保证右栏可用，上限沿用原 640（排版）/ 420（清单）。
+        // 1366 下 34vw≈464px → 左栏≈606px，结果区较原先明显变宽；1920 时封顶 640，不再无谓变宽。
+        width: narrow
+          ? '100%'
+          : builderView === 'layout'
+            ? 'clamp(360px, 34vw, 640px)'
+            : 'clamp(320px, 30vw, 420px)',
+        flexShrink: 0,
+        minHeight: 0,
+        display: 'flex',
+        flexDirection: 'column',
+      }}
+    >
       <ToggleButtonGroup
         size="small"
         exclusive
@@ -450,11 +463,18 @@ export default function PaperBuilderPage() {
         </Alert>
       )}
 
-      {/* 顶部：试卷切换器 + 导出（P3） */}
+      {/* 窄屏提示（P0-3）：<lg（<1200px）时右栏折叠为抽屉，给出轻提示避免困惑。 */}
+      {narrow && (
+        <Alert severity="info" sx={{ mb: 1, py: 0.25 }}>
+          当前窗口较窄，已折叠试卷面板；建议将窗口拉宽至 1200px 以上，使用双栏「边组边看」。
+        </Alert>
+      )}
+
+      {/* 顶部工具条（P3）：筛选 / 试卷面板 / 导出。试卷切换器已提升至全局顶栏（P1-6）。 */}
       <Box sx={{ mb: 1 }}>
         <Stack direction="row" spacing={1} alignItems="center" flexWrap="wrap" useFlexGap>
-          {/* P1-1：窄屏下筛选栏与右栏折叠，用按钮开合 */}
-          {narrow && (
+          {/* P1-1 / P0-3：紧凑视口（<1440）下提供筛选栏开合，便于把宽度让给题目列表 */}
+          {compact && (
             <Button
               variant={filtersOpen ? 'contained' : 'outlined'}
               startIcon={<FilterListIcon />}
@@ -464,17 +484,8 @@ export default function PaperBuilderPage() {
               筛选
             </Button>
           )}
-          <Box sx={{ flex: 1, minWidth: 220 }}>
-            <PaperSwitcher
-              papers={papersQ.data ?? []}
-              currentPaperId={currentPaperId}
-              onSwitch={(id) => {
-                setCurrentPaperId(id)
-                setTargetSectionId(null)
-              }}
-              onOpenList={() => setDrawerOpen(true)}
-            />
-          </Box>
+          {/* 弹性占位：试卷切换器移走后，把「试卷面板 / 导出」推到右侧，避免留空洞。 */}
+          <Box sx={{ flex: 1 }} />
           {narrow && (
             <Button
               variant="outlined"
@@ -516,7 +527,8 @@ export default function PaperBuilderPage() {
             </Stack>
             <Box sx={{ display: 'flex', gap: 2, flex: 1, minHeight: 0 }}>
               {/* P1-1：窄屏下筛选栏默认收起（由顶部「筛选」按钮开合） */}
-              {(!narrow || filtersOpen) && (
+              {/* P1-1 / P0-3：紧凑视口下筛选栏由顶部「筛选」按钮开合；宽屏（≥1440）常驻 */}
+              {(!compact || filtersOpen) && (
                 <Box sx={{ overflow: 'auto', flexShrink: 0 }}>
                   <FilterSidebar
                     facets={facetsQ.data}
@@ -528,11 +540,7 @@ export default function PaperBuilderPage() {
                     }}
                     strictKp={strictKp}
                     onStrictKpChange={setStrictKp}
-                    onReset={() => {
-                      setFilters({})
-                      setKeywordInput('')
-                      setPage(1)
-                    }}
+                    onReset={resetFilters}
                   />
                 </Box>
               )}
@@ -582,11 +590,12 @@ export default function PaperBuilderPage() {
         </Drawer>
       )}
 
-      {/* 试卷列表抽屉（P0-10：新建 / 删除） */}
+      {/* 试卷管理抽屉（P0-10：新建 / 删除 + 撤销）。
+          与全局「切换试卷」区分：这里多了**删除与撤销**，命名体现能力差异。 */}
       <Drawer anchor="left" open={drawerOpen} onClose={() => setDrawerOpen(false)}>
         <Box sx={{ width: 320, p: 2 }}>
           <Typography variant="subtitle1" gutterBottom>
-            试卷列表
+            试卷管理
           </Typography>
           <Stack direction="row" spacing={1} sx={{ mb: 1 }}>
             <TextField

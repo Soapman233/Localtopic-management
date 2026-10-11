@@ -80,6 +80,58 @@ export const GLOSSARY = {
    * 老师一眼就知道**不需要看**。
    */
   technicalInfo: '给技术人员的信息',
+
+  // ------------------------------------------------------------------------- //
+  // 阶段 3（T3-2）新增：门禁「可执行下一步」与「刷新即锁」解释
+  // ------------------------------------------------------------------------- //
+
+  /**
+   * 锁定态下的**可执行动作**（按钮文案）：直接给「生成预览」。
+   *
+   * 理由：老师看到灰掉的导出按钮会问「为什么不能导」，旧文案只说「已锁定」，
+   * 不给下一步；这里把动作直接写进按钮，省去老师自己去找预览入口。
+   */
+  generatePreview: '生成预览',
+
+  /** 已有旧预览、需要重做时的按钮文案（与 {@link generatePreview} 同源）。 */
+  regeneratePreview: '重新生成预览',
+
+  /**
+   * 「刷新即锁」的原因解释。
+   *
+   * 理由：门禁是**会话态**（`uiStore` 刻意不持久化 `previewFresh`），刷新页面后
+   * 会重新锁定。这是**设计取舍**（导出的一定是老师本次看过、确认过的内容），
+   * 但老师不知道，会以为「刚才明明能导，怎么又锁了」。此处**只解释、不改行为**。
+   */
+  previewNotPersisted: '预览结果不跨页面刷新保留，请重新生成',
+
+  /**
+   * 「命中缓存」的教师语言（L2）。
+   *
+   * 理由：「缓存」是技术词，老师不关心它；只要知道**这次预览很快、无需等待**即可。
+   */
+  previewReused: '已复用上次预览，秒开',
+
+  // ------------------------------------------------------------------------- //
+  // 阶段 3（L1）新增：环境失败的教师语言（技术细节仅在 debug 下可见）
+  // ------------------------------------------------------------------------- //
+
+  /** 公式渲染 / DOCX 生成服务未启动（内部对应 `editor_sdk` 缺失）。 */
+  envEditorSdk: '公式渲染服务未启动',
+
+  /** 本机未安装 Word / WPS（无法生成 PDF 预览）。 */
+  envOffice: '本机未安装 Word/WPS',
+
+  /** 其余环境依赖缺失（兜底）。 */
+  envUnknown: '运行环境缺少必要组件',
+
+  /**
+   * 作业超时的教师语言（L5 接线）。
+   *
+   * 理由：作业线程若消失，作业会永远停在「进行中」，前端此前只能永久转圈。
+   * 超时后必须给老师**可执行出路**：明确告知超时并提示重试。
+   */
+  jobTimeout: '任务超时，请重试',
 } as const
 
 /** 单题「快照锁定」提示（用于 Tooltip / 单行徽章）。 */
@@ -101,6 +153,52 @@ export function describeExportGate(state: 'ready' | 'locked' | 'degraded'): stri
   if (state === 'ready') return GLOSSARY.exportReady
   if (state === 'degraded') return GLOSSARY.degradedMode
   return GLOSSARY.exportLocked
+}
+
+/**
+ * 由「是否解锁 + 是否降级」派生门禁三态 key（**唯一派生口径**）。
+ *
+ * 抽屉与导出中心都调用它，保证**同一状态下两个入口的徽标文案完全一致**
+ * （避免各自判断 `unlocked/degradedOk` 时写出不同分支）。
+ */
+export function exportGateState(unlocked: boolean, degradedOk: boolean): 'ready' | 'locked' | 'degraded' {
+  if (!unlocked) return 'locked'
+  return degradedOk ? 'degraded' : 'ready'
+}
+
+/**
+ * 门禁三态下的**可执行下一步**（按钮文案）。
+ *
+ * 锁定态必须给出可执行动作（T3-2）：直接返回「生成预览」，供界面就地渲染按钮；
+ * 已解锁 / 降级已确认时无需额外动作，返回空串（调用方据此隐藏按钮）。
+ */
+export function describeExportGateAction(state: 'ready' | 'locked' | 'degraded'): string {
+  return state === 'locked' ? GLOSSARY.generatePreview : ''
+}
+
+/**
+ * 锁定态下解释「为什么刷新后又要重新预览」（T3-2）。
+ *
+ * ⚠️ **只解释、不改行为**：门禁的会话态语义（刷新即锁）由 `uiStore` 决定，
+ * 本函数仅把原因讲给老师听。
+ */
+export function describePreviewRetention(): string {
+  return GLOSSARY.previewNotPersisted
+}
+
+/** 「命中缓存」的教师语言（L2）：告诉老师本次预览很快、无需等待。 */
+export function describePreviewReused(): string {
+  return GLOSSARY.previewReused
+}
+
+/**
+ * 作业（预览 / 导出）超时的教师语言（L5 接线）。
+ *
+ * 由 `useJob` 的 `timedOut` 标记触发：后端作业线程消失时，作业永远停在 running，
+ * 前端不再无限轮询，而是给出**可执行出路**（提示超时、可重试）。
+ */
+export function describeJobTimeout(): string {
+  return GLOSSARY.jobTimeout
 }
 
 /** 环境降级（未安装 Word/WPS）时的状态说明。 */

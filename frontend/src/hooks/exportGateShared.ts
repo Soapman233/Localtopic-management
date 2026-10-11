@@ -3,7 +3,13 @@
  *
  * 从 `useExportGate.ts` 抽出为独立模块，便于**无 React 依赖**地单元测试
  * （门禁安全关键路径，必须有独立测试）。
+ *
+ * 阶段 3 追加：
+ *  - L1：`describeEnvFailure`——环境失败原因的**教师语言**（技术细节仅在 debug 下可见）；
+ *  - L4：`PREVIEW_STAGES` / `EXPORT_STAGES` 与 `inferPreviewStage` / `inferExportStage`——
+ *    长任务阶段（**前端推断**，后端不上报阶段名，见下方说明）。
  */
+import { GLOSSARY, isDebugMode } from '../lib/glossary'
 import type { PreviewPage } from '../api/types'
 
 /** 环境失败类型：editor_sdk 不可用 / 无 Word·WPS / 其他（非环境原因）。 */
@@ -21,11 +27,78 @@ export function detectEnvFailure(err: unknown): EnvFailure {
   return null
 }
 
-/** 环境失败的人类可读原因。 */
+/**
+ * 环境失败的**技术口径**原因（含 `editor_sdk` 等原始字段）。
+ *
+ * ⚠️ **仅供 debug / 日志**：老师界面请改用 {@link describeEnvFailure}，
+ * 否则会把开发者视角的真相直接暴露给老师。
+ */
 export function envReason(t: EnvFailure): string {
   if (t === 'editor_sdk') return '未检测到 editor_sdk 服务（公式渲染 / DOCX 生成不可用）'
   if (t === 'office') return '未检测到 Microsoft Word / WPS（无法生成 PDF 预览）'
   return '环境依赖缺失'
+}
+
+/**
+ * 环境失败的**教师语言**原因（L1）：走 glossary，老师看得懂。
+ *
+ * 默认只输出教师语言（如「公式渲染服务未启动」）；仅当 `isDebugMode()` 为真时，
+ * 才在括号内追加 {@link envReason} 的技术细节——维护者仍能定位问题，老师默认看不到。
+ */
+export function describeEnvFailure(t: EnvFailure): string {
+  const base = t === 'editor_sdk' ? GLOSSARY.envEditorSdk : t === 'office' ? GLOSSARY.envOffice : GLOSSARY.envUnknown
+  return isDebugMode() ? `${base}（技术细节：${envReason(t)}）` : base
+}
+
+// --------------------------------------------------------------------------- //
+// L4：长任务阶段（**前端推断**）
+// --------------------------------------------------------------------------- //
+//
+// 背景：后端作业（`GET /api/jobs/{id}`）只上报 `status`（pending/running/done/error）
+// 与**粗进度** `progress`（0.0 → 0.1 → 1.0），**不返回阶段名**（见 `webui/jobs.py`）。
+// 因此下面的阶段名与当前阶段索引是**前端按已知调用步骤推断**，**不是**后端真实阶段：
+//   - 预览路径：`内容检查`（export-data 诊断请求）→ `渲染文档`（POST /preview 已发出）
+//     → `生成 PDF` → `生成预览图`（后端把三步合成一个作业，前端无法逐段观测，
+//     仅在作业运行期间按已用时长在 渲染→PDF→预览图 之间推进）；
+//   - 导出路径：`内容检查` → `渲染文档` → `写出 DOCX/PDF`。
+// 如实说明：若将来后端补上阶段字段，应改为消费真实字段，替换这里的推断。
+
+/** 预览长任务的阶段名（**前端推断**，见上方说明）。 */
+export const PREVIEW_STAGES = ['内容检查', '渲染文档', '生成 PDF', '生成预览图']
+/** 导出长任务的阶段名（**前端推断**，见上方说明）。 */
+export const EXPORT_STAGES = ['内容检查', '渲染文档', '写出 DOCX/PDF']
+
+/** 阶段推断入参：均来自前端**可观测**的调用状态，不含任何后端未提供的信息。 */
+export interface StageInput {
+  /** 内容检查（export-data 诊断）请求进行中。 */
+  checking: boolean
+  /** 请求已发出、尚未拿到作业 id（POST 在途）。 */
+  requesting: boolean
+  /** 作业运行中（pending/running）。 */
+  running: boolean
+  /** 已用秒数（用于在无法逐段观测的作业内部做**推断**推进）。 */
+  elapsedSec: number
+}
+
+/** 推断预览当前阶段索引（0 起）。**前端推断**，非后端真实阶段。 */
+export function inferPreviewStage(i: StageInput): number {
+  if (i.checking) return 0
+  if (i.requesting) return 1
+  if (i.running) {
+    // 作业内部三步（渲染→PDF→预览图）后端不逐段上报，按已用时长推断推进。
+    if (i.elapsedSec < 2) return 1
+    if (i.elapsedSec < 4) return 2
+    return 3
+  }
+  return 0
+}
+
+/** 推断导出当前阶段索引（0 起）。**前端推断**，非后端真实阶段。 */
+export function inferExportStage(i: StageInput): number {
+  if (i.checking) return 0
+  if (i.requesting) return 1
+  if (i.running) return i.elapsedSec < 3 ? 1 : 2
+  return 1
 }
 
 /** 从预览响应/作业结果中归一化出页面列表（抽屉与导出页共用同一实现）。 */

@@ -1,11 +1,13 @@
 import type { ReactNode } from 'react'
 import { useState } from 'react'
-import { useQuery } from '@tanstack/react-query'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   AppBar,
   Alert,
   AlertTitle,
   Box,
+  Button,
+  Divider,
   Drawer,
   IconButton,
   List,
@@ -13,6 +15,8 @@ import {
   ListItemIcon,
   ListItemText,
   ListSubheader,
+  Stack,
+  TextField,
   Toolbar,
   Typography,
   useMediaQuery,
@@ -32,7 +36,11 @@ import { Outlet, useLocation, useNavigate } from 'react-router-dom'
 import api from './api/client'
 import { qk } from './api/queryKeys'
 import ErrorBoundary from './components/ErrorBoundary'
-import type { HealthData } from './api/types'
+import { PaperSwitcher } from './components/PaperSwitcher'
+import { createPaper, listPapers } from './api/papers'
+import { usePaperStore } from './store/paperStore'
+import { useSettingsStore } from './store/settingsStore'
+import type { HealthData, Paper } from './api/types'
 
 const DRAWER_WIDTH = 232
 
@@ -149,11 +157,42 @@ function HealthBanner() {
 export default function App() {
   const location = useLocation()
   const navigate = useNavigate()
+  const qc = useQueryClient()
   const theme = useTheme()
   // P1-1 响应式：窄屏（<md，即 <900px）时侧栏改为临时抽屉（汉堡菜单开合），
   // 避免 232px 固定侧栏挤占内容区。桌面（≥md）保持常驻侧栏。
   const isNarrowNav = useMediaQuery(theme.breakpoints.down('md'))
   const [navOpen, setNavOpen] = useState(false)
+
+  // ---- P1-6：「我的试卷」提升为全站可达 ----
+  // 试卷切换器从组卷页顶部提升到全局 AppBar，任意页面都能切换 / 新建试卷。
+  // 数据来源仍是 react-query（`qk.papers()`，与组卷页共用同一份缓存）；**唯一状态来源是 paperStore**。
+  const currentPaperId = usePaperStore((s) => s.currentPaperId)
+  const setCurrentPaperId = usePaperStore((s) => s.setCurrentPaperId)
+  const setTargetSectionId = usePaperStore((s) => s.setTargetSectionId)
+  const [paperListOpen, setPaperListOpen] = useState(false)
+  const [newPaperTitle, setNewPaperTitle] = useState('')
+  const papersQ = useQuery({ queryKey: qk.papers(), queryFn: () => listPapers() })
+  // 防御性兜底：接口异常/契约变化时避免把非数组当列表（如后端错误体）。
+  const papers: Paper[] = Array.isArray(papersQ.data) ? papersQ.data : []
+
+  /** 统一切换试卷：写入唯一来源 `paperStore`，并跳到组卷页让切换效果立即可见（P1-6）。 */
+  const switchPaper = (id: number) => {
+    setCurrentPaperId(id)
+    setTargetSectionId(null)
+    setPaperListOpen(false)
+    navigate('/builder')
+  }
+
+  const createPaperMut = useMutation({
+    // 与组卷页一致：新建试卷套用设置页的「默认模板」。
+    mutationFn: (title: string) => createPaper({ title, template: useSettingsStore.getState().defaultTemplate }),
+    onSuccess: (p) => {
+      qc.invalidateQueries({ queryKey: qk.papers() })
+      switchPaper(p.id)
+      setNewPaperTitle('')
+    },
+  })
 
   /** 统一导航动作：跳转 +（窄屏时）收起临时抽屉。 */
   const handleNavigate = (path: string) => {
@@ -167,7 +206,7 @@ export default function App() {
         position="fixed"
         sx={{ zIndex: (t) => t.zIndex.drawer + 1, bgcolor: 'primary.main' }}
       >
-        <Toolbar variant="dense">
+        <Toolbar variant="dense" sx={{ gap: 1 }}>
           {isNarrowNav && (
             <IconButton
               color="inherit"
@@ -175,14 +214,25 @@ export default function App() {
               size="small"
               aria-label="打开导航"
               onClick={() => setNavOpen(true)}
-              sx={{ mr: 1 }}
+              sx={{ mr: 0 }}
             >
               <MenuIcon />
             </IconButton>
           )}
-          <Typography variant="h6" noWrap component="div">
-            初中物理 · 题库与组卷
-          </Typography>
+          {/* 标题在超窄屏（<sm）让位给试卷切换器；桌面常显，不破版。 */}
+          <Box sx={{ flexGrow: 1, minWidth: 0 }}>
+            <Typography variant="h6" noWrap component="div" sx={{ display: { xs: 'none', sm: 'block' } }}>
+              初中物理 · 题库与组卷
+            </Typography>
+          </Box>
+          {/* P1-6：试卷切换器提升到全局顶栏，任意页面可切换 / 新建试卷（窄屏自动收窄）。 */}
+          <PaperSwitcher
+            papers={papers}
+            currentPaperId={currentPaperId}
+            onSwitch={switchPaper}
+            onOpenList={() => setPaperListOpen(true)}
+            compact={isNarrowNav}
+          />
         </Toolbar>
       </AppBar>
 
@@ -229,6 +279,59 @@ export default function App() {
           <List sx={{ mt: 'auto' }}>
             <NavListButton item={SETTINGS_ITEM} onNavigate={handleNavigate} />
           </List>
+        </Box>
+      </Drawer>
+
+      {/* 全局「切换试卷」抽屉（P1-6）：任意页面都能切换 / 新建。
+          命名刻意与组卷页的「试卷管理」（含删除 + 撤销）区分——两者能力不同，
+          都叫「试卷列表」会让老师困惑「为什么这里的删不掉」。 */}
+      <Drawer anchor="left" open={paperListOpen} onClose={() => setPaperListOpen(false)}>
+        <Box sx={{ width: 320, p: 2 }}>
+          <Typography variant="subtitle1" gutterBottom>
+            切换试卷
+          </Typography>
+          <Stack direction="row" spacing={1} sx={{ mb: 1 }}>
+            <TextField
+              size="small"
+              label="新建试卷标题"
+              value={newPaperTitle}
+              onChange={(e) => setNewPaperTitle(e.target.value)}
+              fullWidth
+            />
+            <Button
+              variant="contained"
+              disabled={createPaperMut.isPending}
+              onClick={() => createPaperMut.mutate(newPaperTitle.trim() || '未命名试卷')}
+            >
+              新建
+            </Button>
+          </Stack>
+          <Divider sx={{ my: 1 }} />
+          {papersQ.isLoading && (
+            <Typography variant="body2" color="text.secondary">
+              加载中…
+            </Typography>
+          )}
+          {papersQ.isError && (
+            <Typography variant="body2" color="error">
+              加载失败，请确认后端服务已启动。
+            </Typography>
+          )}
+          <List dense>
+            {papers.map((p) => (
+              <ListItemButton key={p.id} selected={p.id === currentPaperId} onClick={() => switchPaper(p.id)}>
+                <ListItemText
+                  primary={p.title}
+                  secondary={`${p.item_count ?? 0} 题 · ${p.total_score ?? 0} 分${(p.unscored_count ?? 0) > 0 ? ` · 未设分 ${p.unscored_count}` : ''}`}
+                />
+              </ListItemButton>
+            ))}
+          </List>
+          {papers.length === 0 && !papersQ.isLoading && !papersQ.isError && (
+            <Typography variant="body2" color="text.secondary">
+              还没有试卷，在上方输入标题新建一份。
+            </Typography>
+          )}
         </Box>
       </Drawer>
 
