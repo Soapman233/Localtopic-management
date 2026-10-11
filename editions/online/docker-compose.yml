@@ -1,0 +1,40 @@
+# =============================================================================
+#  线上部署版 · Docker Compose（可选路径）
+#  ⚠️ 本编排基于 Linux 容器，**导出功能不可用**（缺 editor_sdk 与 Office）。
+#     需要导出请用 Windows 宿主部署（见 README 方式 A）。
+#
+#  用法：
+#    cd editions/online
+#    cp .env.example .env      # 按需修改
+#    docker compose up -d
+#  访问：http://<服务器IP>:8080/
+# ===========================================================================
+services:
+  questionbank:
+    build:
+      context: ../..
+      dockerfile: editions/online/Dockerfile
+    image: questionbank:online
+    container_name: questionbank-online
+    restart: unless-stopped
+    env_file:
+      - .env
+    volumes:
+      # 题库与导出件持久化到宿主机（请把现成的 bank.db 放到 ./data/ 下）
+      - ./data:/data
+    expose:
+      - "8720"
+
+  # nginx 反向代理 + Basic Auth（保护整个站点）
+  nginx:
+    image: nginx:1.27-alpine
+    container_name: questionbank-nginx
+    restart: unless-stopped
+    depends_on:
+      - questionbank
+    ports:
+      - "8080:80"
+    volumes:
+      - ./nginx.conf:/etc/nginx/conf.d/default.conf:ro
+      # 口令文件：先执行 htpasswd -c ./htpasswd teacher 生成
+      - ./htpasswd:/etc/nginx/.htpasswd:ro

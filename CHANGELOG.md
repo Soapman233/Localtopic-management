@@ -8,6 +8,31 @@
 
 ## [Unreleased]
 
+### 新增
+
+- **两个版本（editions）与目录分类**：项目按运行形态拆分为
+  **本地运行版**（`editions/local/`，仅 `127.0.0.1`，无鉴权）与
+  **线上部署版**（`editions/online/`，`0.0.0.0` + nginx 访问控制）。
+  二者**共享同一套内核**（`bank/` `pipeline/` `webui/` `frontend/`），业务代码零分叉；
+  版本差异收敛到 `webui/edition.py`。新增 `editions/README.md`（分类总览）、
+  两个版本的 README、`nginx.conf` / `Dockerfile` / `docker-compose.yml` / `.env.example`。
+- `webui/edition.py`：版本配置（`QB_EDITION` / `QB_HOST` / `QB_PORT` / `QB_AUTH_TOKEN`），
+  以及**默认关闭**的 `/api/*` Bearer 鉴权中间件（不设令牌时与历史行为完全一致）。
+- `editions/local/启动题库.bat`：**可移植**的一键启动（`BANK_PY` > `.venv` > `PATH` 自动探测，
+  启动前自检依赖），取代原先硬编码解释器路径的根目录脚本。
+- 前端开发素材库（为重构做准备）：`vitest` + `@testing-library/react` + `jsdom`（测试基座）、
+  `notistack`（全局 toast）、`react-error-boundary`（错误边界）、`zod`（运行时校验）。
+- 补 **14 项**版本/鉴权回归测试（`tests/test_edition.py`）。
+
+### 变更
+
+- 根目录 `启动题库.bat` 迁移至 `editions/local/启动题库.bat`（分类管理）。
+
+### 文档
+
+- `deliverables/前端完整分析与重构方案-2026-10-11.md`：前端完整分析与六阶段重构方案。
+- `deliverables/上线就绪度评估-2026-10-11.md`：上线缺口评估（两种口径）。
+
 ## [0.7.1] - 2026-10-11
 
 ### 修复

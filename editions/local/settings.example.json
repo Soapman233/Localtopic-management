@@ -1,0 +1,13 @@
+{
+  "db_path": "D:/Open-source project/Localtopic-management/outputs/bank.db",
+  "export_dir": "D:/Open-source project/Localtopic-management/outputs/export",
+  "default_template": "考试",
+  "katex": {
+    "throw_on_error": false,
+    "strict": false
+  },
+  "theme": {
+    "primary": "#3370FF",
+    "dark": false
+  }
+}

@@ -4,7 +4,16 @@
 >
 > **核心难点**：源试卷里的数学公式是**旧式 MathType OLE 对象**，必须转换成**原生 OMML**，才能保证导出的 DOCX 在 **Microsoft Word 与 WPS 双端都可编辑**。
 
-面向约 10 名中学教师设计，首个学科为**初中物理**。当前形态为**纯本地单机**（服务只跑在本机，不联网、不需要账号）。
+面向约 10 名中学教师设计，首个学科为**初中物理**。
+
+项目按运行形态分为**两个版本**（**共享同一套内核**，业务代码零分叉）：
+
+| 版本 | 定位 | 入口 |
+|---|---|---|
+| **本地运行版** | 一名老师在自己电脑上用；仅监听 `127.0.0.1`，无账号 | [`editions/local/`](editions/local/README.md) |
+| **线上部署版** | 局域网 / 服务器上多人共用；`0.0.0.0` + nginx 访问控制 | [`editions/online/`](editions/online/README.md) |
+
+> 分类总览与切换方式见 [`editions/README.md`](editions/README.md)。
 
 ---
 
@@ -90,22 +99,25 @@ cd ..
 ### 启动
 
 ```bash
-# 方式一：一键启动（Windows，自动做环境自检并打开浏览器）
-启动题库.bat
+# 方式一：一键启动（**本地运行版**；Windows，自动做环境自检并打开浏览器）
+editions\local\启动题库.bat
 
 # 方式二：手动
 python -m webui
+
+# 方式三：**线上部署版**（监听 0.0.0.0；浏览器访问请置于 nginx 之后）
+set QB_EDITION=online && set QB_HOST=0.0.0.0 && python -m webui
 ```
 
-启动后访问 `http://127.0.0.1:8720`。
+启动后访问 `http://127.0.0.1:8720`（线上版为 `http://<服务器IP>/`）。
 
-> ⚠️ `启动题库.bat` **必须保持 CRLF 换行**（LF 会让 cmd 解析失败、脚本一闪即退），
+> ⚠️ `editions/local/启动题库.bat` **必须保持 CRLF 换行**（LF 会让 cmd 解析失败、脚本一闪即退），
 > 仓库已用 `.gitattributes` 锁定。
 
 ### 常用命令
 
 ```bash
-# 全量测试（当前基线 373 项：372 通过 / 1 skip）
+# 全量测试（当前基线 387 项：386 通过 / 1 skip）
 python -m unittest discover -s tests
 
 # CLI
@@ -186,13 +198,16 @@ python -m bank.cli normalize --db outputs/bank.db
 │   ├── src/hooks/       #   含 useExportGate（导出门禁唯一实现）
 │   └── tests/           #   前端回归测试
 ├── tests/               # 后端测试
+├── editions/            # **版本分类目录（共享内核，两个版本外壳）**
+│   ├── README.md        #   分类总览：对照表 / 如何选择 / 如何切换
+│   ├── local/           #   版本一：本地运行版（一键启动 + 使用说明）
+│   └── online/          #   版本二：线上部署版（nginx / Docker / 部署指南）
 ├── outputs/             # 数据与产物（**仅 *.md 文档入库**）
 ├── deliverables/        # 交付报告
 ├── spike/               # 独立探针原型（A4 分页等）
 ├── .workbuddy-ai/       # 项目级 AI 工具与记忆（含资产清单/元数据脚本）
 ├── AGENTS.md            # **项目全景与开发约定（必读）**
 ├── requirements.txt
-├── 启动题库.bat
 └── .gitignore / .gitattributes
 ```
 
@@ -201,7 +216,7 @@ python -m bank.cli normalize --db outputs/bank.db
 ## 测试
 
 ```bash
-# 后端（373 项：372 通过 / 1 skip）
+# 后端（387 项：386 通过 / 1 skip）
 python -m unittest discover -s tests
 
 # 前端（26 项）
@@ -210,7 +225,7 @@ cd frontend && npm test
 
 | 层 | 项数 | 说明 |
 |---|---|---|
-| 后端 | **371**（370 通过 / 1 skip） | 题库、检索、组卷、导出、内容守卫、Web API 等 |
+| 后端 | **387**（386 通过 / 1 skip） | 题库、检索、组卷、导出、内容守卫、Web API 等 |
 | 前端 | **26** | 预览门禁、主题、公式显示、门禁纯函数、设置 store、删除确认护栏等 |
 
 > 后端测试为 **Windows 专用**（导出相关用例依赖 `pywin32` 与 Office）。
@@ -222,6 +237,8 @@ cd frontend && npm test
 | 文档 | 内容 |
 |---|---|
 | **`AGENTS.md`** | **项目全景**：架构、数据模型、必须遵守的约定、已踩过的坑、当前状态 |
+| `editions/README.md` | **版本分类**：本地运行版 vs 线上部署版（对照、选择、切换） |
+| `editions/online/README.md` | **线上部署指南**：架构、硬约束、部署步骤、鉴权、已知限制 |
 | `outputs/webui/PRD-题库Web界面.md` | 产品需求（9 页面、P0/P1/P2） |
 | `outputs/webui/架构设计.md` | 架构与 API 契约 |
 | `outputs/webui/流程重构设计.md` | 双层预览与强制门禁设计 |
@@ -257,7 +274,7 @@ cd frontend && npm test
 
 几条最容易踩的：
 
-1. **改任何东西前先跑测试**，确认基线（373 项）。
+1. **改任何东西前先跑测试**，确认基线（387 项）。
 2. **碰 `outputs/bank.db` 前先备份**；写入类验证请用**副本**。
 3. **改排版 / 导出后必须渲染出来看**——单元测试测不出视觉缺陷。
 4. **验证「修复类改动」要用反证**：确认修复前确实有问题。

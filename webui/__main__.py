@@ -27,7 +27,7 @@ import time
 import webbrowser
 from pathlib import Path
 
-from . import config
+from . import config, edition
 
 
 def _print(msg: str = "") -> None:
@@ -72,8 +72,9 @@ def _open_browser_later(url: str, delay: float = 1.5) -> None:
 def main(argv: list[str] | None = None) -> int:
     """启动 Web 服务；返回进程退出码。"""
     argv = list(sys.argv[1:] if argv is None else argv)
-    host = config.DEFAULT_HOST
-    port = config.DEFAULT_PORT
+    # 版本配置：监听地址/端口由 ``QB_EDITION`` / ``QB_HOST`` / ``QB_PORT`` 决定。
+    host = edition.resolve_host()
+    port = edition.resolve_port()
     # 允许 ``python -m webui --port 9000`` 覆盖端口（便于排障）。
     if "--port" in argv:
         try:
@@ -85,6 +86,12 @@ def main(argv: list[str] | None = None) -> int:
     db_path = config.get_db_path()
     _print(f"解释器：{sys.executable}")
     _print(f"数据库：{db_path}")
+    _ed = edition.edition_summary()
+    _print(f"版本：{_ed['edition']}（{_ed['notes']}）")
+    if _ed["auth_enabled"]:
+        _print("鉴权：已启用（/api/* 需携带 Bearer 令牌）")
+    if _ed["edition"] == "online" and host == "0.0.0.0":
+        _print("提示：线上版监听 0.0.0.0，请务必置于 nginx 之后并开启访问控制。")
 
     if not db_path.is_file():
         _print("数据库不存在，无法启动。")

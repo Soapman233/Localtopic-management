@@ -22,7 +22,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
-from . import __version__, config
+from . import __version__, config, edition
 from . import db as _db
 from .errors import ok, register_exception_handlers
 
@@ -74,10 +74,31 @@ def create_app() -> FastAPI:
 
     register_exception_handlers(app)
 
+    # 版本鉴权（**默认关闭**）：仅当设置 ``QB_AUTH_TOKEN`` 时启用。
+    # 本地运行版不设该变量 → 与历史行为完全一致，不受任何影响。
+    # 线上部署版的**浏览器访问**建议在 nginx 层用 Basic Auth 保护（见 editions/online/）；
+    # 本层令牌用于保护 ``/api/*``（供自动化/改造后的前端携带 Bearer 令牌调用）。
+    if edition.auth_enabled():
+        _token = edition.auth_token()
+
+        @app.middleware("http")
+        async def _edition_auth_guard(request, call_next):  # noqa: ANN001
+            if (request.url.path.startswith("/api/")
+                    and not edition.is_auth_exempt(request.url.path)):
+                if request.headers.get("authorization", "") != f"Bearer {_token}":
+                    return JSONResponse(
+                        status_code=401,
+                        content={"code": 40101, "data": None,
+                                 "message": "未授权：缺少或错误的访问令牌"},
+                    )
+            return await call_next(request)
+
     @app.get("/api/health")
     def health() -> JSONResponse:
-        """健康检查：返回 DB 状态、schema 版本与环境降级说明。"""
-        return JSONResponse(content=ok(_health_payload()))
+        """健康检查：返回 DB 状态、schema 版本、版本信息与环境降级说明。"""
+        payload = _health_payload()
+        payload["edition"] = edition.current_edition()
+        return JSONResponse(content=ok(payload))
 
     # 挂载各域路由（T03 提供 47 个端点）。
     from .routers import ROUTERS  # noqa: WPS433
