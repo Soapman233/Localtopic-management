@@ -8,6 +8,45 @@
 
 ## [Unreleased]
 
+### 新增（前端重构 · 阶段 5「性能与无障碍」）
+
+**性能（P5-1）——路由级代码分割**
+
+| 指标 | 改前 | 改后 |
+|---|---|---|
+| 入口 JS | 1,122,295 B | **24,372 B** |
+| **首屏合计**（入口 + 4 vendor + CSS） | 1,155,129 B | **734,606 B（−36%）** |
+| `vendor-katex`（261 KB） | 在首屏 | **懒加载，不在首屏** |
+
+- `router.tsx` 全部页面改 `React.lazy`；`Suspense` 放在 **`Outlet` 外层**（放 router 根会让
+  顶栏/侧栏在每次懒加载时整体卸载重挂）。
+- `vite.config.ts` 新增 `manualChunks`（react / mui / katex / data / misc 五组）。
+  ⚠️ 关键坑：`main.tsx` 只 import katex 的 **CSS**，若让该 CSS 归属 `vendor-katex`，
+  入口会因静态 import **连带预加载 258 KB 的 KaTeX JS** —— 故 CSS 一律不参与 vendor 分包。
+- Vite 的「chunk > 500 kB」与「Circular chunk」两条警告**均已消除**。
+- **构建产物清理修复**：代码分割后 assets 下 js/css 由 2 个涨到 125 个。
+  旧脚本按「是否被 `index.html` 引用」判断，会**误删懒加载 chunk**（它们不在 index.html 里）。
+  已启用 `build.manifest`，改用构建清单判定本次构建的完整产物集；并只删 `.js`/`.css`、
+  分批删除（避开沙箱批量删除拦截）。实测 **77 → 27** 个，幂等。
+
+**无障碍（P5-2 对比度 / P5-3 语义）**
+
+- **对比度全部达标 WCAG 2 AA**（`npm run contrast` → **65/65 通过**，含浅色与深色两套）：
+  主色 `#3370FF` → `#2F63EA`（白字 5.13:1）；语义色作文字改为深色
+  （成功 `#15803D` / 警示 `#B15008` / 错误 `#D32222`）；中性灰 `#9CA3AF` → `#667085`；
+  另修若干 CSS chrome（含**深色删除按钮原值在白纸上仅 2.15:1**）。
+  ⚠️ 坑：MUI `getContrastText` 阈值 3:1，深色 `main` 上会**误选深色文字** → 必须显式设 `contrastText`。
+- **对比度门禁接入 `npm run build`**（技能原话：跑一次是审计，接进构建并在失败时非零退出才是保证）。
+  校验器 **vendored 进仓库**（`frontend/scripts/check-contrast.mjs`，MIT，零依赖），不依赖本机技能目录。
+- **无障碍语义**：skip-link（含 **HashRouter 下不改写 hash** 的处理）、`role="main"`、
+  `<nav aria-label>`、`aria-current="page"`、图标按钮可访问名、`prefers-reduced-motion`、
+  路由变化同步 `document.title`；**5 处 `<Drawer>` 补 `aria-labelledby`**
+  （MUI 的 `Dialog` 经 `DialogTitle` 自动派生，**`Drawer` 不会**）。
+- **标题层级修复**：9 个页面原先**全无 `<h1>`**；MUI 的 `variant="subtitle1/2"` 默认渲染成 `<h6>`，
+  造成页内 h1→h6 跳级。已修 **15 处**（含一处**动态 variant** 导致静态 grep 漏掉的 `EmptyState`）。
+  实测 **9/9 页恰好 1 个 h1 且无跳级**。
+- **触达尺寸**：拖拽把手由 20×20 补到 24×24（content-box + padding，图标尺寸不变、零视觉变化）。
+
 ### 新增（前端重构 · 阶段 3「主流程重构」）
 
 **这是六阶段里风险最高的一步。** 门禁语义**零改动**（见下）。

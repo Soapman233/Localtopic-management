@@ -127,3 +127,22 @@
 - ⚠️ 踩坑：MUI focus-visible 由 **React state** 驱动，`blur()` 后必须**等一帧**再采样（否则误报「聚焦无反馈」）。
 - 文档：`deliverables/前端重构阶段3-主流程重构-2026-10-11.md`。
 
+### 前端重构 · 阶段 5「性能与无障碍」（2026-10-11 完成）
+- **代码分割**：入口 1.12MB → **24KB**，首屏 **−36%**（1,155,129 → 734,606 B）。
+  ⚠️ `Suspense` 必须放 **`Outlet` 外层**（放 router 根会让外壳每次懒加载卸载重挂）；
+  ⚠️ **CSS 不能参与 vendor 分包**（否则入口会连带预加载 258KB KaTeX JS）。
+- **构建产物清理**：代码分割后 js/css 2 → 125 个；旧脚本按「是否被 index.html 引用」会**误删懒加载 chunk**。
+  已改用 `build.manifest` 清单判定；只删 `.js`/`.css`、分批删。实测 77 → 27，幂等。
+- **对比度**：**65/65 达标 WCAG AA**（浅+深）。主色 `#3370FF`→`#2F63EA`，语义色作文字改深
+  （`#15803D`/`#B15008`/`#D32222`），中性灰→`#667085`。
+  ⚠️ MUI `getContrastText` 阈值 3:1 → 深色 main 上**误选深色文字**，必须显式 `contrastText`。
+  ⚠️ 深色删除按钮压在**恒白纸张**上，须按白底算。
+  **门禁已接进 `npm run build`**；校验器 vendored 在 `frontend/scripts/check-contrast.mjs`。
+- **无障碍**：skip-link（⚠️ HashRouter 下 `href="#..."` 会改写 hash 触发路由，须拦 onClick）、
+  `role=main`、`aria-current`、**5 处 `<Drawer>` 补 `aria-labelledby`**（MUI `Drawer` 不自动派生）、
+  标题层级 9/9 页无跳级（MUI `subtitle1/2` 默认渲染 `<h6>`，是跳级根源）。
+- 测试基数：后端 387、前端 **204**（26 node:test + 178 vitest）。
+- **3 项待用户决策**：深色模式 primary 作文字 3.52:1；`settings.json` 旧主色迁移；
+  `tokens.difficulty`/`palette.badge` 零消费方（建议删除，接线会重新引入对比度失败）。
+- 文档：`deliverables/前端重构阶段5-性能与无障碍-2026-10-11.md`。
+
