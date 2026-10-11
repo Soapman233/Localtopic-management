@@ -111,3 +111,19 @@
   ⚠️ **视觉基线未入版本库**（`.tmp_verify/baseline-1366x768/`，gitignore）；阶段 3 前需定基线机制。
 - 文档：`deliverables/前端重构阶段2-设计系统统一-2026-10-11.md`。
 
+### 前端重构 · 阶段 3「主流程重构」+ 遗留清算（2026-10-11 完成）
+- **断点**：`PaperBuilderPage` 用 `theme.breakpoints.down('lg')`（<1200 折叠右栏）。实测题卡宽
+  **1366→338 / 1280→281 / 1440→386 / 1920→716**；1366 下排版预览默认可见。
+- **门禁**：表达层重写（三态文案同源、锁定态直接给「生成预览」按钮、解释「刷新即锁」）；
+  ⚠️ **语义零改动**——`uiStore.ts` 不动、`glossary.ts` 纯新增。
+- **🔴 真实缺陷（务必记住）**：**MUI Button 键盘焦点不可见**。根因：`Button.js:114` 默认焦点样式是
+  `boxShadow: shadows[6]`，但本项目 `disableElevation: true` 走 `:176` 的 `boxShadow:'none'`，
+  叠加 `ButtonBase.js:51` 的 `outline:0`。已在 `theme.ts` 的 `MuiButton.styleOverrides.root` 补 `outline` 焦点环。
+- **遗留 L1–L8 全部清算**（`describeEnvFailure` / Chip 中文化 / 键盘 e2e / 导出阶段 / `useJob` 超时 /
+  `validateTargetSection` / 页面级集成测试 / 视觉基线机制）。
+- **视觉基线机制**：`frontend/tests/visual/`（capture.mjs + compare.py + README + baseline-manifest.json）。
+  ⚠️ 基线 PNG **不入库**（派生产物），manifest 记录 sha256 + 接受理由；**更新基线必须先人工看图确认**。
+- 测试基数：后端 387、前端 **169**（26 node:test + 143 vitest）。
+- ⚠️ 踩坑：MUI focus-visible 由 **React state** 驱动，`blur()` 后必须**等一帧**再采样（否则误报「聚焦无反馈」）。
+- 文档：`deliverables/前端重构阶段3-主流程重构-2026-10-11.md`。
+

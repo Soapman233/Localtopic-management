@@ -129,7 +129,7 @@ python -m bank.cli export verify out.docx    # 验证公式双端可编辑性（
 
 # 前端
 cd frontend && npx tsc --noEmit              # 类型检查
-cd frontend && npm test                      # 前端回归（26 node:test + 97 vitest）
+cd frontend && npm test                      # 前端回归（26 node:test + 143 vitest）
 cd frontend && npm run build                 # 生产构建
 ```
 
@@ -219,21 +219,24 @@ python -m bank.cli normalize --db outputs/bank.db
 # 后端（387 项：386 通过 / 1 skip）
 python -m unittest discover -s tests
 
-# 前端（26 node:test + 97 vitest）
+# 前端（26 node:test + 143 vitest）
 cd frontend && npm test
 ```
 
 | 层 | 项数 | 说明 |
 |---|---|---|
 | 后端 | **387**（386 通过 / 1 skip） | 题库、检索、组卷、导出、内容守卫、版本/鉴权、Web API 等 |
-| 前端 | **123** | `node:test` 26（门禁纯函数、主题、公式显示、设置 store、删除确认护栏）+ `vitest` 97（组件行为测试：ConfirmDialog / StatusBadges / KatexFormula / CoverageBanner / FilterSidebar / ErrorBoundary / EmptyState / ErrorState / ProgressStages，错误契约与反馈底座，术语映射，导航分组与路由不变量） |
+| 前端 | **169** | `node:test` 26（门禁纯函数、主题、公式显示、设置 store、删除确认护栏）+ `vitest` 143（组件行为测试、错误契约与反馈底座、术语映射、导航分组与路由不变量、四态组件、筛选 hook、作业轮询、**页面级集成测试**：StatsPage / SourcesPage / SettingsPage / FormulaReviewPage） |
 
 > 后端测试为 **Windows 专用**（导出相关用例依赖 `pywin32` 与 Office）。
 >
 > 前端 `vitest` 组件测试基座于**重构阶段 0** 建立（`frontend/tests/unit/`，jsdom + Testing Library），
-> 用于替换原先「源码字符串断言」式的脆弱测试。阶段 1 又补了术语、导航、筛选三组，阶段 2 补了四态组件。
+> 用于替换原先「源码字符串断言」式的脆弱测试。阶段 1 补了术语、导航、筛选三组，阶段 2 补了四态组件，
+> 阶段 3 补了筛选 hook、作业轮询、页面级集成测试。
+> **视觉回归**见 `frontend/tests/visual/`（1366×768 像素比对 + 差异热力图）。
 > 详见 `deliverables/前端重构阶段0-护栏先行-2026-10-11.md`、
-> `deliverables/前端重构阶段1-术语与信息架构-2026-10-11.md` 与
+> `deliverables/前端重构阶段1-术语与信息架构-2026-10-11.md`、
+> `deliverables/前端重构阶段2-设计系统统一-2026-10-11.md` 与
 > `deliverables/前端重构阶段2-设计系统统一-2026-10-11.md`。
 
 ---
