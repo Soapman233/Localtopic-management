@@ -8,6 +8,24 @@
 
 ## [Unreleased]
 
+### 新增（前端重构 · 阶段 2「设计系统统一」）
+
+- **移除挂名的 Tailwind**：实测全库 **0 处**使用 Tailwind 工具类（所有 `className` 都是 `lp-*`
+  自定义样式与 KaTeX），却带来第二套设计 token 与构建负担。已删除 `tailwind.config.js`、
+  从依赖中移除 `tailwindcss`、清掉 `index.css` 的三段 `@tailwind` 指令
+  （**保留 autoprefixer 与全部 KaTeX 样式**）。
+  **CSS 产物 35,987 B → 32,834 B（−8.8%）；`--tw-` 出现次数 118 → 0。**
+- **设计 token 收敛为单一来源**（`src/theme.ts`）：把原 `tailwind.config.js` 里
+  「无消费方但语义正确」的 token 迁移进来并挂到 MUI 主题——难度色（易/中/难）、
+  徽章色（复核/已确认/已否决/缺失）、8px 间距、圆角档位、字号 5 档、阴影 3 档。
+  **刻意不覆写 MUI 的 typography 字号与 spacing**，以保证零视觉变化。
+- **四态规范组件**：新增 `LoadingState` / `EmptyState` / `ErrorState` / `ProgressStages`，
+  统一全站原本碎片化的四态（此前 `CircularProgress` 散在 13 个文件、`Skeleton` 仅 1 个文件、
+  裸空态文案 7 处、长任务无阶段无上限）。`ErrorState` 走 `describeApiError()` 给教师可读文案，
+  原始堆栈仅在 `?debug=1` 下可见；`ProgressStages` 给导出/预览这类 3–8 秒等待加**阶段 + 上限预期**。
+  **横幅类 `Alert`（覆盖率、降级、内容守卫）保持不动**。
+- 前端测试 **109 → 123 项**（vitest 83 → 97）。
+
 ### 新增（前端重构 · 阶段 1「术语与信息架构」）
 
 - **术语中文化**（P0-1）：新增 `frontend/src/lib/glossary.ts` 作为术语映射的**唯一来源**，

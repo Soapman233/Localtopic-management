@@ -98,3 +98,16 @@
 - **1366×768 截图基线**在 `.tmp_verify/baseline-1366x768/`（已 gitignore，未入库；阶段 2 视觉回归前需定存放/比对方式）。
 - 文档：`deliverables/前端重构阶段1-术语与信息架构-2026-10-11.md`。
 
+### 前端重构 · 阶段 2「设计系统统一」（2026-10-11 完成）
+- **Tailwind 已彻底移除**（全库 0 处工具类使用）：删配置与依赖、清 `@tailwind` 指令；
+  ⚠️ **必须保留 `autoprefixer`**（否则 CSS 产出变化，视觉回归失去基准）。CSS 产物 −8.8%，`--tw-` 118→0。
+- **设计 token 单一来源** `src/theme.ts`（难度色/徽章色/间距/圆角/字号/阴影），挂到 `palette.difficulty`、
+  `palette.badge`、`theme.designTokens`。⚠️ **刻意不覆写 MUI `typography` 字号与 `theme.spacing`**（会改字面量→真实 CSS 差异）。
+- **四态规范组件**：`LoadingState` / `EmptyState` / `ErrorState` / `ProgressStages`；
+  规范：首屏→LoadingState、空→EmptyState、错→ErrorState（走 `describeApiError`）、长任务→ProgressStages、
+  **横幅类 Alert 不动**。
+- 测试基数：后端 387、前端 **123**（26 node:test + 97 vitest）。
+- **视觉回归工具** `.tmp_verify/compare_baseline.py`（像素比对 + 热力图 + 度量自校验）。
+  ⚠️ **视觉基线未入版本库**（`.tmp_verify/baseline-1366x768/`，gitignore）；阶段 3 前需定基线机制。
+- 文档：`deliverables/前端重构阶段2-设计系统统一-2026-10-11.md`。
+
