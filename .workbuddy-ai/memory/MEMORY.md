@@ -163,3 +163,24 @@
 - 读屏：**NVDA 2026.2 已装且能启动**，但**语音未捕获**——`%APPDATA%\nvda\addons\` 为空说明插件未真正安装
   （NVDA 只认 `addons/<包名>/` + `manifest.ini`，**缺字段会静默不加载**）。
 
+### 真实读屏（NVDA）实测 —— 已完成（2026-10-11）
+- 报告：`deliverables/读屏实测报告-2026-10-11.md`。**方法**：add-on hook
+  **`speech.manager.SpeechManager.speak`**（NVDA 所有语音必经的单一漏斗）+ 自检语句证明 hook 生效。
+- **结果：6 通过 / 1 部分 / 1 未捕获**。已用真实播报确认：skip-link、主导航地标、`aria-current`、
+  main 地标 + h1、`role="alert"` 播报、路由改 `document.title`。
+- ⚠️ **NVDA 工程踩坑（复用）**：`nvda.exe` 启动器受**残留单实例互斥量**影响会**静默退出**，
+  须用 `nvda_noUIAccess.exe`；`manifest.ini` 的 `description` **含逗号 → 被解析成 list → 静默不加载**；
+  中文 argv 经控制台代码页损坏 → 窗口匹配须用 **ASCII 标记**；**捕获依赖浏览器持有 OS 前台**。
+- ⚠️ **NVDA 不念「对话框」角色词**（用最小参照 ARIA dialog 对照实验证明与标准行为一致，非项目缺陷）。
+- ⚠️ **仍不等于完整 WCAG 合规**；未做 browse mode / VoiceOver / Narrator。
+
+### 两个易踩的 MUI 坑（2026-10-11 实测）
+- ⚠️ **`sx` 里的 `width`/`height` 不要写数字**：`width: 1` 会被当 spacing 乘数，
+  实测产出 `width: 1366px`（=视口宽）→ 撑出横向溢出。**必须写 `'1px'` 字符串**。
+- ⚠️ **`<Drawer>` 顶部内容会被固定 AppBar 遮挡**（项目把 AppBar 的 zIndex 设为 `drawer+1`）：
+  需在抽屉内容顶部放 `<Toolbar variant="dense" />` 占位。
+
+### 视觉回归机制修正
+- ⚠️ **不要用 `sha256` 判断基线是否被换过**：实测同一代码两次采集字节不完全一致
+  （builder 约 40px，mean≤0.0017）。**判定一律以像素阈值（mean_diff / pct_gt32）为准**。
+
