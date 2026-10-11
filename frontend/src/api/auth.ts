@@ -57,7 +57,13 @@ export interface LoginResult {
   user: AuthUser
 }
 
-/** 读取当前鉴权状态与用户（**无需凭据**）。 */
+/** 读取当前鉴权状态与用户（**无需凭据**）。
+ *
+ * ⚠️ **不要用本端点判断「会话是否有效」**（QA 复验时踩过这个坑，第一版探针因此误判）：
+ * 本端点是**豁免路径**且**恒返回 200**——令牌过期或无效时同样 200，只是 `user: null`。
+ * 所以它只能回答「后端有没有启用鉴权、当前是谁」，
+ * **会话有效性一律以受保护端点的 401 为准**。
+ */
 export function getAuthMe(): Promise<AuthMeData> {
   return api.get<AuthMeData>('/api/auth/me')
 }
