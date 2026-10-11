@@ -1,0 +1,72 @@
+name: CI
+
+# 说明：
+#  * `frontend` 任务在 Linux 上跑完整前端校验（类型检查 / 回归测试 / 生产构建），
+#    自包含、无外部依赖。
+#  * `backend` 任务在 **windows-latest** 上只做**语法与导入冒烟**：
+#    完整后端测试依赖本机 Microsoft Word / WPS 与 editor_sdk 服务，
+#    GitHub 托管 runner 不提供，故不在 CI 中运行（避免制造假失败）。
+#    后端全量测试请在本地按 README 执行。
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  frontend:
+    name: 前端（tsc / test / build）
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: 安装依赖
+        run: npm ci
+
+      - name: 类型检查
+        run: npx tsc --noEmit
+
+      - name: 回归测试
+        run: npm test
+
+      - name: 生产构建
+        run: npm run build
+
+  backend:
+    name: 后端（语法与导入冒烟，Windows）
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+          cache: pip
+
+      - name: 安装依赖
+        run: pip install -r requirements.txt
+
+      - name: 语法检查（compileall）
+        run: python -m compileall -q bank pipeline webui tests
+
+      - name: 导入冒烟
+        env:
+          PYTHONUTF8: '1'
+        run: |
+          python -c "import bank, pipeline, webui; print('imports ok')"
+          python -c "from webui.app import create_app; app = create_app(); print('routes:', len(app.openapi()['paths']))"

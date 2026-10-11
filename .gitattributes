@@ -1,0 +1,62 @@
+# =============================================================================
+# 换行与文本属性
+# =============================================================================
+# 默认：仓库内统一 LF，检出时按平台自动转换。
+* text=auto eol=lf
+
+# -----------------------------------------------------------------------------
+# Windows 批处理**必须** CRLF
+# -----------------------------------------------------------------------------
+# 项目实证：`启动题库.bat` 用 LF 换行时，cmd 解析多行括号块会失败，脚本一闪即退。
+# 见 AGENTS.md「已踩过的坑」。此处强制锁定，避免任何平台/工具把换行改掉。
+*.bat  text eol=crlf
+*.cmd  text eol=crlf
+
+# -----------------------------------------------------------------------------
+# 文本类型显式声明（便于 diff / 语法高亮）
+# -----------------------------------------------------------------------------
+*.py    text diff=python
+*.ts    text
+*.tsx   text
+*.js    text
+*.jsx   text
+*.cjs   text
+*.mjs   text
+*.json  text
+*.css   text
+*.html  text
+*.md    text
+*.txt   text
+*.yml   text
+*.yaml  text
+*.toml  text
+
+# -----------------------------------------------------------------------------
+# 二进制：禁止换行转换与文本 diff
+# -----------------------------------------------------------------------------
+*.png   binary
+*.jpg   binary
+*.jpeg  binary
+*.gif   binary
+*.ico   binary
+*.pdf   binary
+*.docx  binary
+*.doc   binary
+*.xlsx  binary
+*.pptx  binary
+*.db    binary
+*.sqlite binary
+*.zip   binary
+*.ttf   binary
+*.otf   binary
+*.woff  binary
+*.woff2 binary
+*.pyc   binary
+
+# -----------------------------------------------------------------------------
+# 语言统计：把文档类路径排除在「代码行数」之外，让仓库语言构成更真实
+# -----------------------------------------------------------------------------
+AGENTS.md            linguist-documentation
+outputs/**/*.md      linguist-documentation
+deliverables/**      linguist-documentation
+.workbuddy-ai/**     linguist-documentation
