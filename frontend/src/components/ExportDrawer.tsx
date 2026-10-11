@@ -28,6 +28,7 @@ import {
   MenuItem,
   Select,
   Stack,
+  Toolbar,
   Typography,
 } from '@mui/material'
 import CloseIcon from '@mui/icons-material/Close'
@@ -130,6 +131,8 @@ function ExportDrawerForPaper(props: ExportDrawerProps) {
     <Drawer anchor="right" open={open} onClose={handleClose}
       PaperProps={{ role: 'dialog', 'aria-labelledby': 'export-drawer-title' }}>
       <Box sx={{ width: { xs: '92vw', sm: 720 }, p: 2.5, display: 'flex', flexDirection: 'column', height: '100%' }}>
+        {/* ⚠️ 固定顶栏会遮住抽屉顶部（见 PaperBuilderPage 同处注释），放占位把内容推到其下。 */}
+        <Toolbar variant="dense" />
         {/* 头部 */}
         <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 1 }}>
           {/* P5-3：抽屉标题是编辑 chrome 而非文档章节，显式降为 <div>，避免 h1→h6 跳级（视觉不变）。

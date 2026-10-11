@@ -23,6 +23,7 @@ import type { SearchParams } from './search'
 export const ROOT = {
   health: 'health',
   settings: 'settings',
+  authMe: 'auth-me',
   search: 'search',
   facets: 'facets',
   coverage: 'coverage',
@@ -43,6 +44,8 @@ export const qk = {
   // ---- 全局 ----
   health: () => [ROOT.health] as const,
   settings: () => [ROOT.settings] as const,
+  /** 当前鉴权状态与用户（阶段 4）。 */
+  authMe: () => [ROOT.authMe] as const,
 
   // ---- 检索 ----
   search: (params: SearchParams) => [ROOT.search, params] as const,

@@ -28,6 +28,7 @@ import {
   TextField,
   ToggleButton,
   ToggleButtonGroup,
+  Toolbar,
   Typography,
   useMediaQuery,
   useTheme,
@@ -77,6 +78,7 @@ import { ExportDiagnosticsPanel, IssueDetails } from '../components/livePreview/
 import { getExportData } from '../api/export'
 import { recreatePaperCopy } from '../api/paperRestore'
 import { usePaperStore } from '../store/paperStore'
+import { usePermission } from '../hooks/usePermission'
 import { useUiStore } from '../store/uiStore'
 import { useSettingsStore } from '../store/settingsStore'
 import { useQuestionFilters } from '../hooks/useQuestionFilters'
@@ -226,6 +228,10 @@ export default function PaperBuilderPage() {
       ? (errorDataOf(e) as ExportDiagnostics)
       : null)
   })
+
+  // 阶段 4：只读账号禁用「删除试卷」（比"点了才被拒"更好的体验）。
+  // ⚠️ 前端禁用只是体验层，**真正的强制在后端**。
+  const canDeletePaper = usePermission('paper.delete')
 
   // 门禁状态（响应式订阅，供顶部提示 / 诊断）。
   const previewFresh = useUiStore((s) => (paperId != null ? s.previewFresh[paperId] ?? false : false))
@@ -457,16 +463,24 @@ export default function PaperBuilderPage() {
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', height: 'calc(100vh - 96px)' }}>
       {/* P5-3：组卷工作台是双栏工具页、无可见大标题。补一个**仅供读屏**的 h1，
-          保证每页都有唯一 h1（视觉版式零变化，纯语义补充）。 */}
+          保证每页都有唯一 h1（视觉版式零变化，纯语义补充）。
+
+          ⚠️ `width`/`height` 必须写**显式 `'1px'` 字符串**，不能写数字 `1`：
+          MUI 的 `sx` 会把数字当 spacing 乘数处理，实测 `width: 1` 产出的是
+          `width: 1366px`（= 视口宽），导致该 h1 撑出 **248px 横向溢出**
+          （`documentElement.scrollWidth 1614 > clientWidth 1366`）。
+          由 `.tmp_verify` 的交互走查脚本发现，浏览器实测确认。 */}
       <Typography
         variant="h6"
         component="h1"
         sx={{
           position: 'absolute',
-          width: 1,
-          height: 1,
+          top: 0,
+          left: 0,
+          width: '1px',
+          height: '1px',
           p: 0,
-          m: -1,
+          m: '-1px',
           border: 0,
           overflow: 'hidden',
           clip: 'rect(0 0 0 0)',
@@ -601,6 +615,10 @@ export default function PaperBuilderPage() {
         <Drawer anchor="right" open={rightOpen} onClose={() => setRightOpen(false)}
           PaperProps={{ role: 'dialog', 'aria-labelledby': 'builder-panel-drawer-title' }}>
           <Box sx={{ width: '92vw', maxWidth: 680, p: 1.5, height: '100%', display: 'flex', flexDirection: 'column' }}>
+            {/* ⚠️ 固定顶栏（AppBar）的 zIndex 比 Drawer 高（项目刻意设置），会**遮住抽屉顶部**，
+                导致「关闭」按钮鼠标点不到（Esc/点遮罩仍可关，但那是"能关"不是"好关"）。
+                按 MUI 惯例放一个 Toolbar 占位，把内容推到顶栏之下。 */}
+            <Toolbar variant="dense" />
             <Stack direction="row" alignItems="center" sx={{ mb: 1 }}>
               <Typography id="builder-panel-drawer-title" variant="subtitle1" component="h2" sx={{ flex: 1 }}>试卷</Typography>
               <Button size="small" onClick={() => setRightOpen(false)}>关闭</Button>
@@ -615,6 +633,8 @@ export default function PaperBuilderPage() {
       <Drawer anchor="left" open={drawerOpen} onClose={() => setDrawerOpen(false)}
         PaperProps={{ role: 'dialog', 'aria-labelledby': 'paper-manage-drawer-title' }}>
         <Box sx={{ width: 320, p: 2 }}>
+          {/* 同上：避免被固定顶栏遮住标题与新建表单。 */}
+          <Toolbar variant="dense" />
           <Typography id="paper-manage-drawer-title" variant="subtitle1" component="h2" gutterBottom>
             试卷管理
           </Typography>
@@ -653,6 +673,7 @@ export default function PaperBuilderPage() {
                 <Button
                   size="small"
                   color="error"
+                  disabled={!canDeletePaper}
                   onClick={(e) => {
                     e.stopPropagation()
                     // P0-1：先确认（显示将删除的题数），不再单击即 force 删除。

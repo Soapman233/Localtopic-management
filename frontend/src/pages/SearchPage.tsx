@@ -36,6 +36,7 @@ import { usePaperStore } from '../store/paperStore'
 import { useUiStore } from '../store/uiStore'
 import { useSettingsStore } from '../store/settingsStore'
 import { notify } from '../lib/feedback'
+import { usePermissionGuard } from '../hooks/usePermission'
 import { useQuestionFilters } from '../hooks/useQuestionFilters'
 import { qk } from '../api/queryKeys'
 
@@ -208,25 +209,33 @@ export default function SearchPage() {
     onError: (err) => notify.errorFrom(err, { persist: false }),
   })
 
+  // 阶段 4：只读账号点「加入」时给出教师语言提示，而不是发一个注定被服务端拒绝的请求。
+  // ⚠️ 这只是体验层——**真正的强制在后端**（服务端会以 403 拒绝写操作）。
+  const guardAdd = usePermissionGuard('paper.edit')
+
   const handleAdd = (item: SearchItem) => {
-    if (currentPaperId) {
-      addMutation.mutate({ paperId: currentPaperId, questionIds: [item.id] })
-    } else {
-      setPendingAddIds([item.id])
-      setPickOpen(true)
-    }
+    guardAdd(() => {
+      if (currentPaperId) {
+        addMutation.mutate({ paperId: currentPaperId, questionIds: [item.id] })
+      } else {
+        setPendingAddIds([item.id])
+        setPickOpen(true)
+      }
+    })
   }
 
   /** P1-3：把已勾选的题目一次性加入当前试卷。 */
   const handleAddSelected = () => {
     if (selectedIds.size === 0) return
     const ids = [...selectedIds]
-    if (currentPaperId) {
-      addMutation.mutate({ paperId: currentPaperId, questionIds: ids })
-    } else {
-      setPendingAddIds(ids)
-      setPickOpen(true)
-    }
+    guardAdd(() => {
+      if (currentPaperId) {
+        addMutation.mutate({ paperId: currentPaperId, questionIds: ids })
+      } else {
+        setPendingAddIds(ids)
+        setPickOpen(true)
+      }
+    })
   }
 
   const toggleSelect = (item: SearchItem, checked: boolean) =>

@@ -89,3 +89,55 @@
 - **10 人团队口径远未就绪**：`webui/` 零认证代码、只绑 `127.0.0.1`（`webui/config.py:53`）、桥接必须串行、数据分发未定义。
 - 其余：无错误监控、无备份 SOP；`\begin{array}` 1 条公式桥接不支持（降级+告警）。
 - 文档：`deliverables/上线就绪度评估-2026-10-11.md`。
+### 阶段 4「两版适配」+ 用户体系（2026-10-11）
+- **鉴权库独立**：`outputs/webui/auth.db`，**绝不往交付数据 `bank.db` 里加表**（否则污染交付库 + 改变其 sha256）。
+- 后端：`webui/auth.py` + `routers/auth.py` + `tests/test_auth.py`；角色 viewer(read)/editor(read+write)/admin；
+  `pbkdf2_hmac`+`compare_digest`（纯标准库）；会话优先 Bearer、兼容 Cookie `qb_session`；
+  CLI `python -m webui.auth user add|list|set-password`。
+  ⚠️ **仅 `QB_EDITION=online` 且库中有用户时才启用鉴权**，否则单机全权（本地版零影响）。
+- 前端：`lib/deployMode.ts`（`VITE_DEPLOY_MODE`，**缺省 local 是安全默认**）、`app/auth/{AuthProvider,RequireAuth}`、
+  `pages/LoginPage`、`lib/permissions.ts` + `hooks/usePermission` + `components/Can`、`components/SessionControls`。
+- ⚠️ **令牌在 `api/client.ts` 全局自动附加**（逐个 api 函数传 header 必漏）；
+  登录接口须传 `skipAuthRedirect`（否则"密码错"会连带跳转、冲掉提示）。
+- ⚠️ **`useAuth` 缺 Provider 必须抛错**（静默兜底 = 鉴权被无声绕过）；测试侧补生产同款 Provider。
+- ⚠️ `vi.mock('api/client')` 的测试替身需同步新导出（`setAuthToken`/`getAuthToken`/`setUnauthorizedHandler`）。
+- 测试基数：后端 **423**、前端 **240**（26 node:test + 214 vitest）。
+- **本地版零影响的证据**：视觉回归 8 页 **全部 0.00**（像素级一致）。
+- 读屏：**NVDA 2026.2 已装且能启动**，但**语音未捕获**——`%APPDATA%\nvda\addons\` 为空说明插件未真正安装
+  （NVDA 只认 `addons/<包名>/` + `manifest.ini`，**缺字段会静默不加载**）。
+
+### 真实读屏（NVDA）实测 —— 已完成（2026-10-11）
+- 报告：`deliverables/读屏实测报告-2026-10-11.md`。**方法**：add-on hook
+  **`speech.manager.SpeechManager.speak`**（NVDA 所有语音必经的单一漏斗）+ 自检语句证明 hook 生效。
+- **结果：6 通过 / 1 部分 / 1 未捕获**。已用真实播报确认：skip-link、主导航地标、`aria-current`、
+  main 地标 + h1、`role="alert"` 播报、路由改 `document.title`。
+- ⚠️ **NVDA 工程踩坑（复用）**：`nvda.exe` 启动器受**残留单实例互斥量**影响会**静默退出**，
+  须用 `nvda_noUIAccess.exe`；`manifest.ini` 的 `description` **含逗号 → 被解析成 list → 静默不加载**；
+  中文 argv 经控制台代码页损坏 → 窗口匹配须用 **ASCII 标记**；**捕获依赖浏览器持有 OS 前台**。
+- ⚠️ **NVDA 不念「对话框」角色词**（用最小参照 ARIA dialog 对照实验证明与标准行为一致，非项目缺陷）。
+- ⚠️ **仍不等于完整 WCAG 合规**；未做 browse mode / VoiceOver / Narrator。
+
+### 两个易踩的 MUI 坑（2026-10-11 实测）
+- ⚠️ **`sx` 里的 `width`/`height` 不要写数字**：`width: 1` 会被当 spacing 乘数，
+  实测产出 `width: 1366px`（=视口宽）→ 撑出横向溢出。**必须写 `'1px'` 字符串**。
+- ⚠️ **`<Drawer>` 顶部内容会被固定 AppBar 遮挡**（项目把 AppBar 的 zIndex 设为 `drawer+1`）：
+  需在抽屉内容顶部放 `<Toolbar variant="dense" />` 占位。
+
+### 视觉回归机制修正
+- ⚠️ **不要用 `sha256` 判断基线是否被换过**：实测同一代码两次采集字节不完全一致
+  （builder 约 40px，mean≤0.0017）。**判定一律以像素阈值（mean_diff / pct_gt32）为准**。
+
+### 鉴权体系安全审计与收口（2026-10-11）
+> 报告：`deliverables/gstack/phase4-closeout-auth-2026-10-11.md`
+- 🔴 **已修的 3 个 P0**：① **fail-open**（`auth.db` 不可读 → 回落 `off` → 无凭据可读写全站；
+  修法：`auth_store_status()` 区分 ok/missing/error，`uninitialized`/`error` **fail-closed 返回 503**
+  `50301`/`50302`）；② `/api/auth/me` 未豁免导致**线上版无登录入口**；③ **请求风暴**（登出后 12s 内 7328 次，修后 1~3 次）。
+- ⚠️ **契约陷阱**：`/api/auth/me` **豁免 + 恒返回 200**（令牌失效时也 200、只是 `user:null`）
+  → **不能用它判断会话有效性**，一律以**受保护端点的 401** 为准。
+- ⚠️ **耦合**：`interactions.mjs` 的写路径安全闸门依赖 `GET /api/health` 的 `data.db`；
+  线上版不回显该字段 → 闸门**安全 SKIP**。
+- ⚠️ **删依赖必须同步 lockfile**：只改 `package.json` 不跑 `npm install` → **`npm ci` 会失败**。
+- ⚠️ **`tokens.neutral` 不是零消费方**（`ThemeContrast.test.ts` 在用）；
+  difficulty token **接线有害**（鲜艳值作浅底文字 2.28/2.15/3.76:1，且 `contrast-pairs.json` 无该组合 → 门禁抓不到）。
+- 测试基数：后端 **436**、前端 **251**（26 node:test + 225 vitest）。
+

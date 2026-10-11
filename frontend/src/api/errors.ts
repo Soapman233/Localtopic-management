@@ -27,6 +27,8 @@ export const ErrorCode = {
   InvalidRevision: 40007,
   // ---- 401 未授权（线上部署版鉴权）----
   Unauthorized: 40101,
+  // ---- 403 权限不足（线上部署版鉴权：已登录但角色不允许该操作）----
+  PermissionDenied: 40301,
   // ---- 404 资源不存在 ----
   QuestionNotFound: 40401,
   PaperNotFound: 40402,
@@ -58,6 +60,7 @@ const FALLBACK_MESSAGES: Record<number, string> = {
   [ErrorCode.InvalidSettings]: '设置有误，请检查后重试。',
   [ErrorCode.InvalidRevision]: '修订请求不合法。',
   [ErrorCode.Unauthorized]: '未授权：请确认访问权限后重试。',
+  [ErrorCode.PermissionDenied]: '你的账号权限不足，不能执行这个操作。如需权限请联系管理员。',
   [ErrorCode.QuestionNotFound]: '题目不存在，可能已被删除。',
   [ErrorCode.PaperNotFound]: '试卷不存在，可能已被删除。',
   [ErrorCode.ItemNotFound]: '试卷中的这道题不存在。',
@@ -79,6 +82,30 @@ export function isApiError(err: unknown): err is ApiError {
   return err instanceof ApiError
 }
 
+/** 权限不足类错误码区间（后端 `webui/errors.py` 的 403 段码，如 `40301`）。 */
+const PERMISSION_DENIED_MIN = 40300
+const PERMISSION_DENIED_MAX = 40400
+
+/**
+ * 权限不足时的**统一教师语言**。
+ *
+ * ⚠️ 权限类错误**绝不**透传后端 message：后端会带上 `viewer 角色无权执行该操作（需要 paper.edit 权限）`
+ * 这类**开发者行话**（含内部权限标识 `paper.edit`），直接甩给老师既看不懂又像报错。
+ */
+export const PERMISSION_DENIED_MESSAGE =
+  '你的账号权限不足，不能执行这个操作。如需权限请联系管理员。'
+
+/** 按**错误码**判断是否为「权限不足」（403xx 段）。 */
+export function isPermissionDeniedCode(code: number | null | undefined): boolean {
+  return code != null && code >= PERMISSION_DENIED_MIN && code < PERMISSION_DENIED_MAX
+}
+
+/** 是否为「权限不足」类错误（`403xx` 段码，或 HTTP 403 兜底）。 */
+export function isPermissionDenied(err: unknown): boolean {
+  if (isApiError(err) && err.status === 403) return true
+  return isPermissionDeniedCode(errorCodeOf(err))
+}
+
 /** 取出错误码；无法识别时返回 `null`。 */
 export function errorCodeOf(err: unknown): number | null {
   if (isApiError(err)) return err.code
@@ -93,9 +120,13 @@ export function errorCodeOf(err: unknown): number | null {
 /**
  * 把任意错误转成**给老师看**的一句话。
  *
- * 优先级：后端 message（已是中文）→ 按码兜底文案 → 通用兜底。
+ * 优先级：**权限类错误 → 前端统一教师文案**（不透传后端内部标识）；
+ * 其余：后端 message（已是中文）→ 按码兜底文案 → 通用兜底。
  */
 export function describeApiError(err: unknown): string {
+  // ⚠️ 权限类错误优先用前端文案：后端 message 含 `paper.edit` 这类内部权限标识，
+  // 是开发者行话。其余错误仍保持"后端 message 优先"的既有策略。
+  if (isPermissionDenied(err)) return PERMISSION_DENIED_MESSAGE
   if (isApiError(err) && err.message.trim()) return err.message
   const code = errorCodeOf(err)
   if (code !== null && FALLBACK_MESSAGES[code]) return FALLBACK_MESSAGES[code]
