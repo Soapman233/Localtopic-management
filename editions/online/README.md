@@ -225,8 +225,10 @@ python -m webui.auth user enable  lisi                :: 启用
 | 导出无反应 | `editor_sdk`/Office 未就绪 | 启动 `editor_sdk`；确认装了 Word/WPS |
 | 401 `40101` 未授权 | 开了 `QB_AUTH_TOKEN` 但未带令牌 | 调用方加 `Authorization: Bearer <token>` |
 | 401 `40102` 会话失效 | 未登录 / 会话过期 | 重新登录 `POST /api/auth/login` |
-| 401 `40103/40104` 登录失败 | 密码错误 / 账号被禁用 | 核对密码；管理员 `user enable` |
+| 401 `40103` 登录失败 | 密码错误 / 账号不存在 / 账号被禁用（**三者同一码同一文案**） | 核对密码；若确为账号被禁用，管理员执行 `user enable` |
 | 403 `40301` 权限不足 | 当前角色无权 | 用更高权限账号，或管理员 `user set-role` 提权 |
+| 503 `50301` 鉴权未初始化 | 线上版但**尚未创建任何用户** | `python -m webui.auth user add <名> --role admin` |
+| 503 `50302` 鉴权库不可用 | `auth.db` 损坏 / 权限不足 / 路径失效 | 检查该文件；**这是故障，不会自动放行**（fail-closed） |
 | 无法登录、提示未启用用户体系 | 鉴权库无用户 | `python -m webui.auth user add <名> --role admin` |
 | 所有人被锁在外面 | 误禁用了所有管理员 | CLI `python -m webui.auth user enable <名>` 恢复 |
 | 改了口令仍用旧密码能进 | 会话未过期（改密应吊销会话） | 本实现改密即吊销会话；若仍异常请重启服务 |

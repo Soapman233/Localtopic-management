@@ -36,6 +36,7 @@ from bank import enrich as b_enrich
 from bank import labels as b_labels
 from bank import paper as b_paper
 from webui import auth
+from webui import config
 from webui.app import create_app
 from webui.__main__ import migrate_database
 
@@ -113,9 +114,15 @@ class TestPermissionTable(unittest.TestCase):
             ("POST", "/api/papers/1/questions"),
             ("POST", "/api/papers/1/sections"),
             ("POST", "/api/review/1/resolve"),
-            ("PUT", "/api/settings"),
         ]:
             self.assertEqual(auth.required_permission(method, path), auth.PERM_WRITE, path)
+
+    def test_settings_write_is_admin_read_is_read(self):
+        """F4：``/api/settings`` **读**归 read，**写**归 admin（与前端 ``settings.edit`` 对齐）。"""
+        self.assertEqual(auth.required_permission("GET", "/api/settings"), auth.PERM_READ)
+        for method in ("PUT", "POST", "PATCH", "DELETE"):
+            self.assertEqual(auth.required_permission(method, "/api/settings"),
+                             auth.PERM_ADMIN, method)
 
     def test_user_management_is_admin(self):
         for method, path in [
@@ -234,16 +241,31 @@ class TestLoginAndSession(AuthApiBase):
         self.assertEqual(resp.status_code, 401)
         self.assertEqual(resp.json()["code"], 40103)
 
-    def test_login_disabled_user(self):
+    def test_login_disabled_user_uses_same_code_and_message(self):
+        """F5：账号禁用与凭据错误**同码同文案**（禁用状态不暴露给未认证请求方）。"""
         user = self._make_user("dave", "pw-dave")
         conn = auth.connect_auth()
         try:
             auth.update_user(conn, user["id"], disabled=True)
         finally:
             conn.close()
-        resp = self._login("dave", "pw-dave")
+        disabled = self._login("dave", "pw-dave")   # 密码正确但账号禁用
+        wrong = self._login("dave", "nope")         # 密码错误
+        self.assertEqual(disabled.status_code, 401)
+        self.assertEqual(disabled.json()["code"], 40103)
+        self.assertEqual(disabled.json()["message"], wrong.json()["message"],
+                         "禁用与凭据错误必须同文案，避免枚举账号状态")
+        self.assertNotIn("禁用", disabled.json()["message"])
+
+    def test_login_nonexistent_user_runs_dummy_hash(self):
+        """F5：用户不存在时也执行一次等价 pbkdf2（抹平时序差）。"""
+        self._make_user("real", "pw")
+        with mock.patch.object(auth, "_dummy_password_check",
+                               wraps=auth._dummy_password_check) as spy:
+            resp = self._login("ghost", "pw")
         self.assertEqual(resp.status_code, 401)
-        self.assertEqual(resp.json()["code"], 40104)
+        self.assertEqual(resp.json()["code"], 40103)
+        self.assertTrue(spy.called, "用户不存在时必须执行一次等价 pbkdf2 以抹平时序差")
 
     def test_login_when_no_users_reports_disabled(self):
         resp = self._login("anyone", "whatever")
@@ -259,6 +281,7 @@ class TestLoginAndSession(AuthApiBase):
         # `auth_enabled` 是**前端契约字段**（由 auth_mode 派生）：前端靠它决定
         # 「要不要显示登录页 / 拦路由」。它缺失或恒真都会让本地版被误要求登录。
         self.assertIs(data["auth_enabled"], True)
+        self.assertIs(data["needs_setup"], False)
         self.assertEqual(data["user"]["role"], "admin")
 
     def test_session_expiry_invalidates(self):
@@ -372,15 +395,162 @@ class TestLocalZeroImpact(AuthApiBase):
         self.assertIs(me.json()["data"]["auth_enabled"], False)
         self.assertIsNone(me.json()["data"]["user"])
 
-    def test_online_without_users_needs_no_credentials(self):
-        # 线上版但库中无用户 → 仍为单机全权（迁移期 / 未建号）。
+    def test_online_without_users_is_fail_closed(self):
+        """F1/F2：线上版且库中无用户 → **拒绝**（503），绝不静默退化为单机全权。"""
         client = self._app_for_edition("online")
-        self.assertEqual(client.get("/api/papers").status_code, 200)
-        self.assertEqual(client.post("/api/papers", json={"title": "x"}).status_code, 200)
+        resp = client.get("/api/papers")
+        self.assertEqual(resp.status_code, 503, resp.text)
+        self.assertEqual(resp.json()["code"], 50301)
+        self.assertEqual(client.post("/api/papers", json={"title": "x"}).status_code, 503)
 
     def test_health_always_exempt(self):
         self._make_user("admin", "pw", "admin")
         self.assertEqual(self.client.get("/api/health").status_code, 200)
+
+
+class TestAuthFailClosed(AuthApiBase):
+    """F1/F2/F3：线上版鉴权不可用 → fail-closed，并区分「未初始化」与「库损坏」。"""
+
+    def _assert_message_has_no_path(self, message: str) -> None:
+        """客户端可见文案**不得**包含服务器路径 / 内部细节（F6）。"""
+        self.assertNotIn("\\", message, "文案不应含反斜杠路径分隔符")
+        self.assertNotIn("/", message, "文案不应含斜杠路径")
+        self.assertNotIn("c:", message.lower(), "文案不应含盘符（C:）")
+        for token in ("traceback", "sqlite", "not a database", "file is not"):
+            self.assertNotIn(token, message.lower(), f"文案不应含内部细节：{token}")
+
+    def test_online_uninitialized_returns_503_with_guidance(self):
+        # auth.db 不存在（全新部署）→ uninitialized → 503，且给出**可执行**指引。
+        client = self._app_for_edition("online")
+        resp = client.get("/api/papers")
+        self.assertEqual(resp.status_code, 503)
+        body = resp.json()
+        self.assertEqual(set(body.keys()), {"code", "data", "message"})
+        self.assertEqual(body["code"], 50301)
+        self.assertIn("python -m webui.auth user add", body["message"])
+        # 含命令但**不含路径**，可保留；同时确保没有路径分隔符。
+        self._assert_message_has_no_path(body["message"])
+
+    def test_online_corrupt_db_returns_503_without_leaking(self):
+        # 故意破坏**临时目录**里的 auth.db（绝不碰 outputs/webui/auth.db）。
+        self._make_user("admin", "pw", "admin")
+        self.auth_path.write_text("this is not a sqlite database", encoding="utf-8")
+        client = self._app_for_edition("online")
+        resp = client.get("/api/papers")
+        self.assertEqual(resp.status_code, 503, resp.text)
+        body = resp.json()
+        self.assertEqual(body["code"], 50302)
+        self.assertIn("鉴权数据库不可用", body["message"])
+        # **关键**：文案不回显服务器绝对路径，也不回显 sqlite 细节 / 堆栈（F6）。
+        self._assert_message_has_no_path(body["message"])
+        self.assertNotIn(str(self.auth_path), resp.text)
+        self.assertNotIn("traceback", resp.text.lower())
+
+    def test_online_no_users_cannot_bootstrap_admin_via_api(self):
+        # F2：无用户时无凭据 POST /api/auth/users 必须被拒（不是 200），且确实没建号。
+        client = self._app_for_edition("online")
+        resp = client.post("/api/auth/users",
+                           json={"username": "attacker", "password": "pw", "role": "admin"})
+        self.assertEqual(resp.status_code, 503, resp.text)
+        self.assertFalse(auth.users_exist(), "首个管理员只能经 CLI 创建，API 不得自建")
+
+    def test_health_hides_db_path_in_online(self):
+        # 线上版 health 豁免鉴权：未认证客户端不得拿到 DB 绝对路径（F6 同类）。
+        client = self._app_for_edition("online")
+        resp = client.get("/api/health")
+        self.assertEqual(resp.status_code, 200, resp.text)
+        data = resp.json()["data"]
+        self.assertNotIn("db", data, "线上版 health 不应回显 DB 绝对路径")
+        self.assertIn("db_exists", data)
+        self.assertNotIn(str(self.db_path), resp.text)
+
+    def test_health_keeps_db_path_in_local(self):
+        # 本地版仅回环、单机使用：保留绝对路径（前端可视化写路径安全闸门依赖它）。
+        client = self._app_for_edition("local")
+        resp = client.get("/api/health")
+        self.assertEqual(resp.status_code, 200, resp.text)
+        self.assertIn("db", resp.json()["data"])
+
+    def test_me_exempt_reports_uninitialized(self):
+        # F3：me 免鉴权可访问，并表达 needs_setup，供前端给指引而非显示登录表单。
+        client = self._app_for_edition("online")
+        resp = client.get("/api/auth/me")
+        self.assertEqual(resp.status_code, 200, resp.text)
+        data = resp.json()["data"]
+        self.assertEqual(data["auth_mode"], "uninitialized")
+        self.assertIs(data["auth_enabled"], False)
+        self.assertIs(data["needs_setup"], True)
+        self.assertIsNone(data["user"])
+
+    def test_me_exempt_without_credentials_in_session_mode(self):
+        # F3：session 模式下无凭据 GET /api/auth/me 不再是 401（前端据此显示登录页）。
+        self._make_user("admin", "pw", "admin")
+        resp = self.client.get("/api/auth/me")
+        self.assertEqual(resp.status_code, 200, resp.text)
+        data = resp.json()["data"]
+        self.assertEqual(data["auth_mode"], "session")
+        self.assertIs(data["auth_enabled"], True)
+        self.assertIs(data["needs_setup"], False)
+        self.assertIsNone(data["user"])
+
+    def test_me_exempt_with_valid_credentials_returns_user(self):
+        # 免鉴权但**仍尽力解析身份**：带有效会话时 me 应回显用户。
+        token = self._token_for("erin", "pw", "editor")
+        resp = self.client.get("/api/auth/me", headers=self._hdr(token))
+        self.assertEqual(resp.status_code, 200, resp.text)
+        self.assertEqual(resp.json()["data"]["user"]["username"], "erin")
+
+
+class TestSettingsAdminOnly(AuthApiBase):
+    """F4：``/api/settings`` 写操作仅 admin（后端为准，前端已一致）。"""
+
+    def setUp(self):
+        super().setUp()
+        # 把设置文件重定向到临时目录，避免写入仓库真实的 outputs/webui/settings.json。
+        self._settings = [
+            mock.patch.object(config, "WEBUI_DIR", self.dir / "webui"),
+            mock.patch.object(config, "SETTINGS_PATH", self.dir / "webui" / "settings.json"),
+        ]
+        for p in self._settings:
+            p.start()
+            self.addCleanup(p.stop)
+        self.tokens = {
+            "viewer": self._token_for("v1", "pw", "viewer"),
+            "editor": self._token_for("e1", "pw", "editor"),
+            "admin": self._token_for("a1", "pw", "admin"),
+        }
+
+    def test_settings_read_allowed_for_every_role(self):
+        for role in ("viewer", "editor", "admin"):
+            resp = self.client.get("/api/settings", headers=self._hdr(self.tokens[role]))
+            self.assertEqual(resp.status_code, 200, f"{role} 应可读设置：{resp.text}")
+
+    def test_settings_write_admin_only(self):
+        theme = {"primary": "#123abc", "dark": True}
+        for role in ("viewer", "editor"):
+            resp = self.client.put("/api/settings", headers=self._hdr(self.tokens[role]),
+                                   json={"theme": theme})
+            self.assertEqual(resp.status_code, 403, f"{role} 不应可改设置：{resp.text}")
+            self.assertEqual(resp.json()["code"], 40301)
+        resp = self.client.put("/api/settings", headers=self._hdr(self.tokens["admin"]),
+                               json={"theme": theme})
+        self.assertEqual(resp.status_code, 200, resp.text)
+        self.assertEqual(resp.json()["data"]["theme"], theme)
+
+
+class TestSharedTokenConstantTime(AuthApiBase):
+    """F7：共享令牌用常量时间比较；错误令牌一律 401。"""
+
+    def test_wrong_shared_token_rejected(self):
+        with mock.patch.dict(os.environ, {"QB_AUTH_TOKEN": "s3cret-token"}, clear=False):
+            client = TestClient(create_app())
+            for bogus in ("s3cret-tokeX", "s3cret", "", "x"):
+                resp = client.get("/api/papers",
+                                  headers={"Authorization": f"Bearer {bogus}"})
+                self.assertEqual(resp.status_code, 401, bogus)
+            ok_resp = client.get("/api/papers",
+                                 headers={"Authorization": "Bearer s3cret-token"})
+            self.assertEqual(ok_resp.status_code, 200)
 
 
 class TestTokenPriority(AuthApiBase):

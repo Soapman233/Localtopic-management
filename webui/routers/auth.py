@@ -98,12 +98,22 @@ def api_logout(request: Request) -> JSONResponse:
 def api_me(request: Request) -> dict:
     """当前身份与鉴权模式；未启用鉴权（``off``）时 ``user`` 为 ``null``。
 
-    ``auth_enabled`` 是给**前端**用的布尔开关（契约字段），由 ``auth_mode`` 派生：
+    **本端点豁免鉴权**（见 ``webui/auth.py:EXEMPT_PATHS``）——无凭据也必须能调，且**只回显
+    身份与模式，不泄露任何其它数据**。这是前端契约的关键：前端靠响应里的 ``auth_enabled``
+    区分「未登录」与「未启用鉴权」；若本端点返回 401，前端就无法区分，会退化成「本地版」，
+    导致线上版没有登录入口（安全审计 F3）。
 
-    * ``off``（本地版 / 无用户）→ ``False``：前端**透传**，不拦任何路由、不显示登录入口；
+    ``auth_enabled`` 是给**前端**用的布尔开关（契约字段，语义**不可改**），由 ``auth_mode`` 派生：
+
+    * ``off``（本地版）→ ``False``：前端**透传**，不拦任何路由、不显示登录入口；
     * ``session`` / ``token+session``（存在用户体系）→ ``True``：前端需登录；
     * ``token``（**仅**共享令牌、无用户）→ ``False``：浏览器端**无法登录**（没有账号可输），
       该模式只适用于 API / 自动化。线上版请使用用户体系（见 ``editions/online/README.md``）。
+    * ``uninitialized`` / ``error``（线上版鉴权不可用）→ ``False``：配合 ``needs_setup``
+      让前端给出明确指引（去建号），而不是显示一个注定失败的登录表单。
+
+    ``needs_setup``：``True`` 表示「需要初始化管理员」（``uninitialized`` 模式），供前端展示
+    「请先在服务器上创建管理员」的指引；其余模式为 ``False``。
     """
     identity = getattr(request.state, "identity", None)
     mode = getattr(request.state, "auth_mode", "off")
@@ -111,6 +121,7 @@ def api_me(request: Request) -> dict:
         "auth_mode": mode,
         "auth_enabled": mode in ("session", "token+session"),
         "user": identity.to_dict() if identity is not None else None,
+        "needs_setup": mode == "uninitialized",
         "roles": {role: sorted(perms) for role, perms in auth.ROLE_PERMISSIONS.items()},
     })
 

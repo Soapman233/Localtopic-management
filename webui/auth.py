@@ -14,13 +14,21 @@
 * **服务端强制**：权限判定走**声明式表**（HTTP 方法 + 路径白名单 → 所需权限），
   不在前端藏按钮；未授权统一返回 ``{code, data, message}`` 错误信封。
 
-鉴权模式（三选一，见 :func:`resolve_mode`）
-------------------------------------------
-1. ``off``      —— 未启用（本地版，或线上版但库中无用户）：单机全权。
+鉴权模式（见 :func:`resolve_mode`）
+----------------------------------
+1. ``off``      —— 未启用（本地版）：单机全权。
 2. ``token``    —— 共享令牌模式（设置了 ``QB_AUTH_TOKEN`` 且库中无用户）：**保持历史行为**。
 3. ``session``  —— 用户会话模式（线上版且库中有用户）：按角色鉴权。
 4. ``token+session`` —— 两者同时配置：**用户体系优先**，共享令牌退化为「服务账号令牌」
    （携带正确 ``QB_AUTH_TOKEN`` 的请求放行，视为管理员，供自动化脚本使用）。
+5. ``uninitialized`` —— **仅线上版**：鉴权库不存在 / 尚无 ``users`` 表（全新部署，未建号）。
+   此时**拒绝**所有非豁免请求（``503``），提示运维用 CLI 建首个管理员——而不是 fail-open。
+6. ``error``    —— **仅线上版**：鉴权库存在但**读取失败**（损坏 / 权限不足 / 缺表）。
+   此时同样**拒绝**非豁免请求（``503``），提示运维检查库文件。
+
+.. note::
+   ``uninitialized`` 与 ``error`` 是**安全审计 F1/F2** 的修复：线上版「鉴权不可用」必须
+   **fail-closed**，且要让运维能区分「去建号」还是「去修库」，绝不能静默退化为单机全权。
 
 CLI（``python -m webui.auth ...``）
 ----------------------------------
@@ -46,6 +54,7 @@ from __future__ import annotations
 import argparse
 import hashlib
 import hmac
+import logging
 import os
 import re
 import secrets
@@ -56,6 +65,9 @@ from datetime import datetime, timedelta
 from pathlib import Path
 
 from . import config
+
+#: 模块日志器（把库损坏 / 读取失败等**内部细节**写进服务端日志，而非回显给客户端）。
+_log = logging.getLogger("webui.auth")
 
 # --------------------------------------------------------------------------- #
 # 常量
@@ -70,6 +82,9 @@ SESSION_TOKEN_BYTES = 32
 DEFAULT_SESSION_TTL = 12 * 3600
 #: 会话 Cookie 名（后端同时接受 Cookie 与 ``Authorization: Bearer``）。
 COOKIE_NAME = "qb_session"
+
+#: 凭据错误**统一文案**（账号不存在 / 密码错误 / 账号禁用共用，避免账号枚举）。
+CREDENTIALS_ERROR_MESSAGE = "用户名或密码错误"
 
 #: 合法角色。
 ROLE_VIEWER = "viewer"
@@ -90,12 +105,17 @@ ROLE_PERMISSIONS: dict[str, frozenset[str]] = {
 }
 
 #: 免鉴权路径（健康检查供容器探针；登录/登出端点本身可匿名访问——登出幂等，
-#: 无有效会话时也返回成功，故不要求先认证）。
+#: 无有效会话时也返回成功，故不要求先认证；``/api/auth/me`` **只回显身份与模式、
+#: 不泄露任何其它数据**，必须匿名可访问——否则前端拿不到响应就无法区分「未登录」与
+#: 「未启用鉴权」，线上版会退化成「没有登录入口」（安全审计 F3））。
 EXEMPT_PATHS: frozenset[str] = frozenset({"/api/health", "/api/auth/login",
-                                          "/api/auth/logout"})
+                                          "/api/auth/logout", "/api/auth/me"})
 
 #: 用户管理路径 → 需 ``admin`` 权限。
 _ADMIN_PATH_RE = re.compile(r"^/api/auth/users(?:/.*)?$")
+#: 系统设置路径：读=``read``；**写=``admin``**（与前端 ``permissions.ts`` 的
+#: ``settings.edit`` 对齐，修正前后端权限漂移——安全审计 F4）。
+_SETTINGS_PATH_RE = re.compile(r"^/api/settings$")
 #: 「写方法但语义为读」的白名单（导出/预览不落库、仅产出文件；登出对任何已登录用户开放）。
 _READ_POST_RES: tuple[re.Pattern[str], ...] = (
     re.compile(r"^/api/papers/\d+/preview$"),
@@ -124,11 +144,12 @@ class UserNotFoundError(AuthError):
 
 
 class InvalidCredentials(AuthError):
-    """用户名或密码错误（401）。"""
+    """用户名或密码错误（401）。
 
-
-class AccountDisabled(AuthError):
-    """账号已禁用（401）。"""
+    **也用于「账号已禁用」**：对外不区分「账号不存在 / 密码错 / 账号被禁用」，避免账号枚举
+    （见 :func:`login`）。故**不**单独定义「账号已禁用」异常——否则它一旦被 ``raise``，
+    就会把「账号存在且被禁用」这一事实泄露给未认证的请求方。
+    """
 
 
 class AuthNotEnabled(AuthError):
@@ -274,6 +295,21 @@ def verify_password(password: str, password_hash: str, password_salt: str,
         return False
     digest = hashlib.pbkdf2_hmac("sha256", password.encode("utf-8"), salt, it)
     return hmac.compare_digest(digest.hex(), expected)
+
+
+#: 用户不存在时用于**抹平时序差**的固定假盐（公开、非机密）。
+_DUMMY_SALT = b"\x00" * SALT_BYTES
+
+
+def _dummy_password_check(password: str) -> None:
+    """对**不存在的用户**执行一次等价的 pbkdf2 派生，抹平「用户是否存在」的时序差。
+
+    若用户不存在就提前返回，会与「用户存在但密码错误」产生可测量的时间差，攻击者可据此
+    枚举有效用户名（安全审计 F5）。此处用固定假盐跑满一轮派生，使两条路径耗时相当。
+    返回值无意义（丢弃），仅用于消耗时间。
+    """
+    hashlib.pbkdf2_hmac("sha256", (password or "").encode("utf-8"),
+                        _DUMMY_SALT, DEFAULT_ITERATIONS)
 
 
 # --------------------------------------------------------------------------- #
@@ -468,6 +504,60 @@ def users_exist() -> bool:
         conn.close()
 
 
+def _short_reason(exc: sqlite3.Error) -> str:
+    """把底层 sqlite 错误归类成**不泄漏内部细节**的简短原因（供运维提示）。"""
+    low = str(exc).lower()
+    if "not a database" in low or "encrypted" in low or "malformed" in low:
+        return "文件不是有效的数据库（可能已损坏）"
+    if "unable to open" in low or "readonly" in low or "permission" in low:
+        return "无法打开文件（权限不足或路径不可用）"
+    if "no such table" in low:
+        return "缺少必要的数据表"
+    return "读取失败"
+
+
+def _auth_store_probe() -> tuple[str, str]:
+    """探测鉴权库可用性，返回 ``(status, detail)``。
+
+    * ``('ok', '')``        —— 可正常查询；
+    * ``('missing', 说明)`` —— 库文件不存在 / 尚无 ``users`` 表（全新部署，待初始化）；
+    * ``('error', 说明)``   —— 库存在但读取失败（损坏 / 权限不足）；说明为**简短**原因。
+
+    这是 F1 修复的关键：把「没有用户」拆成「待初始化」与「读取失败」两种状态，线上版据此
+    fail-closed 并给出**可执行**指引（去建号 / 去修库），而不是静默放行。
+    """
+    path = Path(auth_db_path())
+    if not path.is_file():
+        return "missing", "鉴权库不存在（尚未初始化）"
+    try:
+        conn = connect_auth()
+    except sqlite3.Error as exc:  # pragma: no cover - 罕见：连不上（权限等）
+        _log.warning("鉴权库无法打开：%s", exc)
+        return "error", _short_reason(exc)
+    try:
+        tables = {row[0] for row in conn.execute(
+            "SELECT name FROM sqlite_master WHERE type='table'")}
+        if "users" not in tables:
+            return "missing", "鉴权库中尚无 users 表（尚未初始化）"
+        conn.execute("SELECT 1 FROM users LIMIT 1").fetchone()
+        return "ok", ""
+    except sqlite3.Error as exc:
+        _log.warning("鉴权库读取失败：%s", exc)
+        return "error", _short_reason(exc)
+    finally:
+        conn.close()
+
+
+def auth_store_status() -> str:
+    """鉴权库可用状态：``'ok'`` / ``'missing'`` / ``'error'``（详见 :func:`_auth_store_probe`）。"""
+    return _auth_store_probe()[0]
+
+
+def auth_store_error_detail() -> str:
+    """鉴权库不可用时的**简短**原因（用于给运维的可执行提示）；可用时返回空串。"""
+    return _auth_store_probe()[1]
+
+
 # --------------------------------------------------------------------------- #
 # 会话
 # --------------------------------------------------------------------------- #
@@ -521,15 +611,25 @@ def authenticate(conn: sqlite3.Connection, token: str) -> dict | None:
 
 def login(conn: sqlite3.Connection, username: str, password: str, *,
           user_agent: str | None = None) -> dict:
-    """校验凭据并创建会话，返回 ``{token, expires_at, user}``。"""
+    """校验凭据并创建会话，返回 ``{token, expires_at, user}``。
+
+    安全（F5）：**账号不存在 / 密码错误 / 账号已禁用**对外一律返回**同一错误码与同一文案**
+    （:class:`InvalidCredentials`），且都执行一次等价的 pbkdf2 派生，避免通过错误码或响应
+    时间枚举用户名。禁用状态仅对管理员在用户列表中可见。
+    """
     row = get_user_by_username(conn, username)
     if row is None:
-        raise InvalidCredentials("用户名或密码错误")
-    if row["disabled"]:
-        raise AccountDisabled("账号已禁用，请联系管理员")
-    if not verify_password(password, row["password_hash"], row["password_salt"],
-                           row["iterations"]):
-        raise InvalidCredentials("用户名或密码错误")
+        # 用户不存在：也跑一次等价派生，抹平时序差（否则会被时序侧信道枚举用户名）。
+        _dummy_password_check(password)
+        raise InvalidCredentials(CREDENTIALS_ERROR_MESSAGE)
+    # 无论密码对错、账号是否禁用，都执行一次**真实校验**（常量时间 + 等价工作量），再统一拒绝。
+    # 注意：**禁用账号与凭据错误返回同一错误码与文案**（``40103``）——未认证的请求方不应能
+    # 区分「账号不存在 / 密码错 / 账号被禁用」（否则可枚举有效账号、探测账号状态）。
+    # 管理员的用户列表里可以看到禁用状态；**切勿**为「已禁用」单独 ``raise`` 另一个异常或错误码。
+    ok = verify_password(password, row["password_hash"], row["password_salt"],
+                         row["iterations"])
+    if row["disabled"] or not ok:
+        raise InvalidCredentials(CREDENTIALS_ERROR_MESSAGE)
     conn.execute("UPDATE users SET last_login_at = ? WHERE id = ?", (_now(), row["id"]))
     conn.commit()
     session = create_session(conn, row["id"], user_agent=user_agent)
@@ -545,14 +645,18 @@ def required_permission(method: str, path: str) -> str:
 
     规则（**唯一事实来源**，新增端点时必须在此显式归类）：
     1. ``/api/auth/users*`` → ``admin``（用户管理）；
-    2. ``GET/HEAD/OPTIONS`` → ``read``；
-    3. ``POST`` 且命中「写方法但语义为读」白名单（预览 / 导出 / 登出）→ ``read``；
-    4. 其余 → ``write``。
+    2. ``/api/settings`` 的**写方法** → ``admin``（系统设置；与前端 ``settings.edit`` 对齐，F4）；
+    3. ``GET/HEAD/OPTIONS`` → ``read``；
+    4. ``POST`` 且命中「写方法但语义为读」白名单（预览 / 导出 / 登出）→ ``read``；
+    5. 其余 → ``write``。
     """
     if _ADMIN_PATH_RE.match(path):
         return PERM_ADMIN
     verb = (method or "").upper()
-    if verb in ("GET", "HEAD", "OPTIONS"):
+    is_read = verb in ("GET", "HEAD", "OPTIONS")
+    if not is_read and _SETTINGS_PATH_RE.match(path):
+        return PERM_ADMIN
+    if is_read:
         return PERM_READ
     if verb == "POST" and any(r.match(path) for r in _READ_POST_RES):
         return PERM_READ
@@ -623,17 +727,31 @@ def authenticate_request(request) -> Identity | None:
 
 
 def resolve_mode(*, online: bool, token: str | None) -> str:
-    """解析当前鉴权模式（``off`` / ``token`` / ``session`` / ``token+session``）。
+    """解析当前鉴权模式。
+
+    返回 ``off`` / ``token`` / ``session`` / ``token+session`` / ``uninitialized`` / ``error``。
+
+    * 本地版（``online=False``）**恒不触碰鉴权库**，直接 ``off``（或共享令牌的 ``token``），
+      保证「本地版零影响」；
+    * 线上版按鉴权库状态决定：库损坏 → ``error``；库不存在 / 无 ``users`` 表 → ``uninitialized``
+      （两者都由中间件 **fail-closed** 返回 503，而不是放行）；库正常再按是否有用户区分
+      ``session`` / ``token+session``，或（配了共享令牌但无用户时）``token``。
 
     ``online`` 与 ``token`` 由调用方在 **app 构建时**捕获（保证测试中环境变量回退后行为稳定），
-    用户是否存在则**每次请求动态查询**（建号后无需重启即可生效）。
+    鉴权库状态与用户存在性则**每次请求动态查询**（建号后无需重启即可生效）。
     """
+    if not online:
+        return "token" if token else "off"
+    status = auth_store_status()
+    if status == "error":
+        return "error"
+    if status == "missing":
+        # 尚未初始化：若配置了共享令牌，令牌模式仍可用（令牌本身即凭据）；否则需先建号。
+        return "token" if token else "uninitialized"
     has_users = users_exist()
     if token:
-        return "token+session" if (online and has_users) else "token"
-    if online and has_users:
-        return "session"
-    return "off"
+        return "token+session" if has_users else "token"
+    return "session" if has_users else "uninitialized"
 
 
 # --------------------------------------------------------------------------- #
@@ -800,13 +918,14 @@ __all__ = [
     "DEFAULT_ITERATIONS", "SALT_BYTES", "SESSION_TOKEN_BYTES", "DEFAULT_SESSION_TTL",
     "COOKIE_NAME", "ROLES", "ROLE_VIEWER", "ROLE_EDITOR", "ROLE_ADMIN",
     "PERM_READ", "PERM_WRITE", "PERM_ADMIN", "ROLE_PERMISSIONS", "EXEMPT_PATHS",
+    "CREDENTIALS_ERROR_MESSAGE",
     "AuthError", "UserExistsError", "UserNotFoundError", "InvalidCredentials",
-    "AccountDisabled", "AuthNotEnabled", "InvalidRole", "PasswordInvalid",
+    "AuthNotEnabled", "InvalidRole", "PasswordInvalid",
     "auth_db_path", "session_ttl_seconds", "ensure_auth_schema", "connect_auth",
     "hash_password", "verify_password",
     "public_user", "get_user_by_username", "get_user", "list_users", "create_user",
     "set_password", "update_user", "count_enabled_admins", "ensure_not_last_admin",
-    "users_exist",
+    "users_exist", "auth_store_status", "auth_store_error_detail",
     "create_session", "delete_session", "purge_expired_sessions", "authenticate", "login",
     "required_permission", "role_allows", "Identity", "SERVICE_IDENTITY",
     "bearer_token", "cookie_token", "extract_token", "authenticate_request", "resolve_mode",

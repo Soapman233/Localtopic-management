@@ -24,7 +24,12 @@
 
 from __future__ import annotations
 
+import logging
+import sqlite3
 from typing import Any
+
+#: 模块日志器（把内部异常细节写进**服务端日志**，而非回显给客户端——安全审计 F6）。
+_log = logging.getLogger("webui.errors")
 
 
 # --------------------------------------------------------------------------- #
@@ -143,8 +148,8 @@ CODE_INVALID_ROLE = 40009           # 非法角色
 #: 未授权（401）。
 CODE_UNAUTHORIZED_TOKEN = 40101     # 缺少 / 错误的共享访问令牌（历史行为）
 CODE_UNAUTHORIZED_SESSION = 40102   # 会话缺失或已过期
-CODE_INVALID_CREDENTIALS = 40103    # 用户名或密码错误
-CODE_ACCOUNT_DISABLED = 40104       # 账号已禁用
+#: 用户名或密码错误；**账号被禁用也复用此码**——不向未认证请求方暴露账号状态（防枚举）。
+CODE_INVALID_CREDENTIALS = 40103
 
 #: 禁止访问（403）。
 CODE_FORBIDDEN = 40301              # 已认证但权限不足
@@ -170,6 +175,11 @@ CODE_USER_EXISTS = 40906            # 用户名已存在
 
 #: 后端内部错误（500）。
 CODE_INTERNAL = 50001               # 含 editor_sdk 不可达、COM/PDF 失败
+
+#: 服务不可用（503）——线上版鉴权不可用（**fail-closed**，安全审计 F1/F2）。
+#: 语义：不是「你没登录」（401），而是「服务没配好」——运维需去建号或去修库。
+CODE_AUTH_UNINITIALIZED = 50301     # 鉴权未初始化（线上版尚未创建首个管理员）
+CODE_AUTH_STORE_ERROR = 50302       # 鉴权数据库不可用（损坏 / 权限不足）
 
 
 # --------------------------------------------------------------------------- #
@@ -256,6 +266,12 @@ def to_api_error(exc: Exception) -> ApiError:
     """
     if isinstance(exc, ApiError):
         return exc
+    # 数据存储异常（sqlite3）：绝不回显原始错误（可能含文件路径 / 内部细节），
+    # 统一返回通用文案，细节只进服务端日志（安全审计 F6）。
+    if isinstance(exc, sqlite3.Error):
+        _log.exception("数据存储异常：%s", exc)
+        return ApiError("服务暂不可用：数据存储异常，请稍后重试或联系管理员。",
+                        code=CODE_INTERNAL, http_status=500)
     from bank.export_content import ExportContentError, ExportEvidenceStale
     if isinstance(exc, ExportContentError):
         return conflict(CODE_EXPORT_CONTENT_BLOCKED, str(exc), exc.diagnostics)
@@ -288,8 +304,6 @@ def to_api_error(exc: Exception) -> ApiError:
             return not_found(CODE_USER_NOT_FOUND, str(exc))
         if isinstance(exc, _auth.InvalidCredentials):
             return unauthorized(CODE_INVALID_CREDENTIALS, str(exc))
-        if isinstance(exc, _auth.AccountDisabled):
-            return unauthorized(CODE_ACCOUNT_DISABLED, str(exc))
         if isinstance(exc, _auth.AuthNotEnabled):
             return bad_request(CODE_AUTH_DISABLED, str(exc))
         if isinstance(exc, _auth.InvalidRole):
@@ -304,8 +318,15 @@ def to_api_error(exc: Exception) -> ApiError:
     if isinstance(exc, ValueError):
         return map_value_error(exc)
     if isinstance(exc, FileNotFoundError):
+        # ⚠️ **有意保留**：``str(exc)`` 可能含文件路径。这是**面向用户的定位信息**
+        # （如「导出的模板文件被挪走了」），帮助老师找到缺失文件，故不回退为通用文案。
+        # 安全性：线上模式下**未认证请求在中间件即被拦截**，根本到不了此处；仅在已认证
+        # 请求下可达。请勿当作「路径泄漏」误改（对照 F6：未认证客户端不得拿到文件系统布局）。
         return NotFoundError(str(exc))
-    return ApiError(str(exc) or exc.__class__.__name__)
+    # 兜底：**不**回显原始异常字符串（可能含文件路径 / SQL / 内部细节）。具体原因由
+    # 异常处理器写入服务端日志（见 :func:`register_exception_handlers`），客户端只拿通用文案。
+    return ApiError("服务内部错误：请稍后重试或联系管理员。",
+                    code=CODE_INTERNAL, http_status=500)
 
 
 def register_exception_handlers(app) -> None:
@@ -328,6 +349,17 @@ def register_exception_handlers(app) -> None:
         return JSONResponse(status_code=mapped.http_status,
                             content=error_body(mapped.code, mapped.message, mapped.data))
 
+    @app.exception_handler(sqlite3.Error)
+    async def _sqlite_error_handler(_request: Request, exc: sqlite3.Error) -> JSONResponse:
+        """数据存储异常：回显**通用文案**，内部细节只进服务端日志（安全审计 F6）。
+
+        显式注册（而非依赖通用 ``Exception`` 处理器）——后者在 Starlette 下会重新抛出，
+        导致 TestClient 报错；同时确保任何 ``sqlite3.Error`` 都不会把 SQL / 路径回显给客户端。
+        """
+        _log.exception("数据存储异常：%s", exc)
+        return JSONResponse(status_code=500, content=error_body(
+            CODE_INTERNAL, "服务暂不可用：数据存储异常，请稍后重试或联系管理员。"))
+
     @app.exception_handler(ValueError)
     async def _value_error_handler(_request: Request, exc: ValueError) -> JSONResponse:
         mapped = to_api_error(exc)
@@ -337,6 +369,9 @@ def register_exception_handlers(app) -> None:
     @app.exception_handler(Exception)
     async def _unhandled_handler(_request: Request, exc: Exception) -> JSONResponse:
         mapped = to_api_error(exc)
+        # 仅对真正的服务端错误（5xx）记录堆栈细节；已映射为 4xx 的业务错误不刷日志。
+        if mapped.http_status >= 500:
+            _log.exception("未处理的服务端异常：%s", exc)
         return JSONResponse(status_code=mapped.http_status,
                             content=error_body(mapped.code, mapped.message, mapped.data))
 
@@ -350,12 +385,13 @@ __all__ = [
     "CODE_INVALID_SCORE", "CODE_INVALID_CSV", "CODE_INVALID_SETTINGS",
     "CODE_AUTH_DISABLED", "CODE_INVALID_ROLE",
     "CODE_UNAUTHORIZED_TOKEN", "CODE_UNAUTHORIZED_SESSION",
-    "CODE_INVALID_CREDENTIALS", "CODE_ACCOUNT_DISABLED", "CODE_FORBIDDEN",
+    "CODE_INVALID_CREDENTIALS", "CODE_FORBIDDEN",
     "CODE_QUESTION_NOT_FOUND", "CODE_PAPER_NOT_FOUND", "CODE_ITEM_NOT_FOUND",
     "CODE_IMAGE_NOT_FOUND", "CODE_JOB_NOT_FOUND", "CODE_LABEL_NOT_FOUND",
     "CODE_REVIEW_NOT_FOUND", "CODE_SOURCE_NOT_FOUND", "CODE_USER_NOT_FOUND",
     "CODE_CONTENT_CONFLICT", "CODE_NEED_FORCE", "CODE_NEED_CONFIRM",
     "CODE_USER_EXISTS", "CODE_INTERNAL",
+    "CODE_AUTH_UNINITIALIZED", "CODE_AUTH_STORE_ERROR",
     "bad_request", "not_found", "conflict", "unauthorized", "forbidden",
     "bridge_error", "map_value_error",
     "ok", "error_body", "to_api_error", "register_exception_handlers",
