@@ -144,7 +144,7 @@ export default function QuestionDetailPage() {
         <Button startIcon={<ArrowBackIcon />} onClick={() => navigate(-1)}>
           返回
         </Button>
-        <Typography variant="h6">题 {q.number || q.id}</Typography>
+        <Typography variant="h6" component="h1">题 {q.number || q.id}</Typography>
         {q.qtype && <Chip size="small" label={q.qtype} variant="outlined" />}
         <AnswerBadge hasAnswer={hasAnswer} />
         <AnalysisBadge hasAnalysis={hasAnalysis} />
@@ -178,7 +178,7 @@ export default function QuestionDetailPage() {
           />
         ) : (
           <>
-            <Typography variant="subtitle2" color="text.secondary" gutterBottom>
+            <Typography variant="subtitle2" component="h2" color="text.secondary" gutterBottom>
               题干
             </Typography>
             <Box sx={{ fontSize: 15, mb: 2 }}>
@@ -187,7 +187,7 @@ export default function QuestionDetailPage() {
 
             {(q.images ?? []).length > 0 && (
               <Box sx={{ mb: 2 }}>
-                <Typography variant="subtitle2" color="text.secondary" gutterBottom>
+                <Typography variant="subtitle2" component="h2" color="text.secondary" gutterBottom>
                   图片（只读）
                 </Typography>
                 <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
@@ -206,7 +206,7 @@ export default function QuestionDetailPage() {
 
             {(q.formulas ?? []).length > 0 && (
               <Box sx={{ mb: 2 }}>
-                <Typography variant="subtitle2" color="text.secondary" gutterBottom>
+                <Typography variant="subtitle2" component="h2" color="text.secondary" gutterBottom>
                   公式列表（{q.formulas!.length} 条）
                 </Typography>
                 <Stack spacing={1}>
@@ -219,7 +219,7 @@ export default function QuestionDetailPage() {
 
             <Stack direction="row" spacing={3} flexWrap="wrap" sx={{ mb: 2 }}>
               <Box sx={{ flex: 1, minWidth: 240 }}>
-                <Typography variant="subtitle2" color="text.secondary" gutterBottom>
+                <Typography variant="subtitle2" component="h2" color="text.secondary" gutterBottom>
                   答案
                 </Typography>
                 <Box sx={{ p: 1.5, bgcolor: 'action.hover', borderRadius: 1 }}>
@@ -227,7 +227,7 @@ export default function QuestionDetailPage() {
                 </Box>
               </Box>
               <Box sx={{ flex: 1, minWidth: 240 }}>
-                <Typography variant="subtitle2" color="text.secondary" gutterBottom>
+                <Typography variant="subtitle2" component="h2" color="text.secondary" gutterBottom>
                   解析
                 </Typography>
                 <Box sx={{ p: 1.5, bgcolor: 'action.hover', borderRadius: 1 }}>
@@ -236,7 +236,7 @@ export default function QuestionDetailPage() {
               </Box>
             </Stack>
 
-            <Typography variant="subtitle2" color="text.secondary" gutterBottom>
+            <Typography variant="subtitle2" component="h2" color="text.secondary" gutterBottom>
               知识点标签（三态）
             </Typography>
             <Typography variant="caption" color="text.secondary" display="block" sx={{ mb: 1 }}>
@@ -257,7 +257,7 @@ export default function QuestionDetailPage() {
             </Stack>
 
             <Divider sx={{ my: 1.5 }} />
-            <Typography variant="subtitle2" color="text.secondary" gutterBottom>
+            <Typography variant="subtitle2" component="h2" color="text.secondary" gutterBottom>
               来源定位
             </Typography>
             <Typography variant="body2" color="text.secondary">
@@ -269,7 +269,7 @@ export default function QuestionDetailPage() {
       </Paper>
 
       <Paper variant="outlined" sx={{ p: 2.5 }}>
-        <Typography variant="subtitle1" gutterBottom>
+        <Typography variant="subtitle1" component="h2" gutterBottom>
           版本历史（只读）
         </Typography>
         <VersionHistory questionId={q.id} versions={q.versions} />

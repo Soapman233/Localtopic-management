@@ -119,7 +119,7 @@ function PaperExportPage({ paperId, onRevised }: { paperId: number; onRevised: (
   if (paperId <= 0) {
     return (
       <Box>
-        <Typography variant="h6" gutterBottom>
+        <Typography variant="h6" component="h1" gutterBottom>
           导出
         </Typography>
         <EmptyState
@@ -141,7 +141,7 @@ function PaperExportPage({ paperId, onRevised }: { paperId: number; onRevised: (
   return (
     <Box sx={{ maxWidth: 1200 }}>
       <Stack direction="row" spacing={1} alignItems="center" flexWrap="wrap" useFlexGap sx={{ mb: 0.5 }}>
-        <Typography variant="h6">
+        <Typography variant="h6" component="h1">
           导出中心 · {paperQ.data?.title ?? `试卷 #${paperId}`}
         </Typography>
         {/* 三态文案与导出抽屉**同源**（exportGateState + describeExportGate）。 */}
@@ -368,7 +368,7 @@ function PaperExportPage({ paperId, onRevised }: { paperId: number; onRevised: (
       {/* 导出结果（P2-6 导出历史记录：本页展示本次产物） */}
       {(exportMut.isError || exportJob.data?.status === 'error' || exportResult || exportRunning || exportMut.isPending || exportTimedOut) && (
         <Paper variant="outlined" sx={{ p: 2, mt: 2 }}>
-          <Typography variant="subtitle2" gutterBottom>
+          <Typography variant="subtitle2" component="h2" gutterBottom>
             导出结果
           </Typography>
           {exportMut.isError && (

@@ -136,7 +136,9 @@ export function PaperPanel({
         variant="outlined"
         sx={{ p: 3, height: '100%', borderStyle: isOver ? 'dashed' : 'solid', borderColor: isOver ? 'primary.main' : 'divider' }}
       >
-        <Typography variant="subtitle2" gutterBottom>
+        {/* P5-3：`variant="subtitle2"` 在 MUI 默认渲染为 <h6>，会造成页内 h1→h6 跳级；
+            这是面板小标题而非文档章节标题，显式降为 <div>（视觉不变）。 */}
+        <Typography variant="subtitle2" component="div" gutterBottom>
           试卷
         </Typography>
         {loading ? (
@@ -274,7 +276,7 @@ export function PaperPanel({
           return (
             <Box key={g.section?.id ?? 'ungrouped'} sx={{ mb: 1.5 }}>
               <Stack direction="row" spacing={0.5} alignItems="center" sx={{ mb: 0.75 }}>
-                <Typography variant="subtitle2" sx={{ flex: 1 }}>
+                <Typography variant="subtitle2" component="div" sx={{ flex: 1 }}>
                   {g.section?.name ?? '未分组'}
                   <Typography component="span" variant="caption" color="text.secondary">
                     {' '}

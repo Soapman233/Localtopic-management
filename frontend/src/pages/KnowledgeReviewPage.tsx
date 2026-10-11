@@ -146,7 +146,7 @@ export default function KnowledgeReviewPage() {
   return (
     <Box>
       <Stack direction="row" alignItems="center" spacing={2} sx={{ mb: 1 }} flexWrap="wrap" useFlexGap>
-        <Typography variant="h6">知识点复核</Typography>
+        <Typography variant="h6" component="h1">知识点复核</Typography>
         <Chip size="small" color="warning" variant="outlined" label={`待复核 ${(counts['待复核'] ?? 0).toLocaleString('zh-CN')}`} />
         <Chip size="small" color="success" variant="outlined" label={`已确认 ${(counts['已确认'] ?? 0).toLocaleString('zh-CN')}`} />
         <Chip size="small" label={`已否决 ${(counts['已否决'] ?? 0).toLocaleString('zh-CN')}`} />
@@ -272,7 +272,7 @@ export default function KnowledgeReviewPage() {
           ) : (
             <Paper variant="outlined" sx={{ p: 2 }}>
               <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 1 }} flexWrap="wrap" useFlexGap>
-                <Typography variant="subtitle1" fontWeight={600}>
+                <Typography variant="subtitle1" component="h2" fontWeight={600}>
                   {selected}
                 </Typography>
                 {selectedRow && (

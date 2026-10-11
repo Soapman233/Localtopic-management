@@ -94,7 +94,8 @@ export function SortableItemRow({
       <Tooltip title="拖拽排序">
         <DragIndicatorIcon
           fontSize="small"
-          sx={{ color: 'text.disabled', mt: 0.25, cursor: 'grab' }}
+          // P5-3 触达尺寸（SC 2.5.8）：20×20 的拖拽把手补 2px 透明内边距到 24×24（content-box 不放大图标）。
+          sx={{ color: 'text.disabled', mt: 0.25, cursor: 'grab', boxSizing: 'content-box', p: 0.25 }}
           {...attributes}
           {...listeners}
         />

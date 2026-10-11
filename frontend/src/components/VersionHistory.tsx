@@ -85,7 +85,7 @@ function VersionRow({
         )}
         {data && (
           <Box>
-            <Typography variant="subtitle2" gutterBottom>
+            <Typography variant="subtitle2" component="div" gutterBottom>
               题干（只读）
             </Typography>
             <Box sx={{ p: 1.5, bgcolor: 'action.hover', borderRadius: 1, mb: 1.5 }}>
@@ -96,7 +96,7 @@ function VersionRow({
             </Box>
             <Stack direction="row" spacing={3} flexWrap="wrap">
               <Box>
-                <Typography variant="subtitle2" gutterBottom>
+                <Typography variant="subtitle2" component="div" gutterBottom>
                   答案
                 </Typography>
                 <Typography variant="body2" color="text.secondary">
@@ -104,7 +104,7 @@ function VersionRow({
                 </Typography>
               </Box>
               <Box>
-                <Typography variant="subtitle2" gutterBottom>
+                <Typography variant="subtitle2" component="div" gutterBottom>
                   解析
                 </Typography>
                 <Typography variant="body2" color="text.secondary">
@@ -112,7 +112,7 @@ function VersionRow({
                 </Typography>
               </Box>
               <Box>
-                <Typography variant="subtitle2" gutterBottom>
+                <Typography variant="subtitle2" component="div" gutterBottom>
                   公式
                 </Typography>
                 <Typography variant="body2" color="text.secondary">

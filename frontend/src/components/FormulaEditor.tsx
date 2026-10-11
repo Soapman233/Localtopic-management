@@ -59,7 +59,7 @@ export function FormulaEditor({ open, fid, initialLatex, onClose, onConfirm }: F
             InputProps={{ sx: { fontFamily: 'Consolas, Menlo, monospace', fontSize: 14 } }}
           />
           <Box sx={{ flex: 1, minWidth: 0 }}>
-            <Typography variant="subtitle2" gutterBottom>
+            <Typography variant="subtitle2" component="div" gutterBottom>
               实时预览
             </Typography>
             <Box

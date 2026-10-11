@@ -8,7 +8,8 @@
     "test": "node --test tests/preview-and-theme.test.cjs tests/frontend-fixes.test.cjs && vitest run",
     "test:unit": "vitest run",
     "dev": "vite",
-    "build": "tsc --noEmit && vite build && node scripts/prune-stale-assets.mjs",
+    "contrast": "node scripts/check-contrast.mjs tests/visual/contrast-pairs.json",
+    "build": "tsc --noEmit && npm run contrast && vite build && node scripts/prune-stale-assets.mjs",
     "preview": "vite preview"
   },
   "dependencies": {

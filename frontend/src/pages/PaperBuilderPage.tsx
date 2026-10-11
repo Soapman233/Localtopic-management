@@ -456,6 +456,25 @@ export default function PaperBuilderPage() {
 
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', height: 'calc(100vh - 96px)' }}>
+      {/* P5-3：组卷工作台是双栏工具页、无可见大标题。补一个**仅供读屏**的 h1，
+          保证每页都有唯一 h1（视觉版式零变化，纯语义补充）。 */}
+      <Typography
+        variant="h6"
+        component="h1"
+        sx={{
+          position: 'absolute',
+          width: 1,
+          height: 1,
+          p: 0,
+          m: -1,
+          border: 0,
+          overflow: 'hidden',
+          clip: 'rect(0 0 0 0)',
+          whiteSpace: 'nowrap',
+        }}
+      >
+        组卷工作台
+      </Typography>
       {error && (
         <Alert severity="error" sx={{ mb: 1 }} onClose={() => setError(null)}>
           {error}
@@ -579,10 +598,11 @@ export default function PaperBuilderPage() {
 
       {/* P1-1：窄屏下右栏折叠为右侧抽屉（默认关闭，避免挤占结果区） */}
       {narrow && (
-        <Drawer anchor="right" open={rightOpen} onClose={() => setRightOpen(false)}>
+        <Drawer anchor="right" open={rightOpen} onClose={() => setRightOpen(false)}
+          aria-labelledby="builder-panel-drawer-title">
           <Box sx={{ width: '92vw', maxWidth: 680, p: 1.5, height: '100%', display: 'flex', flexDirection: 'column' }}>
             <Stack direction="row" alignItems="center" sx={{ mb: 1 }}>
-              <Typography variant="subtitle1" sx={{ flex: 1 }}>试卷</Typography>
+              <Typography id="builder-panel-drawer-title" variant="subtitle1" component="h2" sx={{ flex: 1 }}>试卷</Typography>
               <Button size="small" onClick={() => setRightOpen(false)}>关闭</Button>
             </Stack>
             {rightPanel}
@@ -592,9 +612,10 @@ export default function PaperBuilderPage() {
 
       {/* 试卷管理抽屉（P0-10：新建 / 删除 + 撤销）。
           与全局「切换试卷」区分：这里多了**删除与撤销**，命名体现能力差异。 */}
-      <Drawer anchor="left" open={drawerOpen} onClose={() => setDrawerOpen(false)}>
+      <Drawer anchor="left" open={drawerOpen} onClose={() => setDrawerOpen(false)}
+        aria-labelledby="paper-manage-drawer-title">
         <Box sx={{ width: 320, p: 2 }}>
-          <Typography variant="subtitle1" gutterBottom>
+          <Typography id="paper-manage-drawer-title" variant="subtitle1" component="h2" gutterBottom>
             试卷管理
           </Typography>
           <Stack direction="row" spacing={1} sx={{ mb: 1 }}>

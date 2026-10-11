@@ -1,15 +1,6 @@
-import type { ReactElement } from 'react'
+import { lazy, type ReactElement } from 'react'
 import { Navigate, RouterProvider, createHashRouter } from 'react-router-dom'
 import App, { NAV_ITEMS } from './App'
-import SearchPage from './pages/SearchPage'
-import QuestionDetailPage from './pages/QuestionDetailPage'
-import PaperBuilderPage from './pages/PaperBuilderPage'
-import ExportPage from './pages/ExportPage'
-import KnowledgeReviewPage from './pages/KnowledgeReviewPage'
-import FormulaReviewPage from './pages/FormulaReviewPage'
-import SourcesPage from './pages/SourcesPage'
-import StatsPage from './pages/StatsPage'
-import SettingsPage from './pages/SettingsPage'
 
 // 使用 HashRouter：FastAPI StaticFiles 静态托管无需服务端 history fallback。
 //
@@ -19,6 +10,26 @@ import SettingsPage from './pages/SettingsPage'
 //
 // 阶段 1 信息架构重构（P0-4 / P1-6）：治理页统一迁到 /manage/* 子路径，
 // 默认落地页由 /search 改为 /builder（老师最高频动作是组卷）。
+//
+// 阶段 5 性能优化（P5-1）——**路由级代码分割**
+// ------------------------------------------------
+// 改前：9 个页面全部**同步 import**，入口 chunk 单文件达 1.12 MB；首屏必须下载并
+// 解析**全部页面**（含 4 个低频治理页）的代码，Vite 持续告警「Some chunks are
+// larger than 500 kB」。
+// 改后：每个页面改用 `React.lazy` 动态 `import()`，各自产出独立 chunk，
+// **仅在访问对应路由时才下载**（老师 90% 时间只在组卷 / 找题 / 导出之间切换，
+// 治理页代码不再进首屏）。加载态的呈现由 `App.tsx` 中包裹 `<Outlet/>` 的
+// `<Suspense>` 统一负责（fallback 复用全站统一的 `LoadingState`），此处无需重复处理。
+const SearchPage = lazy(() => import('./pages/SearchPage'))
+const QuestionDetailPage = lazy(() => import('./pages/QuestionDetailPage'))
+const PaperBuilderPage = lazy(() => import('./pages/PaperBuilderPage'))
+const ExportPage = lazy(() => import('./pages/ExportPage'))
+const KnowledgeReviewPage = lazy(() => import('./pages/KnowledgeReviewPage'))
+const FormulaReviewPage = lazy(() => import('./pages/FormulaReviewPage'))
+const SourcesPage = lazy(() => import('./pages/SourcesPage'))
+const StatsPage = lazy(() => import('./pages/StatsPage'))
+const SettingsPage = lazy(() => import('./pages/SettingsPage'))
+
 const PAGES: Record<string, ReactElement> = {
   search: <SearchPage />,
   builder: <PaperBuilderPage />,

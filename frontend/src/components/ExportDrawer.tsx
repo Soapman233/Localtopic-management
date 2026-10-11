@@ -127,11 +127,14 @@ function ExportDrawerForPaper(props: ExportDrawerProps) {
   }, [onClose])
 
   return (
-    <Drawer anchor="right" open={open} onClose={handleClose}>
+    <Drawer anchor="right" open={open} onClose={handleClose}
+      aria-labelledby="export-drawer-title">
       <Box sx={{ width: { xs: '92vw', sm: 720 }, p: 2.5, display: 'flex', flexDirection: 'column', height: '100%' }}>
         {/* 头部 */}
         <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 1 }}>
-          <Typography variant="h6" sx={{ flex: 1 }}>
+          {/* P5-3：抽屉标题是编辑 chrome 而非文档章节，显式降为 <div>，避免 h1→h6 跳级（视觉不变）。
+              但仍给它 id 供 Drawer 的 aria-labelledby 引用——**可访问名比标题层级重要**。 */}
+          <Typography id="export-drawer-title" variant="h6" component="div" sx={{ flex: 1 }}>
             导出 · {paperQ.data?.title ?? `试卷 #${paperId}`}
           </Typography>
           <IconButton size="small" onClick={handleClose} aria-label="关闭">
@@ -267,7 +270,7 @@ function ExportDrawerForPaper(props: ExportDrawerProps) {
           {/* 环境降级逃生：像素预览不可用时，以「结构预览确认」替代 */}
           {envFail !== null && (
             <Alert severity="warning" icon={<WarningAmberIcon />} sx={{ mb: 1.5 }}>
-              <Typography variant="subtitle2">
+              <Typography variant="subtitle2" component="div">
                 当前电脑无法生成像素预览，已改用结构预览确认
               </Typography>
               <Typography variant="body2" sx={{ mb: 1 }}>

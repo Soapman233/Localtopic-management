@@ -44,7 +44,8 @@ function toForm(s: SettingsData): FormState {
     default_template: s.default_template ?? '考试',
     katex_throw_on_error: Boolean(s.katex?.throw_on_error),
     katex_strict: Boolean(s.katex?.strict),
-    theme_primary: String(s.theme?.primary ?? '#3370FF'),
+    // P5-2：默认主色同步为文字安全值 #2F63EA（原 #3370FF 白字仅 4.28:1，未达 AA）。
+    theme_primary: String(s.theme?.primary ?? '#2F63EA'),
     theme_dark: Boolean(s.theme?.dark),
   }
 }
@@ -82,7 +83,7 @@ export default function SettingsPage() {
   if (settingsQ.isError) {
     return (
       <Box>
-        <Typography variant="h6" gutterBottom>系统设置</Typography>
+        <Typography variant="h6" component="h1" gutterBottom>系统设置</Typography>
         <ErrorState
           error={settingsQ.error}
           title="加载设置失败"
@@ -94,7 +95,7 @@ export default function SettingsPage() {
   if (settingsQ.isLoading || form === null) {
     return (
       <Box>
-        <Typography variant="h6" gutterBottom>
+        <Typography variant="h6" component="h1" gutterBottom>
           系统设置
         </Typography>
         <LoadingState label="正在加载设置…" />
@@ -107,7 +108,7 @@ export default function SettingsPage() {
 
   return (
     <Box sx={{ maxWidth: 760 }}>
-      <Typography variant="h6" gutterBottom>
+      <Typography variant="h6" component="h1" gutterBottom>
         系统设置
       </Typography>
 
@@ -119,7 +120,7 @@ export default function SettingsPage() {
 
       {/* 数据库 */}
       <Paper variant="outlined" sx={{ p: 2, mb: 2 }}>
-        <Typography variant="subtitle2" gutterBottom>
+        <Typography variant="subtitle2" component="h2" gutterBottom>
           数据库
         </Typography>
         <TextField
@@ -137,7 +138,7 @@ export default function SettingsPage() {
 
       {/* 导出 */}
       <Paper variant="outlined" sx={{ p: 2, mb: 2 }}>
-        <Typography variant="subtitle2" gutterBottom>
+        <Typography variant="subtitle2" component="h2" gutterBottom>
           导出
         </Typography>
         <Stack spacing={2}>
@@ -174,7 +175,7 @@ export default function SettingsPage() {
 
       {/* 公式渲染（KaTeX） */}
       <Paper variant="outlined" sx={{ p: 2, mb: 2 }}>
-        <Typography variant="subtitle2" gutterBottom>
+        <Typography variant="subtitle2" component="h2" gutterBottom>
           公式渲染（KaTeX）
         </Typography>
         {/* P0-2：这两个开关已真正生效——保存后经 main.tsx 的 syncFrom 镜像到 settingsStore，
@@ -203,7 +204,7 @@ export default function SettingsPage() {
 
       {/* 界面偏好 */}
       <Paper variant="outlined" sx={{ p: 2, mb: 2 }}>
-        <Typography variant="subtitle2" gutterBottom>
+        <Typography variant="subtitle2" component="h2" gutterBottom>
           界面偏好
         </Typography>
         <Stack direction="row" spacing={2} alignItems="center" flexWrap="wrap" useFlexGap>

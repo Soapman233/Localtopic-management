@@ -10,17 +10,65 @@ import { createTheme } from '@mui/material/styles'
  * 组件通过 `useTheme()` 读取（见下方 module augmentation 的 `theme.designTokens` 等挂载点）。
  */
 export const tokens = {
-  // ── 语义色（来源：原 theme.ts，保持既有取值不变）────────────────────────────
-  /** 品牌主色；历史非法主色会安全回退到该值。 */
-  primary: '#3370FF',
-  /** 成功 / 正向语义色（绿）。 */
+  // ══════════════════════════════════════════════════════════════════════════
+  // P5-2：WCAG 2 AA 对比度治理（可计算，不靠肉眼）。
+  //
+  // 核心问题：鲜艳的语义色（绿 #22C55E / 橙 #F59E0B / 红 #EF4444）作**浅色底上的文字**
+  // 时对比度只有 2.15–3.76:1，未达 AA 正文 4.5:1。但同一种色作**深色文字的背景填充**
+  // 却完全够用（深字压鲜艳底 5.6–9.8:1）。
+  //
+  // 因此把「填充角色」与「文字角色」拆成两套值：
+  //   · `success/warning/error`（鲜艳）  = **填充值**，只作大色块填充（filled 徽章底、图表等）。
+  //   · `successText/warningText/errorText`（深色）= **文字值**，作浅底上的文字/图标/描边。
+  // MUI 的 `palette.<color>.main` 被 outlined 徽章文字、图标、`Typography color`、Alert 共用，
+  // 故 `.main` 统一取**文字安全值**；filled 徽章底色由 `MuiChip.styleOverrides` 回填鲜艳值（见下）。
+  //
+  // 实测比值见 `tests/visual/contrast-pairs.json`（`npm run contrast` 门禁，0 组不达标）。
+  // ══════════════════════════════════════════════════════════════════════════
+
+  // ── 品牌主色 ────────────────────────────────────────────────────────────────
+  /**
+   * 主色（**文字安全值**）。作主按钮/顶栏底色时白字 5.13:1；
+   * 作浅底上的文字：白卡片 5.13:1 / 页面底色 `#F5F6F8` 4.74:1（如「严格模式」caption 直接落在页面底上）。
+   * 原值 `#3370FF` 白字仅 4.28:1；团队候选 `#3268F5` 在**页面底色**上仅 4.38:1，故再下调一档。
+   */
+  primary: '#2F63EA',
+  /** 原品牌主色（`#3370FF`）：因白字对比度 4.28:1 不达标而**不再用于白字/正文**，仅保留作参考与大色块填充。 */
+  primaryBrand: '#3370FF',
+
+  // ── 语义色：填充值（鲜艳，保留品牌观感；仅作非文字填充）────────────────────
+  /** 成功绿「填充值」。作浅底文字仅 2.28:1，**禁止**作文字/图标，仅作 filled 徽章底等填充。 */
   success: '#22C55E',
-  /** 警示 / 待处理语义色（橙）。 */
+  /** 警示橙「填充值」。作浅底文字仅 2.15:1，**禁止**作文字/图标。 */
   warning: '#F59E0B',
-  /** 错误 / 危险语义色（红）。 */
+  /** 错误红「填充值」。作浅底文字仅 3.76:1，**禁止**作文字/图标。 */
   error: '#EF4444',
-  /** 中性灰，用于禁用、次要文本等。 */
-  neutral: '#9CA3AF',
+
+  // ── 语义色：文字安全值（浅色模式，用于 palette.<color>.main）────────────────
+  /** 成功绿「文字值」：白底 5.02:1。 */
+  successText: '#15803D',
+  /** 警示橙「文字值」：白底 5.22:1 / 页面底色 4.83:1 / 警示 Alert 底 4.68:1。 */
+  warningText: '#B15008',
+  /** 错误红「文字值」：白底 5.22:1 / 页面底色 4.83:1。 */
+  errorText: '#D32222',
+
+  // ── 语义色：文字安全值（深色模式；浅底上的深色值在深底上不达标，故另配浅色）──
+  /** 成功绿「深色模式文字值」：`#121212` 上 10.77:1。 */
+  successTextDark: '#4ADE80',
+  /** 警示橙「深色模式文字值」：`#121212` 上 11.23:1。 */
+  warningTextDark: '#FBBF24',
+  /** 错误红「深色模式文字值」：`#121212` 上 6.79:1。 */
+  errorTextDark: '#F87171',
+
+  // ── 中性灰 ─────────────────────────────────────────────────────────────────
+  /**
+   * 中性灰「文字值」：白底 4.97:1 / 页面底色 `#F5F6F8` 上 4.60:1，两种底都达标。
+   * 注：常见取值 `#6B7280` 在页面底色上仅 4.47:1（差 0.03），故取 `#667085`。
+   * 当前 `src/` 内**暂无消费方**（仅声明），保留为规范取值供后续使用。
+   */
+  neutral: '#667085',
+  /** 中性灰「禁用态」值：SC 1.4.3 明确豁免 disabled 控件，故保留浅灰以维持禁用观感。 */
+  neutralDisabled: '#9CA3AF',
   /** 页面底色（浅色模式）。 */
   bg: '#F5F6F8',
 
@@ -120,18 +168,43 @@ declare module '@mui/material/styles' {
   }
 }
 
+/**
+ * 鲜艳填充色上的文字色（深字压鲜艳底）。
+ * 实测：#22C55E 9.22:1 / #F59E0B 9.78:1 / #EF4444 5.58:1，均 ≥ 4.5:1。
+ * 这是 MUI `getContrastText()` 对这三个鲜艳底色的既有选择，保持与历史 filled 徽章观感一致。
+ */
+const ON_VIVID_FILL = 'rgba(0, 0, 0, 0.87)'
+
+/**
+ * 浅色填充底上的白色文字（用于 filled 主按钮、顶栏等）。
+ * 语义色的 `.main` 已是深色，白字实测 4.84–5.02:1；主色白字 4.74:1。
+ */
+const ON_SOLID_FILL = '#FFFFFF'
+
 /** 读取已保存偏好；历史非法主色安全回退，避免主题构建导致白屏。 */
 export function buildTheme(preferences?: { primary?: string; dark?: boolean }) {
   const dark = preferences?.dark === true
   const color = preferences?.primary ?? ''
   const primary = /^#[0-9a-fA-F]{6}$/.test(color) ? color : tokens.primary
+  /**
+   * 语义色 `.main` 按模式取「文字安全值」：
+   * - 浅色模式取深色值（白底/浅底上作文字/图标/描边达标）；
+   * - 深色模式取浅色值（`#121212`/`#1E1E1E` 上作文字/图标达标）。
+   * `contrastText` 显式指定，**不能**依赖 MUI 自动推导——MUI 的 `getContrastText` 阈值是 3:1，
+   * 在深色 `.main` 上会误选深色文字（如 `#15803D` 上深字仅 4.18:1，不达标），必须钉死为白色。
+   */
+  const semantic = {
+    success: dark ? tokens.successTextDark : tokens.successText,
+    warning: dark ? tokens.warningTextDark : tokens.warningText,
+    error: dark ? tokens.errorTextDark : tokens.errorText,
+  }
   return createTheme({
     palette: {
       mode: dark ? 'dark' : 'light',
-      primary: { main: primary },
-      success: { main: tokens.success },
-      warning: { main: tokens.warning },
-      error: { main: tokens.error },
+      primary: { main: primary, contrastText: ON_SOLID_FILL },
+      success: { main: semantic.success, contrastText: dark ? ON_VIVID_FILL : ON_SOLID_FILL },
+      warning: { main: semantic.warning, contrastText: dark ? ON_VIVID_FILL : ON_SOLID_FILL },
+      error: { main: semantic.error, contrastText: dark ? ON_VIVID_FILL : ON_SOLID_FILL },
       background: dark ? { default: '#121212', paper: '#1E1E1E' } : { default: tokens.bg, paper: '#FFFFFF' },
       // 难度色 / 徽章色：供组件以 palette 路径消费，保持单一来源。
       difficulty: tokens.difficulty,
@@ -171,6 +244,32 @@ export function buildTheme(preferences?: { primary?: string; dark?: boolean }) {
         },
       },
       MuiPaper: { styleOverrides: { root: { backgroundImage: 'none' } } },
+      MuiChip: {
+        styleOverrides: {
+          /**
+           * 「填充 vs 文字」分离的落地点。
+           *
+           * MUI 的 outlined 与 filled **共用** `palette.<color>.main` 一个槽位
+           * （见 `@mui/material/Chip/Chip.js:230` 与 `:168`）：outlined 用 `.main` 作文字/描边，
+           * filled 用 `.main` 作底色。但 `.main` 已被定为**文字安全深色**（供浅底文字/图标/Alert），
+           * 若不做处理，filled 徽章底色会跟着变深。
+           *
+           * 这里把 filled 徽章的**底色**回填鲜艳填充值、文字用深色——filled 徽章视觉与改动前一致，
+           * 同时 outlined 徽章自动用上文字安全色。实测深字压鲜艳底 9.22 / 9.78 / 5.58:1，均 ≥ 4.5:1。
+           * 仅对 success/warning/error 生效；`default`/`primary` 等走 MUI 原逻辑（已达标）。
+           */
+          root: ({ ownerState }: { ownerState: { variant?: string; color?: string } }) => {
+            if (ownerState.variant !== 'filled') return {}
+            const fill: Partial<Record<string, string>> = {
+              success: tokens.success,
+              warning: tokens.warning,
+              error: tokens.error,
+            }
+            const bg = ownerState.color ? fill[ownerState.color] : undefined
+            return bg ? { backgroundColor: bg, color: ON_VIVID_FILL } : {}
+          },
+        },
+      },
     },
   })
 }

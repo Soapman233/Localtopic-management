@@ -102,7 +102,8 @@ export function FilterSidebar({
   return (
     <Box sx={{ width: 248, flexShrink: 0 }}>
       <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mb: 1 }}>
-        <Typography variant="subtitle2">筛选</Typography>
+        {/* P5-3：筛选栏面板小标题，显式降为 <div>，避免与页面 h1 形成 h1→h6 跳级（视觉不变）。 */}
+        <Typography variant="subtitle2" component="div">筛选</Typography>
         <Chip size="small" variant="outlined" label="重置" onClick={onReset} />
       </Stack>
 

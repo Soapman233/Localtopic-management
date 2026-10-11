@@ -99,7 +99,9 @@ export function QuestionCard({
             <Tooltip title="拖拽到右侧试卷即可加入">
               <DragIndicatorIcon
                 fontSize="small"
-                sx={{ color: 'text.disabled', cursor: 'grab' }}
+                // P5-3 触达尺寸（SC 2.5.8）：20×20 的拖拽把手补 2px 透明内边距到 24×24。
+                // 用 `content-box` 让 padding 外扩命中区而**不放大图标本身**（视觉零变化）。
+                sx={{ color: 'text.disabled', cursor: 'grab', boxSizing: 'content-box', p: 0.25 }}
                 {...attributes}
                 {...listeners}
               />

@@ -129,7 +129,7 @@ export default function FormulaReviewPage() {
   return (
     <Box>
       <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 1 }} flexWrap="wrap" useFlexGap>
-        <Typography variant="h6">待复核公式队列</Typography>
+        <Typography variant="h6" component="h1">待复核公式队列</Typography>
         <Chip size="small" color="warning" label={`待处理 ${(summary?.open ?? 0).toLocaleString('zh-CN')}`} />
         <Chip size="small" color="success" variant="outlined" label={`已处理 ${(summary?.resolved ?? 0).toLocaleString('zh-CN')}`} />
         <Chip size="small" variant="outlined" label={`总计 ${total.toLocaleString('zh-CN')}`} />

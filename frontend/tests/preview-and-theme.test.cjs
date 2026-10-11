@@ -30,7 +30,7 @@ function loadTs(file) {
 }
 
 const { useUiStore, previewSettingsKey } = loadTs('src/store/uiStore.ts')
-const { buildTheme } = loadTs('src/theme.ts')
+const { buildTheme, tokens } = loadTs('src/theme.ts')
 const { formulaDisplay } = loadTs('src/components/formulaDisplay.ts')
 const katex = require('katex')
 const { GradeGapNotice } = loadTs('src/components/GradeGapNotice.tsx')
@@ -149,7 +149,8 @@ test('主题按保存值构建深色/主色，历史非法颜色安全回退', (
   assert.equal(dark.palette.mode, 'dark')
   assert.equal(dark.palette.primary.main, '#123abc')
   assert.equal(dark.palette.background.paper, '#1E1E1E')
-  assert.equal(buildTheme({ primary: 'invalid' }).palette.primary.main, '#3370FF')
+  // 回退主色 = `tokens.primary`（P5-2 起为 WCAG AA 文字安全值；断言引用 token，避免改色时硬编码字面量漂移）。
+  assert.equal(buildTheme({ primary: 'invalid' }).palette.primary.main, tokens.primary)
   assert.equal(buildTheme().palette.mode, 'light')
 })
 

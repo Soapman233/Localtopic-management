@@ -18,11 +18,12 @@ body {
   padding: 0 2px;
 }
 
-/* KaTeX 渲染失败降级：红色源码（不静默吞掉错误） */
+/* KaTeX 渲染失败降级：红色源码（不静默吞掉错误）
+ * P5-2：原 `#ef4444` 文字在 `#fef2f2` 上仅 3.44:1（未达 AA 4.5），改用深红 `#b91c1c`（5.91:1）。 */
 .qb-katex-fallback {
-  color: #ef4444;
+  color: #b91c1c;
   background: #fef2f2;
-  border: 1px dashed #ef4444;
+  border: 1px dashed #b91c1c;
   border-radius: 4px;
   padding: 0 4px;
   font-family: Consolas, Menlo, monospace;
@@ -34,4 +35,18 @@ body {
   overflow-x: auto;
   overflow-y: hidden;
   padding: 2px 0;
+}
+
+/* 减少动效（P5-3，WCAG SC 2.3.3 / 技能第 4 节）：
+   用户在系统里开启「减少动态效果」后，收敛过渡与动画时长（保留极短时长而非 0，
+   避免依赖 transitionend 的逻辑被永久挂起），并关闭平滑滚动。 */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
 }

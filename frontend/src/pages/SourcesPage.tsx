@@ -153,7 +153,7 @@ function SourceDetailDialog({
           )}
           {detail && src && (
             <Box>
-              <Typography variant="subtitle1" fontWeight={600} gutterBottom>
+              <Typography variant="subtitle1" component="h3" fontWeight={600} gutterBottom>
                 {src.file_name}
               </Typography>
               <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap sx={{ mb: 1 }}>
@@ -168,7 +168,7 @@ function SourceDetailDialog({
               </Typography>
 
               {/* 该来源内的覆盖率 */}
-              <Typography variant="subtitle2" sx={{ mt: 2 }}>
+              <Typography variant="subtitle2" component="h3" sx={{ mt: 2 }}>
                 该来源覆盖率
               </Typography>
               <Stack direction="row" spacing={2} flexWrap="wrap" useFlexGap>
@@ -181,7 +181,7 @@ function SourceDetailDialog({
               <Paper variant="outlined" sx={{ p: 2, mt: 2 }}>
                 <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 1 }}>
                   <EditIcon fontSize="small" color="action" />
-                  <Typography variant="subtitle2">文件级元数据（年级 / 教材）</Typography>
+                  <Typography variant="subtitle2" component="h3">文件级元数据（年级 / 教材）</Typography>
                 </Stack>
                 <Alert severity="warning" sx={{ mb: 1 }}>
                   年级 / 教材属于<strong>来源文件级</strong>字段：修改将影响该文件下全部{' '}
@@ -229,7 +229,7 @@ function SourceDetailDialog({
               </Paper>
 
               {/* 题目 id 预览 */}
-              <Typography variant="subtitle2" sx={{ mt: 2 }}>
+              <Typography variant="subtitle2" component="h3" sx={{ mt: 2 }}>
                 题目预览（前 {detail.question_ids_preview.length} 题）
               </Typography>
               <Stack direction="row" spacing={0.5} flexWrap="wrap" useFlexGap>
@@ -299,7 +299,7 @@ export default function SourcesPage() {
   return (
     <Box>
       <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 1 }} flexWrap="wrap" useFlexGap>
-        <Typography variant="h6">来源文件管理</Typography>
+        <Typography variant="h6" component="h1">来源文件管理</Typography>
         <Chip size="small" label={`文件 ${totalFiles}`} />
         <Chip
           size="small"

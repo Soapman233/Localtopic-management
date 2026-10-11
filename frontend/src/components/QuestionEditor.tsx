@@ -119,7 +119,7 @@ export function QuestionEditor({
         </Alert>
       )}
 
-      <Typography variant="subtitle2" gutterBottom>
+      <Typography variant="subtitle2" component="div" gutterBottom>
         题干（保留 ⟦Fn⟧ 占位符，公式单独编辑）
       </Typography>
       <TextField
@@ -151,7 +151,7 @@ export function QuestionEditor({
       </Stack>
 
       <Divider sx={{ my: 2 }} />
-      <Typography variant="subtitle2" gutterBottom>
+      <Typography variant="subtitle2" component="div" gutterBottom>
         元数据
       </Typography>
       <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} sx={{ mb: 2 }} flexWrap="wrap">
@@ -203,7 +203,7 @@ export function QuestionEditor({
         </Box>
       </Alert>
 
-      <Typography variant="subtitle2" gutterBottom>
+      <Typography variant="subtitle2" component="div" gutterBottom>
         知识点（可编辑标签集合）
       </Typography>
       {/* P0-1：把内部「提及口径」翻译成老师能懂的边界说明——标签只是搜索线索，不等于考点。 */}
@@ -249,7 +249,7 @@ export function QuestionEditor({
       />
 
       <Divider sx={{ my: 2 }} />
-      <Typography variant="subtitle2" gutterBottom>
+      <Typography variant="subtitle2" component="div" gutterBottom>
         公式（{formulas.length} 条，仅编辑现有公式的 LaTeX）
       </Typography>
       <Stack spacing={1} sx={{ mb: 2 }}>

@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react'
-import { useState } from 'react'
+import { Suspense, useEffect, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   AppBar,
@@ -36,6 +36,7 @@ import { Outlet, useLocation, useNavigate } from 'react-router-dom'
 import api from './api/client'
 import { qk } from './api/queryKeys'
 import ErrorBoundary from './components/ErrorBoundary'
+import LoadingState from './components/LoadingState'
 import { PaperSwitcher } from './components/PaperSwitcher'
 import { createPaper, listPapers } from './api/papers'
 import { usePaperStore } from './store/paperStore'
@@ -104,6 +105,23 @@ export const SETTINGS_ITEM: NavItem = {
  */
 export const NAV_ITEMS: NavItem[] = [...NAV_GROUPS.flatMap((g) => g.items), SETTINGS_ITEM]
 
+/** 站点基础标题（与 `index.html` 的 `<title>` 一致）。 */
+export const BASE_TITLE = '初中物理 · 题库与组卷'
+
+/**
+ * 由路由路径推导**文档标题**（P5-3：路由变化时同步 `document.title`）。
+ *
+ * 为什么：单页应用切换路由时 `<title>` 不变，读屏用户与多标签浏览者无法判断当前在哪一页。
+ * 本函数是**纯函数、无副作用**，导出以便单测（`documentTitleForPath` 的不变量：
+ * 已知路由 → 「页面名 · 初中物理题库」；题目详情 → 固定文案；未知 → 基础标题）。
+ */
+export function documentTitleForPath(pathname: string): string {
+  const clean = pathname.replace(/^\/+/, '')
+  if (clean.startsWith('question/')) return '题目详情 · 初中物理题库'
+  const hit = NAV_ITEMS.find((it) => clean === it.path || clean.startsWith(`${it.path}/`))
+  return hit ? `${hit.label} · 初中物理题库` : BASE_TITLE
+}
+
 /**
  * 单个侧栏导航按钮。
  *
@@ -115,7 +133,9 @@ function NavListButton({ item, onNavigate }: { item: NavItem; onNavigate: (path:
   // 用前缀匹配：治理页位于 /manage/* 子路径下，访问子路由时父项也应保持高亮。
   const selected = location.pathname.startsWith(`/${item.path}`)
   return (
-    <ListItemButton selected={selected} onClick={() => onNavigate(item.path)}>
+    // P5-3：`aria-current="page"` 明确告诉读屏用户「当前就在这一页」，
+    // 仅靠视觉高亮（selected）对读屏用户不可见。
+    <ListItemButton selected={selected} aria-current={selected ? 'page' : undefined} onClick={() => onNavigate(item.path)}>
       <ListItemIcon sx={{ minWidth: 40 }}>{item.icon}</ListItemIcon>
       <ListItemText
         primary={item.label}
@@ -164,6 +184,11 @@ export default function App() {
   const isNarrowNav = useMediaQuery(theme.breakpoints.down('md'))
   const [navOpen, setNavOpen] = useState(false)
 
+  // P5-3：路由变化时同步 document.title，让浏览器标签页 / 读屏播报当前页名。
+  useEffect(() => {
+    document.title = documentTitleForPath(location.pathname)
+  }, [location.pathname])
+
   // ---- P1-6：「我的试卷」提升为全站可达 ----
   // 试卷切换器从组卷页顶部提升到全局 AppBar，任意页面都能切换 / 新建试卷。
   // 数据来源仍是 react-query（`qk.papers()`，与组卷页共用同一份缓存）；**唯一状态来源是 paperStore**。
@@ -202,6 +227,48 @@ export default function App() {
 
   return (
     <Box sx={{ display: 'flex', minHeight: '100vh' }}>
+      {/* 跳到主内容（skip-link）——P5-3 无障碍语义。
+          键盘用户首次 Tab 即可直达主内容，不必逐次 Tab 过侧栏 8 个导航项。
+          ⚠️ 本项目用 HashRouter：若 `href="#main-content"` 走原生锚点会改写 location.hash，
+          被路由当成路径 `/main-content`（进而重定向）。故拦截默认行为，改为「聚焦 + 滚动」主内容区。
+          默认用 transform 移出视口（仍可被 Tab 聚焦），`:focus` 时滑入并显示焦点环（与 theme 的
+          Button 焦点环口径一致：2px 实线 + 外扩 2px）。 */}
+      <Box
+        component="a"
+        href="#main-content"
+        onClick={(e) => {
+          e.preventDefault()
+          const el = document.getElementById('main-content')
+          if (el) {
+            el.focus()
+            el.scrollIntoView()
+          }
+        }}
+        sx={{
+          position: 'fixed',
+          top: 8,
+          left: 8,
+          zIndex: (t) => t.zIndex.tooltip + 1,
+          px: 2,
+          py: 1,
+          bgcolor: 'background.paper',
+          color: 'text.primary',
+          borderRadius: 1,
+          boxShadow: 3,
+          textDecoration: 'none',
+          fontSize: 14,
+          transform: 'translateY(-200%)',
+          transition: 'transform 120ms ease',
+          '&:focus': {
+            transform: 'translateY(0)',
+            outline: '2px solid',
+            outlineColor: 'primary.main',
+            outlineOffset: 2,
+          },
+        }}
+      >
+        跳到主内容
+      </Box>
       <AppBar
         position="fixed"
         sx={{ zIndex: (t) => t.zIndex.drawer + 1, bgcolor: 'primary.main' }}
@@ -241,6 +308,9 @@ export default function App() {
         open={isNarrowNav ? navOpen : true}
         onClose={() => setNavOpen(false)}
         ModalProps={{ keepMounted: true }}
+        // P5-3：MUI 的 Dialog 会经 DialogTitle 自动派生 aria-labelledby，**Drawer 不会**。
+        // 窄屏下本抽屉是模态（temporary），没有可访问名时读屏只会念「对话框」。
+        aria-label="侧边导航"
         sx={{
           width: DRAWER_WIDTH,
           flexShrink: 0,
@@ -249,8 +319,9 @@ export default function App() {
       >
         <Toolbar variant="dense" />
         {/* 分组导航：分组名用 ListSubheader 呈现（非交互元素，不进 Tab 序列）；
-            系统设置用 mt:auto 顶到底部，与日常/治理两组视觉分离。 */}
-        <Box sx={{ overflow: 'auto', flexGrow: 1, display: 'flex', flexDirection: 'column' }}>
+            系统设置用 mt:auto 顶到底部，与日常/治理两组视觉分离。
+            P5-3：整块侧栏用 `<nav aria-label="主导航">` 承载，读屏用户可按地标快速跳转。 */}
+        <Box component="nav" aria-label="主导航" sx={{ overflow: 'auto', flexGrow: 1, display: 'flex', flexDirection: 'column' }}>
           {NAV_GROUPS.map((group) => (
             <List
               key={group.label}
@@ -285,9 +356,10 @@ export default function App() {
       {/* 全局「切换试卷」抽屉（P1-6）：任意页面都能切换 / 新建。
           命名刻意与组卷页的「试卷管理」（含删除 + 撤销）区分——两者能力不同，
           都叫「试卷列表」会让老师困惑「为什么这里的删不掉」。 */}
-      <Drawer anchor="left" open={paperListOpen} onClose={() => setPaperListOpen(false)}>
+      <Drawer anchor="left" open={paperListOpen} onClose={() => setPaperListOpen(false)}
+        aria-labelledby="paper-switch-drawer-title">
         <Box sx={{ width: 320, p: 2 }}>
-          <Typography variant="subtitle1" gutterBottom>
+          <Typography id="paper-switch-drawer-title" variant="subtitle1" component="h2" gutterBottom>
             切换试卷
           </Typography>
           <Stack direction="row" spacing={1} sx={{ mb: 1 }}>
@@ -335,12 +407,29 @@ export default function App() {
         </Box>
       </Drawer>
 
-      <Box component="main" sx={{ flexGrow: 1, minWidth: 0, p: { xs: 1.5, md: 3 } }}>
+      {/* 主内容区：`id` + `role="main"` 作为 skip-link 的目标与读屏地标；
+          `tabIndex={-1}` 使其可被脚本聚焦（不进 Tab 序列），聚焦时去掉整页外框。
+          （`component="main"` 本身已有隐式 role=main，此处显式声明以便阅读与断言。） */}
+      <Box
+        component="main"
+        id="main-content"
+        role="main"
+        tabIndex={-1}
+        sx={{ flexGrow: 1, minWidth: 0, p: { xs: 1.5, md: 3 }, '&:focus': { outline: 'none' } }}
+      >
         <Toolbar variant="dense" />
         <HealthBanner />
         {/* 页面级错误边界：单页异常不再整站白屏；切换路由自动重置。 */}
         <ErrorBoundary resetKeys={[location.pathname]}>
-          <Outlet />
+          {/* P5-1 路由级代码分割的加载态边界。
+              Suspense 放在 App 外壳**内部**、仅包住 <Outlet/>，而不是包住整个 <App/>：
+              这样懒加载页面 chunk 下载期间，顶栏 / 侧栏 / 试卷切换器**保持挂载不闪动**，
+              只有内容区显示统一的加载态（`LoadingState`），既无白屏也不会整页重排。
+              外层保留 ErrorBoundary：懒加载 chunk 拉取失败（动态 import reject）会作为
+              渲染错误冒泡到它，走项目既有的错误 UI，而不是卡在加载态。 */}
+          <Suspense fallback={<LoadingState label="页面加载中…" />}>
+            <Outlet />
+          </Suspense>
         </ErrorBoundary>
       </Box>
     </Box>

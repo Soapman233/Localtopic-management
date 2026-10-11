@@ -67,14 +67,15 @@
   font-size: 12px;
 }
 
-/* 页面调试徽标（仅 debug 模式）。 */
+/* 页面调试徽标（仅 debug 模式）。
+ * P5-2：原 `#b26a00` 在 `#fff7e6` 上仅 3.98:1（未达 AA 4.5），改用 `#92400e`（6.65:1）。 */
 .lp-debug-badge {
   position: absolute;
   top: 2px;
   right: 4px;
   z-index: 2;
   font-size: 10px;
-  color: #b26a00;
+  color: #92400e;
   background: #fff7e6;
   border: 1px solid #ffd591;
   border-radius: 3px;
@@ -95,13 +96,14 @@
 }
 
 /* 拖拽手柄：每题左侧，悬停显现（拖动时始终显示）。
- * P1-2：补 `:focus-within`，使键盘 Tab 聚焦到手柄/工具栏时同样显现（此前仅 hover 可达）。 */
+ * P1-2：补 `:focus-within`，使键盘 Tab 聚焦到手柄/工具栏时同样显现（此前仅 hover 可达）。
+ * P5-2：原 `#b0bec5` 在白色纸张上仅 1.91:1（未达非文字 3:1），改用 `#78909c`（3.35:1）。 */
 .lp-qhandle {
   position: absolute;
   left: -14px;
   top: 0;
   cursor: grab;
-  color: #b0bec5;
+  color: #78909c;
   font-size: 13px;
   line-height: 1;
   user-select: none;
@@ -156,7 +158,8 @@
 .lp-score-chip.lp-score-empty {
   border-color: #ffb74d;
   background: #fff3e0;
-  color: #e65100;
+  /* P5-2：原 `#e65100` 在 `#fff3e0` 上仅 3.46:1（未达 AA 4.5），改用 `#9a3412`（6.66:1）。 */
+  color: #9a3412;
 }
 
 /* 就地分值输入框。 */
@@ -189,6 +192,43 @@
   color: #8e0000;
 }
 
+/* ------------------------------------------------------------------ */
+/* P5-3 触达尺寸（SC 2.5.8，≥24×24）：下列编辑控件的**视觉尺寸**很小      */
+/* （拖拽手柄 ~13px、分值 chip 高 ~18px、删除按钮 ~13px）。用一个对齐、   */
+/* 透明的 24×24 伪元素扩展**命中区**，**不改变任何视觉与布局**。          */
+/* 三者都是绝对定位的编辑 chrome（手柄/工具栏不参与分页测量）。           */
+/* ------------------------------------------------------------------ */
+.lp-score-chip,
+.lp-qdel {
+  /* 使伪元素以其自身为定位基准（`.lp-qhandle` 已是 absolute，无需改）。 */
+  position: relative;
+}
+/* 拖拽手柄位于题目左侧页边距：命中区向左（页边距侧）对齐，不越入正文。 */
+.lp-qhandle::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  right: 0;
+  width: 24px;
+  height: 24px;
+  transform: translateY(-50%);
+}
+/* 分值 chip / 删除按钮：命中区居中放大。 */
+.lp-score-chip::after,
+.lp-qdel::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 24px;
+  height: 24px;
+  transform: translate(-50%, -50%);
+}
+/* 删除按钮命中区再**右移 3px**，避免向左越入相邻「分值」按钮造成误触删除。 */
+.lp-qdel::after {
+  transform: translate(-50%, -50%) translateX(3px);
+}
+
 
 .lp-doc .lp-line { white-space: pre-wrap; tab-size: 8; overflow-wrap: anywhere; }
 .lp-content-blocked { padding: 8px; border: 1px dashed #b91c1c; background: #fff1f2; color: #991b1b; font-size: 12px; line-height: 1.7; overflow-wrap: anywhere; }
@@ -203,7 +243,9 @@
 .lp-dark .lp-score-chip.lp-score-empty { border-color: #ffb74d; background: #3a2a10; color: #ffcc80; }
 .lp-dark .lp-score-input { background: #0d2b45; color: #e3f2fd; }
 .lp-dark .lp-score-input.lp-invalid { background: #3a1414; color: #ffcdd2; }
-.lp-dark .lp-qdel { color: #ef9a9a; }
-.lp-dark .lp-qdel:hover { color: #ffcdd2; }
+.lp-dark .lp-qdel { color: #c62828; }
+/* P5-2：深色覆盖里的删除按钮实际压在**白色纸张**上（纸张恒为白底黑字），
+ * 原 `#ef9a9a`/`#ffcdd2` 在白底上仅 2.15:1，改用与浅色模式一致的深红（5.62:1 / 6.57:1）。 */
+.lp-dark .lp-qdel:hover { color: #b71c1c; }
 .lp-dark .lp-qhandle { color: #78909c; }
 .lp-dark .lp-debug-badge { color: #ffcc80; background: #3a2a10; border-color: #ffb74d; }

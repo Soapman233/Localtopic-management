@@ -247,7 +247,7 @@ export default function SearchPage() {
   return (
     <Box>
       <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 2 }} flexWrap="wrap" useFlexGap>
-        <Typography variant="h6" sx={{ flexShrink: 0 }}>
+        <Typography variant="h6" component="h1" sx={{ flexShrink: 0 }}>
           检索题库
         </Typography>
         <TextField

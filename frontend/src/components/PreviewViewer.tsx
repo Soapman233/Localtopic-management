@@ -34,7 +34,12 @@ export function PreviewViewer({ pages, cached }: PreviewViewerProps) {
     <Box>
       <Stack direction="row" spacing={1} alignItems="center" sx={{ mb: 1.5 }} flexWrap="wrap">
         <Tooltip title="缩小">
-          <IconButton size="small" onClick={() => setZoom((z) => Math.max(0.4, +(z - 0.1).toFixed(2)))}>
+          {/* P5-3：图标按钮必须带中文可访问名，否则读屏只念「按钮」。 */}
+          <IconButton
+            size="small"
+            aria-label="缩小预览"
+            onClick={() => setZoom((z) => Math.max(0.4, +(z - 0.1).toFixed(2)))}
+          >
             <ZoomOutIcon fontSize="small" />
           </IconButton>
         </Tooltip>
@@ -42,7 +47,11 @@ export function PreviewViewer({ pages, cached }: PreviewViewerProps) {
           {Math.round(zoom * 100)}%
         </Button>
         <Tooltip title="放大">
-          <IconButton size="small" onClick={() => setZoom((z) => Math.min(2.5, +(z + 0.1).toFixed(2)))}>
+          <IconButton
+            size="small"
+            aria-label="放大预览"
+            onClick={() => setZoom((z) => Math.min(2.5, +(z + 0.1).toFixed(2)))}
+          >
             <ZoomInIcon fontSize="small" />
           </IconButton>
         </Tooltip>

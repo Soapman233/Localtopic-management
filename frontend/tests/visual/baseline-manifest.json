@@ -7,41 +7,41 @@
   "route_prefix": "#",
   "warmup_ms": 3500,
   "prelude": "localStorage['qb-paper-store'] = { currentPaperId: 1 }",
-  "accepted_at": "2026-10-11T17:08:36+08:00",
-  "accepted_reason": "接受阶段 3 的视觉变化作为新基线。逐页看图确认：builder=整页重排（单栏+右抽屉 → 1366 下双栏，P0-3 预期修复）；export=门禁表达重写（锁定态新增「生成预览」按钮 + 刷新即锁解释 + 回到组卷页引导，T3-2 预期）；其余 6 页 0.31/0.33% 差异来自 AppBar 新增试卷切换器（T3-4 预期），在阈值内。无回归。",
+  "accepted_at": "2026-10-11T18:01:45+08:00",
+  "accepted_reason": "接受阶段 5 的视觉变化作为新基线。逐页看图确认：顶栏主色 #3370FF → #2F63EA（细微变深，为满足白字 4.5:1）；语义徽章由亮绿/亮橙/亮红改为深绿/深橙/深红（outlined 徽章文字与描边，差异热力图显示仅徽章区域变化）；无布局变化。全 8 页均在阈值内（mean 0.08–1.00）。",
   "note": "基线 PNG 本身不入库（见 README「为什么基线图不入库」）；本清单用于追溯基线何时被替换。",
   "pages": [
     {
       "name": "builder",
-      "sha256": "a4395793d42c7a041f2239a9ef6b3104"
+      "sha256": "42bc11ff0868748128878960d2f443ae"
     },
     {
       "name": "export",
-      "sha256": "c8edcf56b9fe49dbf4c4eda072fc1184"
+      "sha256": "78c2757d3289336b93cc7b5cfcb37f80"
     },
     {
       "name": "manage-formula-review",
-      "sha256": "1b96ce0d76f0aae4980e3998bdbd0ffe"
+      "sha256": "99a88b29c234a899ed740acdea9d8ba0"
     },
     {
       "name": "manage-knowledge",
-      "sha256": "1c9604a26f068f3c417efc4d5db186a7"
+      "sha256": "60b89b284b0dcc4526c6a27765e1888f"
     },
     {
       "name": "manage-sources",
-      "sha256": "ced9273e3aed8dd83ec906de3f17dd26"
+      "sha256": "6d059588ed0132e519ecbbeeff7be172"
     },
     {
       "name": "manage-stats",
-      "sha256": "cf656c5790f15e540bae9d18f02faf6b"
+      "sha256": "74bc995052025fce2ad80743b5e1489e"
     },
     {
       "name": "search",
-      "sha256": "e4d9f494b7b8c662ad0fe29784436478"
+      "sha256": "9f927cf2ec163fe227c3d6f02836036a"
     },
     {
       "name": "settings",
-      "sha256": "94baace183a8a2648c5c6e46d3356de7"
+      "sha256": "1faa9393d41ddbb6a095423158bd98fc"
     }
   ]
 }

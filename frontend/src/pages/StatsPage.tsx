@@ -40,7 +40,8 @@ function StatCard({
       <Typography variant="caption" color="text.secondary">
         {label}
       </Typography>
-      <Typography variant="h5" fontWeight={700}>
+      {/* P5-3：总览卡的「数值」是数据而非标题——去掉 variant=h5 带来的伪 <h5>，避免污染标题大纲。 */}
+      <Typography variant="h5" fontWeight={700} component="div">
         {value}
       </Typography>
       {hint && (
@@ -82,7 +83,7 @@ function DistributionList({ title, rows, onItemClick }: {
   const max = rows.reduce((m, r) => Math.max(m, r.count), 0) || 1
   return (
     <Paper variant="outlined" sx={{ p: 2, flex: '1 1 320px', minWidth: 280 }}>
-      <Typography variant="subtitle2" gutterBottom>
+      <Typography variant="subtitle2" component="h2" gutterBottom>
         {title}
       </Typography>
       {rows.length === 0 && <EmptyState dense title="该维度暂无数据" />}
@@ -124,7 +125,7 @@ export default function StatsPage() {
   if (statsQ.isLoading) {
     return (
       <Box>
-        <Typography variant="h6" gutterBottom>
+        <Typography variant="h6" component="h1" gutterBottom>
           题库统计
         </Typography>
         <LoadingState label="正在加载统计…" />
@@ -134,7 +135,7 @@ export default function StatsPage() {
   if (statsQ.isError) {
     return (
       <Box>
-        <Typography variant="h6" gutterBottom>
+        <Typography variant="h6" component="h1" gutterBottom>
           题库统计
         </Typography>
         <ErrorState error={statsQ.error} title="加载统计失败" onRetry={() => statsQ.refetch()} />
@@ -150,7 +151,7 @@ export default function StatsPage() {
 
   return (
     <Box>
-      <Typography variant="h6" gutterBottom>
+      <Typography variant="h6" component="h1" gutterBottom>
         题库统计
       </Typography>
 
@@ -180,7 +181,7 @@ export default function StatsPage() {
       <Stack direction="row" spacing={2} flexWrap="wrap" useFlexGap sx={{ mb: 2 }}>
         {/* 覆盖率 */}
         <Paper variant="outlined" sx={{ p: 2, flex: '1 1 380px', minWidth: 320 }}>
-          <Typography variant="subtitle2" gutterBottom>
+          <Typography variant="subtitle2" component="h2" gutterBottom>
             元数据 / 内容覆盖率
           </Typography>
           <CoverageRow label="年级" bucket={env.grade} />
@@ -205,7 +206,7 @@ export default function StatsPage() {
 
         {/* 复核进度 + 知识点状态 */}
         <Paper variant="outlined" sx={{ p: 2, flex: '1 1 380px', minWidth: 320 }}>
-          <Typography variant="subtitle2" gutterBottom>
+          <Typography variant="subtitle2" component="h2" gutterBottom>
             待复核公式清零进度
           </Typography>
           <Stack direction="row" justifyContent="space-between">
@@ -223,7 +224,7 @@ export default function StatsPage() {
             ))}
           </Stack>
 
-          <Typography variant="subtitle2" sx={{ mt: 2 }} gutterBottom>
+          <Typography variant="subtitle2" component="h2" sx={{ mt: 2 }} gutterBottom>
             知识点复核状态
           </Typography>
           <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
