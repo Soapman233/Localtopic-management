@@ -110,7 +110,7 @@ python -c "import hashlib;from pathlib import Path;print(hashlib.sha256(Path('ou
 # 项目全景（背景知识）
 > **用途**：供 AI 编程助手（Codex 等）快速建立项目上下文。
 > **最后更新**：2026-10-10
-> **当前基线**：后端 387 项（386 通过、1 skip），前端 75 项通过（26 node:test + 49 vitest）；交付库 sha256 `6905955734953c6c…`。T2/T3 新导出已通过 Word/WPS 实际改字符、保存、重开验证，详见 `outputs/backlog-20261010/README.md`。独立验收后的 A/B 实现与 C/D 方案见 `outputs/acceptance-followup-20261010/README.md`。导出 P0（内容守卫 / 分支实例 / 显式修订卷 / 局部版式）见 `outputs/handoff/D-导出P0最终交接.md`。
+> **当前基线**：后端 387 项（386 通过、1 skip），前端 109 项通过（26 node:test + 83 vitest）；交付库 sha256 `6905955734953c6c…`。T2/T3 新导出已通过 Word/WPS 实际改字符、保存、重开验证，详见 `outputs/backlog-20261010/README.md`。独立验收后的 A/B 实现与 C/D 方案见 `outputs/acceptance-followup-20261010/README.md`。导出 P0（内容守卫 / 分支实例 / 显式修订卷 / 局部版式）见 `outputs/handoff/D-导出P0最终交接.md`。
 > **文档性质**：事实性交接文档 —— 记录**已完成的工作**、**当前架构**、**必须遵守的约定**与**已踩过的坑**。
 
 ---
@@ -156,7 +156,7 @@ python -m bank.cli export verify out.docx   # 验证公式可编辑性（Word+WP
 # 前端
 cd frontend && npm run build    # 产物写入 webui/static/（由后端托管）
 cd frontend && npx tsc --noEmit # 类型检查
-cd frontend && npm test        # 预览门禁/主题/公式显示/修复回归（node:test 26）+ 组件测试（vitest 49）
+cd frontend && npm test        # 预览门禁/主题/公式显示/修复回归（node:test 26）+ 组件测试（vitest 83）
 ```
 
 ### 关键路径
@@ -435,7 +435,7 @@ SQLite 11 表 + FTS5；幂等导入；中文检索；题目版本；待复核队
 
 | 项 | 值 |
 |---|---|
-| 测试 | 后端 **387 项（386 通过、1 skip）**；前端 **75 项通过** |
+| 测试 | 后端 **387 项（386 通过、1 skip）**；前端 **109 项通过** |
 | `bank.db` | 累计实质修复64条；本轮13条／9题；sha256 `6905955734953c6c...`（64,815,104 字节）；新备份 `outputs/bank.backup-20261010-162607-rdt.db` 已核验 |
 | 前端构建 | `webui/static/`（最新代码） |
 | 单人本地可用性 | ✅ 达到生产级 |

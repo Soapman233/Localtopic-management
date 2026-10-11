@@ -1,6 +1,6 @@
 # 交付资产元数据清单
 
-- 生成时间：2026-10-11T15:40:36.931694+08:00
+- 生成时间：2026-10-11T16:14:55.143853+08:00
 - 资产数量：168
 - 版本策略：**阶段制，暂用 0.x（首次交付 0.1.0）**
 - `author`：统一 `待补充`（用户明确要求）
@@ -119,15 +119,15 @@
 | outputs-material-diagnostics-20261005-json | `outputs/material_diagnostics_20261005.json` | 素材诊断数据 | 数据产物 | 数据 | 0.1.0 | 1126488 | 2026-10-05T11:04:32.315072+08:00 | 2026-10-05T11:04:32.317067+08:00 | 素材诊断、JSON、数据产物 |
 | outputs-preprocess-final-summary-json | `outputs/preprocess_final/_summary.json` | 阶段1 产出汇总 | 数据产物 | 数据 | 0.1.0 | 305878 | 2026-10-06T14:40:39.025115+08:00 | 2026-10-06T15:14:27.125073+08:00 | 阶段1、汇总、预处理、数据产物 |
 | bank-media-py | `bank/media.py` | 题库媒体信息与复核预览 | Web界面 | Web界面 | 0.1.0 | 5843 | 2026-10-09T10:43:35.797735+08:00 | 2026-10-10T21:51:50.886041+08:00 | 媒体、快照、WMF、PNG |
-| frontend-tests-preview-and-theme-test-cjs | `frontend/tests/preview-and-theme.test.cjs` | 预览门禁与主题回归测试 | 测试 | Web界面 | 0.1.0 | 13254 | 2026-10-09T10:56:56.353494+08:00 | 2026-10-10T22:04:19.547466+08:00 | 前端测试、预览门禁、主题 |
+| frontend-tests-preview-and-theme-test-cjs | `frontend/tests/preview-and-theme.test.cjs` | 预览门禁与主题回归测试 | 测试 | Web界面 | 0.1.0 | 14239 | 2026-10-09T10:56:56.353494+08:00 | 2026-10-11T16:04:47.122280+08:00 | 前端测试、预览门禁、主题 |
 | outputs-续作验证报告-20261009-md | `outputs/续作验证报告-20261009.md` | 续作与验证报告（2026-10-09） | 交付报告 | Web界面 | 0.1.0 | 5755 | 2026-10-09T11:02:44.307282+08:00 | 2026-10-09T11:09:42.925527+08:00 | 续作、验证、待办 |
 | outputs-backlog-20261010-README-md | `outputs/backlog-20261010/README.md` | 本轮交付与余项 | 交付报告 | 交付报告 | 0.1.0 | 3212 | 2026-10-10T11:56:47.036385+08:00 | 2026-10-10T11:59:26.505696+08:00 | 续作、验证 |
 | outputs-backlog-20261010-T4-超长单题跨页评估-md | `outputs/backlog-20261010/T4-超长单题跨页评估.md` | T4 超长单题跨页评估 | 交付报告 | 交付报告 | 0.1.0 | 3577 | 2026-10-10T11:54:51.606419+08:00 | 2026-10-10T11:59:26.505696+08:00 | 续作、验证 |
 | outputs-backlog-20261010-T5-多人部署方案比较-md | `outputs/backlog-20261010/T5-多人部署方案比较.md` | T5 多人部署方案比较 | 交付报告 | 交付报告 | 0.1.0 | 5683 | 2026-10-10T11:54:51.757308+08:00 | 2026-10-10T11:59:26.505696+08:00 | 续作、验证 |
 | frontend-src-components-formulaDisplay-ts | `frontend/src/components/formulaDisplay.ts` | 公式显示字形清洗 | Web界面 | Web界面 | 0.1.0 | 570 | 2026-10-10T11:44:55.098542+08:00 | 2026-10-10T11:44:55.098542+08:00 | 续作、验证 |
 | frontend-src-components-KatexFormula-tsx | `frontend/src/components/KatexFormula.tsx` | KaTeX 公式显示 | Web界面 | Web界面 | 0.1.0 | 5885 | 2026-10-07T11:30:46.124831+08:00 | 2026-10-11T10:33:55.014335+08:00 | 续作、验证 |
-| frontend-src-components-CoverageBanner-tsx | `frontend/src/components/CoverageBanner.tsx` | 覆盖率风险提示 | Web界面 | Web界面 | 0.1.0 | 3384 | 2026-10-07T11:30:46.124831+08:00 | 2026-10-10T11:20:59.765725+08:00 | 续作、验证 |
-| frontend-src-components-FilterSidebar-tsx | `frontend/src/components/FilterSidebar.tsx` | 筛选侧栏 | Web界面 | Web界面 | 0.1.0 | 11852 | 2026-10-07T11:31:48.128026+08:00 | 2026-10-10T12:47:01.754776+08:00 | 续作、验证 |
+| frontend-src-components-CoverageBanner-tsx | `frontend/src/components/CoverageBanner.tsx` | 覆盖率风险提示 | Web界面 | Web界面 | 0.1.0 | 4200 | 2026-10-07T11:30:46.124831+08:00 | 2026-10-11T16:01:32.441144+08:00 | 续作、验证 |
+| frontend-src-components-FilterSidebar-tsx | `frontend/src/components/FilterSidebar.tsx` | 筛选侧栏 | Web界面 | Web界面 | 0.1.0 | 14214 | 2026-10-11T16:02:53.285957+08:00 | 2026-10-11T16:11:32.014135+08:00 | 续作、验证 |
 | outputs-backlog-20261010-t2-approved-json | `outputs/backlog-20261010/t2-approved.json` | T2 逐项准入清单 | 数据产物 | 数据产物 | 0.1.0 | 16770 | 2026-10-10T11:41:23.113218+08:00 | 2026-10-10T11:42:25.436166+08:00 | 续作、验证 |
 | outputs-backlog-20261010-t2-applied-json | `outputs/backlog-20261010/t2-applied.json` | T2 正式写入与备份核验 | 数据产物 | 数据产物 | 0.1.0 | 2858 | 2026-10-10T11:42:26.370857+08:00 | 2026-10-10T11:42:26.370857+08:00 | 续作、验证 |
 | outputs-backlog-20261010-t2-copy-validation-json | `outputs/backlog-20261010/t2-copy-validation.json` | T2 副本演练 | 数据产物 | 数据产物 | 0.1.0 | 797 | 2026-10-10T11:41:23.570727+08:00 | 2026-10-10T11:41:23.570727+08:00 | 续作、验证 |
@@ -160,7 +160,7 @@
 | frontend-src-hooks-useExportGate-ts | `frontend/src/hooks/useExportGate.ts` | 导出预览门禁共享 hook | Web界面 | Web界面 | 0.1.0 | 17304 | 2026-10-11T10:31:39.859127+08:00 | 2026-10-11T15:28:20.128205+08:00 | 门禁、预览、导出、重构、Web界面 |
 | frontend-src-hooks-exportGateShared-ts | `frontend/src/hooks/exportGateShared.ts` | 导出门禁纯函数 | Web界面 | Web界面 | 0.1.0 | 2229 | 2026-10-11T10:40:34.439775+08:00 | 2026-10-11T10:40:34.439775+08:00 | 门禁、环境降级、editor_sdk、Web界面 |
 | frontend-src-components-ExportResultPanel-tsx | `frontend/src/components/ExportResultPanel.tsx` | 导出结果面板 | Web界面 | Web界面 | 0.1.0 | 2483 | 2026-10-11T10:38:10.773354+08:00 | 2026-10-11T10:38:10.773354+08:00 | 导出、结果、Web界面 |
-| frontend-src-components-PaperPanelItemRow-tsx | `frontend/src/components/PaperPanelItemRow.tsx` | 试卷题目行组件 | Web界面 | Web界面 | 0.1.0 | 6454 | 2026-10-11T10:39:23.846790+08:00 | 2026-10-11T10:39:23.846790+08:00 | 组卷、排序、Web界面 |
+| frontend-src-components-PaperPanelItemRow-tsx | `frontend/src/components/PaperPanelItemRow.tsx` | 试卷题目行组件 | Web界面 | Web界面 | 0.1.0 | 6644 | 2026-10-11T10:39:23.846790+08:00 | 2026-10-11T16:07:18.345037+08:00 | 组卷、排序、Web界面 |
 | frontend-src-api-types-core-ts | `frontend/src/api/types/core.ts` | 前端类型·核心 | Web界面 | Web界面 | 0.1.0 | 5992 | 2026-10-11T10:38:45.032404+08:00 | 2026-10-11T10:38:45.032404+08:00 | 类型、Web界面 |
 | frontend-src-api-types-paper-ts | `frontend/src/api/types/paper.ts` | 前端类型·试卷 | Web界面 | Web界面 | 0.1.0 | 8300 | 2026-10-11T10:38:53.717217+08:00 | 2026-10-11T10:38:53.717217+08:00 | 类型、组卷、Web界面 |
 | frontend-src-api-types-governance-ts | `frontend/src/api/types/governance.ts` | 前端类型·治理 | Web界面 | Web界面 | 0.1.0 | 7686 | 2026-10-11T10:39:01.597722+08:00 | 2026-10-11T10:39:01.597722+08:00 | 类型、治理、Web界面 |
@@ -173,9 +173,9 @@
 | outputs-handoff-D-前端修复与重构-md | `outputs/handoff/D-前端修复与重构.md` | 前端修复与重构交接（D） | 交付报告 | 交付报告 | 0.1.0 | 10214 | 2026-10-11T10:46:26.150680+08:00 | 2026-10-11T10:46:26.150680+08:00 | 前端、交接、重构、易用性 |
 | outputs-handoff-T-本轮独立验收-md | `outputs/handoff/T-本轮独立验收.md` | 本轮独立验收（T） | 交付报告 | 交付报告 | 0.1.0 | 10289 | 2026-10-11T10:54:35.545335+08:00 | 2026-10-11T10:54:35.546364+08:00 | 验收、独立、反证 |
 | outputs-export-upgrade-20261010-README-md | `outputs/export-upgrade-20261010/README.md` | 导出 P0 阶段收口索引 | 交付报告 | 交付报告 | 0.1.0 | 4638 | 2026-10-11T10:38:35.832263+08:00 | 2026-10-11T10:38:35.832263+08:00 | 导出、索引、阶段 |
-| webui-static-index-html | `webui/static/index.html` | 前端生产入口 | 数据产物 | Web界面 | 0.1.0 | 423 | 2026-10-07T11:35:17.501401+08:00 | 2026-10-11T15:35:31.855049+08:00 | 前端、构建 |
-| webui-static-assets-index-BOQOZ8LG-css | `webui/static/assets/index-BOQOZ8LG.css` | 前端生产资源 index-BOQOZ8LG.css | 数据产物 | Web界面 | 0.1.0 | 35987 | 2026-10-11T10:45:14.263730+08:00 | 2026-10-11T15:35:31.856048+08:00 | 前端、构建 |
-| webui-static-assets-index-BXPF-KLW-js | `webui/static/assets/index-BXPF_KLW.js` | 前端生产资源 index-BXPF_KLW.js | 数据产物 | Web界面 | 0.1.0 | 1105970 | 2026-10-11T15:35:31.851042+08:00 | 2026-10-11T15:35:31.861049+08:00 | 前端、构建 |
+| webui-static-index-html | `webui/static/index.html` | 前端生产入口 | 数据产物 | Web界面 | 0.1.0 | 419 | 2026-10-07T11:35:17.501401+08:00 | 2026-10-11T16:12:48.195075+08:00 | 前端、构建 |
+| webui-static-assets-index-BOQOZ8LG-css | `webui/static/assets/index-BOQOZ8LG.css` | 前端生产资源 index-BOQOZ8LG.css | 数据产物 | Web界面 | 0.1.0 | 35987 | 2026-10-11T10:45:14.263730+08:00 | 2026-10-11T16:12:48.195075+08:00 | 前端、构建 |
+| webui-static-assets-index-3rSU5EJ-js | `webui/static/assets/index-_3rSU5EJ.js` | 前端生产资源 index-_3rSU5EJ.js | 数据产物 | Web界面 | 0.1.0 | 1110339 | 2026-10-11T16:12:48.193078+08:00 | 2026-10-11T16:12:48.199592+08:00 | 前端、构建 |
 
 ## 逐条说明
 
@@ -1296,8 +1296,8 @@
 - **keywords**：前端测试、预览门禁、主题
 - **category**：测试　**stage**：Web界面
 - **author**：待补充　**version**：0.1.0
-- **created**：2026-10-09T10:56:56.353494+08:00　**modified**：2026-10-10T22:04:19.547466+08:00
-- **size_bytes**：13254
+- **created**：2026-10-09T10:56:56.353494+08:00　**modified**：2026-10-11T16:04:47.122280+08:00
+- **size_bytes**：14239
 
 ### 续作与验证报告（2026-10-09） (`outputs/续作验证报告-20261009.md`)
 
@@ -1366,8 +1366,8 @@
 - **keywords**：续作、验证
 - **category**：Web界面　**stage**：Web界面
 - **author**：待补充　**version**：0.1.0
-- **created**：2026-10-07T11:30:46.124831+08:00　**modified**：2026-10-10T11:20:59.765725+08:00
-- **size_bytes**：3384
+- **created**：2026-10-07T11:30:46.124831+08:00　**modified**：2026-10-11T16:01:32.441144+08:00
+- **size_bytes**：4200
 
 ### 筛选侧栏 (`frontend/src/components/FilterSidebar.tsx`)
 
@@ -1376,8 +1376,8 @@
 - **keywords**：续作、验证
 - **category**：Web界面　**stage**：Web界面
 - **author**：待补充　**version**：0.1.0
-- **created**：2026-10-07T11:31:48.128026+08:00　**modified**：2026-10-10T12:47:01.754776+08:00
-- **size_bytes**：11852
+- **created**：2026-10-11T16:02:53.285957+08:00　**modified**：2026-10-11T16:11:32.014135+08:00
+- **size_bytes**：14214
 
 ### T2 逐项准入清单 (`outputs/backlog-20261010/t2-approved.json`)
 
@@ -1706,8 +1706,8 @@
 - **keywords**：组卷、排序、Web界面
 - **category**：Web界面　**stage**：Web界面
 - **author**：待补充　**version**：0.1.0
-- **created**：2026-10-11T10:39:23.846790+08:00　**modified**：2026-10-11T10:39:23.846790+08:00
-- **size_bytes**：6454
+- **created**：2026-10-11T10:39:23.846790+08:00　**modified**：2026-10-11T16:07:18.345037+08:00
+- **size_bytes**：6644
 
 ### 前端类型·核心 (`frontend/src/api/types/core.ts`)
 
@@ -1836,8 +1836,8 @@
 - **keywords**：前端、构建
 - **category**：数据产物　**stage**：Web界面
 - **author**：待补充　**version**：0.1.0
-- **created**：2026-10-07T11:35:17.501401+08:00　**modified**：2026-10-11T15:35:31.855049+08:00
-- **size_bytes**：423
+- **created**：2026-10-07T11:35:17.501401+08:00　**modified**：2026-10-11T16:12:48.195075+08:00
+- **size_bytes**：419
 
 ### 前端生产资源 index-BOQOZ8LG.css (`webui/static/assets/index-BOQOZ8LG.css`)
 
@@ -1846,16 +1846,16 @@
 - **keywords**：前端、构建
 - **category**：数据产物　**stage**：Web界面
 - **author**：待补充　**version**：0.1.0
-- **created**：2026-10-11T10:45:14.263730+08:00　**modified**：2026-10-11T15:35:31.856048+08:00
+- **created**：2026-10-11T10:45:14.263730+08:00　**modified**：2026-10-11T16:12:48.195075+08:00
 - **size_bytes**：35987
 
-### 前端生产资源 index-BXPF_KLW.js (`webui/static/assets/index-BXPF_KLW.js`)
+### 前端生产资源 index-_3rSU5EJ.js (`webui/static/assets/index-_3rSU5EJ.js`)
 
-- **id**：`webui-static-assets-index-BXPF-KLW-js`
+- **id**：`webui-static-assets-index-3rSU5EJ-js`
 - **description**：当前入口直接引用的构建资源，尺寸和时间取实际文件。
 - **keywords**：前端、构建
 - **category**：数据产物　**stage**：Web界面
 - **author**：待补充　**version**：0.1.0
-- **created**：2026-10-11T15:35:31.851042+08:00　**modified**：2026-10-11T15:35:31.861049+08:00
-- **size_bytes**：1105970
+- **created**：2026-10-11T16:12:48.193078+08:00　**modified**：2026-10-11T16:12:48.199592+08:00
+- **size_bytes**：1110339
 

@@ -86,3 +86,15 @@
 - 验证：后端 387 / 前端 75 / tsc 0 / build 成功 / 浏览器冒烟 7/7 / toast 端到端 5/5（零写入）/ 反证成立。
 - 文档：`deliverables/前端重构阶段0-护栏先行-2026-10-11.md`。
 
+### 前端重构 · 阶段 1「术语与信息架构」（2026-10-11 完成）
+- **术语映射唯一来源**：`frontend/src/lib/glossary.ts`（`GLOSSARY` + `describe*` 函数 + `isDebugMode()`）。
+  **原始技术字段默认不渲染**，仅 `?debug=1` 或 `localStorage.qb_debug=1` 下显示（折叠区「给技术人员的信息」）。
+  ⚠️ 改术语口径时**必须同步 `tests/preview-and-theme.test.cjs`**（旧断言与新口径冲突）。
+- **导航**：`NAV_GROUPS`（日常备课 / 数据治理）+ 底部 `SETTINGS_ITEM`；治理页 `/manage/*`；
+  **默认落地 `/builder`**；**旧链接重定向 `LEGACY_REDIRECTS` 必须注册在 `*` 通配之前**。
+- **难度死功能**：`FilterSidebar.dimensionUsable()` 通用判定（items 为空即「暂不可用」+ 折叠 + 说明）；
+  `CoverageBanner` 覆盖率 0 显示「未标注（N 题）」而非「0%」。
+- 测试基数：后端 387、前端 **109**（26 node:test + 83 vitest）。
+- **1366×768 截图基线**在 `.tmp_verify/baseline-1366x768/`（已 gitignore，未入库；阶段 2 视觉回归前需定存放/比对方式）。
+- 文档：`deliverables/前端重构阶段1-术语与信息架构-2026-10-11.md`。
+
