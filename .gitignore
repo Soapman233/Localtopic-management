@@ -123,3 +123,9 @@ spike/latex2omml_smoke/real_*.docx
 spike/docx_writer_smoke/*.pdf
 spike/docx_writer_smoke/*.docx
 spike/docx_writer_smoke/_media/
+
+# 引擎切换实测产物（可再生）
+spike/docx_writer_smoke/engine_*.docx
+spike/docx_writer_smoke/eng_*.docx
+spike/docx_writer_smoke/e_*.docx
+spike/docx_writer_smoke/dbg.docx

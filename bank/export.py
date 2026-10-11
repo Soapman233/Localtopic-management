@@ -1792,34 +1792,97 @@ def make_docx_word_compatible(path: Path | str, dst: Path | str | None = None) -
     return postprocess_bridge_docx(path, dst)["graphic_data"]
 
 
+#: 导出引擎。
+#: * ``native`` —— 自研 :mod:`bank.docx_writer`，**不依赖 editor_sdk / Office**（便携路线默认）
+#: * ``bridge`` —— 原 editor_sdk 桥接链路（保留为后备）
+#: * ``auto``   —— 优先 native，失败时回退 bridge
+_EXPORT_ENGINES = ("native", "bridge", "auto")
+DEFAULT_EXPORT_ENGINE = "native"
+
+
+def resolve_export_engine(engine: str | None = None) -> str:
+    """确定生效的导出引擎：显式参数 > ``QB_EXPORT_ENGINE`` > 默认（native）。"""
+    if engine:
+        e = str(engine).strip().lower()
+        if e in _EXPORT_ENGINES:
+            return e
+    env = os.environ.get("QB_EXPORT_ENGINE", "").strip().lower()
+    return env if env in _EXPORT_ENGINES else DEFAULT_EXPORT_ENGINE
+
+
 def export_paper_docx(conn, paper_id: int, out_path: Path | str, *,
                       answer_mode: str | None = None, template: str | None = None,
                       bridge: EditorBridge | None = None,
-                      media_cache: Path = MEDIA_CACHE_DIR) -> dict:
+                      media_cache: Path = MEDIA_CACHE_DIR,
+                      engine: str | None = None) -> dict:
     """把试卷导出为 DOCX（原生 OMML 公式），返回导出报告。
+
+    引擎（见 :func:`resolve_export_engine`）：
+    * ``native``（默认）——自研 :mod:`bank.docx_writer`，**不需要 editor_sdk / Office**；
+    * ``bridge``——原 editor_sdk 链路；
+    * ``auto``——native 失败时回退 bridge。
+
+    两种引擎**共用**同一份「文档计划」与同一套发布前复核，因此产物可比。
 
     只读操作：不改题库、不改阶段1 JSON、不改 payload。
     """
+    engine = resolve_export_engine(engine)
     payload = _paper.build_export_payload(conn, paper_id, answer_mode=answer_mode, template=template)
 
     def _resolver(source_id, media_path, sha256):
         return resolve_media(conn, source_id, media_path, sha256, cache_dir=media_cache)
 
     plan = build_document_plan(payload, template=template, media_resolver=_resolver)
-    bridge = bridge or EditorBridge()
 
     out_path = Path(out_path).resolve()
     out_path.parent.mkdir(parents=True, exist_ok=True)
-    # 桥接写出的文件会被编辑器池持有句柄（可改名、不可覆盖），故先写 raw 再修补到最终路径。
+    # 桥接写出的文件会被编辑器池持有句柄（可改名、不可覆盖），故统一先写 raw 再发布到最终路径。
     raw = out_path.with_name(out_path.name + ".__raw__.docx")
-    written = render_plan_to_docx(bridge, plan, raw)
-    # CLI也可能在桥接渲染期间遇到来源/快照变化；发布最终件前重新核对。
+
+    used_engine = "bridge" if engine == "bridge" else "native"
+    bridge = bridge if bridge is not None else None
+    bridge_warnings: list[str] = []
+    bridge_errors: list[str] = []
+    fixes: dict = {}
+    written: dict = {}
+
+    def _run_bridge() -> dict:
+        nonlocal bridge, used_engine
+        used_engine = "bridge"
+        bridge = bridge or EditorBridge()
+        rep = render_plan_to_docx(bridge, plan, raw)
+        bridge_warnings.extend(bridge.warnings)
+        bridge_errors.extend(bridge.errors)
+        return rep
+
+    if engine == "bridge":
+        written = _run_bridge()
+    else:
+        from . import docx_writer
+        try:
+            written = docx_writer.write_plan(plan, raw)
+            used_engine = "native"
+        except Exception as exc:                       # noqa: BLE001
+            if engine != "auto":
+                raise
+            plan.setdefault("warnings", []).append(
+                f"native 渲染失败（{type(exc).__name__}: {exc}），已回退 bridge")
+            written = _run_bridge()
+
+    # CLI 也可能在渲染期间遇到来源/快照变化；发布最终件前重新核对（两引擎共用）。
     from . import export_content as content
     current = _paper.build_export_payload(conn, paper_id, answer_mode=answer_mode, template=template)
     if current['content_digest'] != payload['content_digest']:
         raise content.ExportEvidenceStale(current['diagnostics'])
     content.require_export_allowed(current['diagnostics'], current['answer_mode'])
-    fixes = postprocess_bridge_docx(raw, dst=out_path)
+
+    if used_engine == "bridge":
+        fixes = postprocess_bridge_docx(raw, dst=out_path)
+    else:
+        # 自研产物已直接输出正确的 OOXML（graphicData 带 uri / 真 <w:tab/> / 无实体残留），
+        # 无需桥接后处理；但仍经过 raw -> 发布 的同一条路径以保证语义一致。
+        os.replace(raw, out_path)
+
     for _ in range(20):                       # 清理中间文件（句柄释放后即可删除）
         try:
             raw.unlink()
@@ -1832,21 +1895,22 @@ def export_paper_docx(conn, paper_id: int, out_path: Path | str, *,
         "title": plan["title"],
         "template": plan["template"],
         "answer_mode": plan["answer_mode"],
+        "engine": used_engine,
         "docx": str(out_path),
         "size_bytes": out_path.stat().st_size if out_path.exists() else 0,
         "question_count": sum(len(s["questions"]) for s in plan["sections"]),
         "section_count": len(plan["sections"]),
-        "formulas_written": written["formulas_written"],
-        "images_written": written["images_written"],
+        "formulas_written": written.get("formulas_written", written.get("formulas", 0)),
+        "images_written": written.get("images_written", written.get("images", 0)),
         "image_sizes": written.get("image_sizes", []),
-        "word_compat_fixes": fixes["graphic_data"],
-        "math_entity_fixes": fixes["math_entities"],
+        "word_compat_fixes": fixes.get("graphic_data", 0),
+        "math_entity_fixes": fixes.get("math_entities", 0),
         "image_paragraph_merges": fixes.get("image_merge", 0),
         "footer_added": fixes.get("footer", False),
         "audit": plan["audit"],
         "warnings": plan["warnings"],
-        "bridge_warnings": bridge.warnings,
-        "bridge_errors": bridge.errors,
+        "bridge_warnings": bridge_warnings,
+        "bridge_errors": bridge_errors,
     }
 
 
@@ -2041,4 +2105,5 @@ __all__ = [
     "text_to_lines", "resolve_media", "build_document_plan", "EditorBridge",
     "render_plan_to_docx", "postprocess_bridge_docx", "make_docx_word_compatible",
     "export_paper_docx", "export_pdf", "verify_cross_client",
+    "resolve_export_engine", "DEFAULT_EXPORT_ENGINE",
 ]

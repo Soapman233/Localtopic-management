@@ -216,14 +216,49 @@ class TestExportContentP0(unittest.TestCase):
         self.assertIsNone(reason);self.assertEqual(hashlib.sha256(path.read_bytes()).hexdigest(),im['sha256'])
 
     def test_cli_render_time_content_change_prevents_final_publication(self):
-        target=Path(self.tmp.name)/'export.docx'
-        def changed_during_render(bridge,plan,raw):
-            self.conn.execute('UPDATE paper_questions SET score=25 WHERE paper_id=?',(self.pid,));self.conn.commit()
-            Path(raw).write_bytes(b'raw-rendered-file')
-            return {'formulas_written':0,'images_written':0}
-        with mock.patch.object(export,'render_plan_to_docx',side_effect=changed_during_render):
-            with self.assertRaises(content.ExportEvidenceStale):export.export_paper_docx(self.conn,self.pid,target)
-        self.assertFalse(target.exists())
+        """渲染期间内容变化 → **必须拒绝发布**。
+
+        ⚠️ 这道闸门与引擎无关：``export_paper_docx`` 在渲染完成后、发布最终件之前
+        会重新构建 payload 并比对 ``content_digest``。**两种引擎都必须守住**，
+        因此本测试对 native 与 bridge 各跑一遍。
+        """
+        from bank import docx_writer
+        row = self.conn.execute('SELECT score FROM paper_questions WHERE paper_id=? LIMIT 1',
+                                (self.pid,)).fetchone()
+        orig_score = row[0] if row else None
+
+        def make_side_effect():
+            def changed_during_render(*args, **kw):
+                # 模拟「渲染期间试卷内容被改动」
+                self.conn.execute('UPDATE paper_questions SET score=25 WHERE paper_id=?',
+                                  (self.pid,))
+                self.conn.commit()
+                raw = args[-1] if args else kw.get('path')
+                Path(raw).write_bytes(b'raw-rendered-file')
+                return {'formulas_written': 0, 'images_written': 0,
+                        'formulas': 0, 'images': 0}
+            return changed_during_render
+
+        for engine in ('native', 'bridge'):
+            with self.subTest(engine=engine):
+                # 每轮开始前复位，保证「渲染期间的变化」真实发生
+                self.conn.execute('UPDATE paper_questions SET score=? WHERE paper_id=?',
+                                  (orig_score, self.pid))
+                self.conn.commit()
+                target = Path(self.tmp.name) / f'export_{engine}.docx'
+                patcher = (mock.patch.object(docx_writer, 'write_plan',
+                                             side_effect=make_side_effect())
+                           if engine == 'native' else
+                           mock.patch.object(export, 'render_plan_to_docx',
+                                             side_effect=make_side_effect()))
+                with patcher:
+                    with self.assertRaises(content.ExportEvidenceStale):
+                        export.export_paper_docx(self.conn, self.pid, target, engine=engine)
+                self.assertFalse(target.exists())
+
+        self.conn.execute('UPDATE paper_questions SET score=? WHERE paper_id=?',
+                          (orig_score, self.pid))
+        self.conn.commit()
 
     def test_stem_crossing_confirmed_answer_boundary_blocks_without_default_delete(self):
         seed=_seed(self.conn,[{'text':'1．真题正文'},{'text':'参考答案'},{'text':'1．A'},{'text':'2．B'}])
