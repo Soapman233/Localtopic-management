@@ -146,3 +146,20 @@
   `tokens.difficulty`/`palette.badge` 零消费方（建议删除，接线会重新引入对比度失败）。
 - 文档：`deliverables/前端重构阶段5-性能与无障碍-2026-10-11.md`。
 
+### 阶段 4「两版适配」+ 用户体系（2026-10-11）
+- **鉴权库独立**：`outputs/webui/auth.db`，**绝不往交付数据 `bank.db` 里加表**（否则污染交付库 + 改变其 sha256）。
+- 后端：`webui/auth.py` + `routers/auth.py` + `tests/test_auth.py`；角色 viewer(read)/editor(read+write)/admin；
+  `pbkdf2_hmac`+`compare_digest`（纯标准库）；会话优先 Bearer、兼容 Cookie `qb_session`；
+  CLI `python -m webui.auth user add|list|set-password`。
+  ⚠️ **仅 `QB_EDITION=online` 且库中有用户时才启用鉴权**，否则单机全权（本地版零影响）。
+- 前端：`lib/deployMode.ts`（`VITE_DEPLOY_MODE`，**缺省 local 是安全默认**）、`app/auth/{AuthProvider,RequireAuth}`、
+  `pages/LoginPage`、`lib/permissions.ts` + `hooks/usePermission` + `components/Can`、`components/SessionControls`。
+- ⚠️ **令牌在 `api/client.ts` 全局自动附加**（逐个 api 函数传 header 必漏）；
+  登录接口须传 `skipAuthRedirect`（否则"密码错"会连带跳转、冲掉提示）。
+- ⚠️ **`useAuth` 缺 Provider 必须抛错**（静默兜底 = 鉴权被无声绕过）；测试侧补生产同款 Provider。
+- ⚠️ `vi.mock('api/client')` 的测试替身需同步新导出（`setAuthToken`/`getAuthToken`/`setUnauthorizedHandler`）。
+- 测试基数：后端 **423**、前端 **240**（26 node:test + 214 vitest）。
+- **本地版零影响的证据**：视觉回归 8 页 **全部 0.00**（像素级一致）。
+- 读屏：**NVDA 2026.2 已装且能启动**，但**语音未捕获**——`%APPDATA%\nvda\addons\` 为空说明插件未真正安装
+  （NVDA 只认 `addons/<包名>/` + `manifest.ini`，**缺字段会静默不加载**）。
+

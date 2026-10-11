@@ -367,6 +367,8 @@ export default function App() {
       <Drawer anchor="left" open={paperListOpen} onClose={() => setPaperListOpen(false)}
         PaperProps={{ role: 'dialog', 'aria-labelledby': 'paper-switch-drawer-title' }}>
         <Box sx={{ width: 320, p: 2 }}>
+          {/* 同上：避免被固定顶栏遮住标题与新建表单。 */}
+          <Toolbar variant="dense" />
           <Typography id="paper-switch-drawer-title" variant="subtitle1" component="h2" gutterBottom>
             切换试卷
           </Typography>
