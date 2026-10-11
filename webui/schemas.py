@@ -258,6 +258,39 @@ class SettingsUpdate(BaseModel):
     theme: Optional[dict] = None
 
 
+# --------------------------------------------------------------------------- #
+# 鉴权 / 用户管理
+# --------------------------------------------------------------------------- #
+class LoginRequest(BaseModel):
+    """``POST /api/auth/login`` 请求体。"""
+
+    username: str
+    password: str
+
+
+class UserCreateRequest(BaseModel):
+    """``POST /api/auth/users`` 请求体（仅 admin）。"""
+
+    username: str
+    password: str
+    role: str = "viewer"
+    display_name: Optional[str] = None
+
+
+class UserUpdateRequest(BaseModel):
+    """``PATCH /api/auth/users/{id}`` 请求体（仅 admin；仅传入需修改字段）。"""
+
+    role: Optional[str] = None
+    disabled: Optional[bool] = None
+    display_name: Optional[str] = None
+
+
+class UserPasswordRequest(BaseModel):
+    """``POST /api/auth/users/{id}/password`` 请求体（仅 admin）。"""
+
+    password: str
+
+
 __all__ = [
     "HealthOut", "ApiResponse", "SearchQuery",
     "FormulaPatch", "QuestionPatch", "QuestionUpdateRequest",
@@ -267,4 +300,5 @@ __all__ = [
     "PreviewRequest", "ExportRequest",
     "ReviewResolveRequest", "LabelDecisionPreviewRequest", "LabelDecisionRequest",
     "SourceMetadataRequest", "SettingsUpdate",
+    "LoginRequest", "UserCreateRequest", "UserUpdateRequest", "UserPasswordRequest",
 ]

@@ -22,9 +22,10 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
-from . import __version__, config, edition
+from . import __version__, auth, config, edition
 from . import db as _db
-from .errors import ok, register_exception_handlers
+from .errors import (CODE_FORBIDDEN, CODE_UNAUTHORIZED_SESSION, CODE_UNAUTHORIZED_TOKEN,
+                     error_body, ok, register_exception_handlers)
 
 #: 允许的本地来源（dev 时 Vite 在 5173；生产同源）。
 _ALLOWED_ORIGINS = [
@@ -74,24 +75,53 @@ def create_app() -> FastAPI:
 
     register_exception_handlers(app)
 
-    # 版本鉴权（**默认关闭**）：仅当设置 ``QB_AUTH_TOKEN`` 时启用。
-    # 本地运行版不设该变量 → 与历史行为完全一致，不受任何影响。
-    # 线上部署版的**浏览器访问**建议在 nginx 层用 Basic Auth 保护（见 editions/online/）；
-    # 本层令牌用于保护 ``/api/*``（供自动化/改造后的前端携带 Bearer 令牌调用）。
-    if edition.auth_enabled():
-        _token = edition.auth_token()
+    # ------------------------------------------------------------------ #
+    # 鉴权中间件（**默认关闭**：本地版 / 无用户 → 单机全权，无需任何凭据）
+    # ------------------------------------------------------------------ #
+    # 设计（详见 webui/auth.py）：
+    #   * ``online`` 与共享令牌在 **app 构建时**捕获 → 行为稳定（环境变量回退后不变）；
+    #   * 「是否存在用户」**每次请求动态查询** → 新建账号后无需重启即生效；
+    #   * 模式：off（单机全权）/ token（共享令牌，历史行为）/ session（用户会话）
+    #           / token+session（用户体系优先，共享令牌退化为服务账号）。
+    #   * 权限在**服务端**强制（不依赖前端隐藏按钮），未授权返回统一错误信封。
+    _online = edition.is_online()
+    _shared_token = edition.auth_token()
 
-        @app.middleware("http")
-        async def _edition_auth_guard(request, call_next):  # noqa: ANN001
-            if (request.url.path.startswith("/api/")
-                    and not edition.is_auth_exempt(request.url.path)):
-                if request.headers.get("authorization", "") != f"Bearer {_token}":
-                    return JSONResponse(
-                        status_code=401,
-                        content={"code": 40101, "data": None,
-                                 "message": "未授权：缺少或错误的访问令牌"},
-                    )
+    @app.middleware("http")
+    async def _auth_guard(request, call_next):  # noqa: ANN001
+        path = request.url.path
+        # 非 /api/*、免鉴权路径、以及 CORS 预检（OPTIONS）一律放行。
+        if (not path.startswith("/api/") or path in auth.EXEMPT_PATHS
+                or request.method == "OPTIONS"):
             return await call_next(request)
+        mode = auth.resolve_mode(online=_online, token=_shared_token)
+        request.state.auth_mode = mode
+        if mode == "off":
+            return await call_next(request)
+        # 共享令牌（服务账号）：携带正确令牌即放行，视为管理员（供自动化脚本）。
+        if _shared_token and auth.bearer_token(request) == _shared_token:
+            request.state.identity = auth.SERVICE_IDENTITY
+            return await call_next(request)
+        if mode in ("session", "token+session"):
+            identity = auth.authenticate_request(request)
+            if identity is None:
+                return JSONResponse(
+                    status_code=401,
+                    content=error_body(CODE_UNAUTHORIZED_SESSION,
+                                       "未授权：会话缺失或已过期，请重新登录"))
+            permission = auth.required_permission(request.method, path)
+            if not auth.role_allows(identity.role, permission):
+                return JSONResponse(
+                    status_code=403,
+                    content=error_body(
+                        CODE_FORBIDDEN,
+                        f"权限不足：{identity.role} 角色无权执行该操作（需要 {permission} 权限）"))
+            request.state.identity = identity
+            return await call_next(request)
+        # 纯共享令牌模式：缺令牌 / 令牌错误 → 401（保持历史行为）。
+        return JSONResponse(
+            status_code=401,
+            content=error_body(CODE_UNAUTHORIZED_TOKEN, "未授权：缺少或错误的访问令牌"))
 
     @app.get("/api/health")
     def health() -> JSONResponse:
