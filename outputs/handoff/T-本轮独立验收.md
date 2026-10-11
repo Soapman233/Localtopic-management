@@ -1,3 +1,14 @@
+---
+title: "本轮独立验收（T）"
+description: "G3 独立验证：导出 5 项 + 前端 6 项断言逐条结论、自建反例与证据。"
+keywords: ["验收", "独立", "反证"]
+author: "待补充"
+created: "2026-10-11T10:54:35.545335+08:00"
+modified: "2026-10-11T10:54:35.546364+08:00"
+version: "0.1.0"
+category: ["交付报告"]
+---
+
 # T-本轮独立验收（导出修复 + 前端修复重构）
 
 日期 2026-10-11 · 独立验收员（T/V）· 项目 `D:/Open-source project/Localtopic-management`
