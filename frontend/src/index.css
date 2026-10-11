@@ -1,0 +1,40 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+html,
+body,
+#root {
+  height: 100%;
+  margin: 0;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC',
+    'Microsoft YaHei', Roboto, 'Helvetica Neue', Arial, sans-serif;
+}
+
+/* 公式渲染容器（KaTeX） */
+.katex-inline {
+  display: inline-block;
+  vertical-align: middle;
+  padding: 0 2px;
+}
+
+/* KaTeX 渲染失败降级：红色源码（不静默吞掉错误） */
+.qb-katex-fallback {
+  color: #ef4444;
+  background: #fef2f2;
+  border: 1px dashed #ef4444;
+  border-radius: 4px;
+  padding: 0 4px;
+  font-family: Consolas, Menlo, monospace;
+  font-size: 0.9em;
+}
+
+/* 长公式横向可滚动，避免撑破卡片 */
+.katex-display {
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding: 2px 0;
+}

@@ -1,0 +1,2556 @@
+{
+  "student": {
+    "paper": {
+      "id": 1,
+      "title": "八年级物理·浮力与压强单元测验",
+      "subject": "物理",
+      "stage": "初中",
+      "grade": "八年级下册",
+      "template": "考试",
+      "answer_mode": "学生版",
+      "created_by": "待补充",
+      "status": "草稿",
+      "created_at": "2026-10-06T21:42:13"
+    },
+    "answer_mode": "学生版",
+    "generated_at": "2026-10-07T19:19:25",
+    "summary": {
+      "paper_id": 1,
+      "title": "八年级物理·浮力与压强单元测验",
+      "subject": "物理",
+      "stage": "初中",
+      "grade": "八年级下册",
+      "template": "考试",
+      "answer_mode": "学生版",
+      "status": "草稿",
+      "item_count": 10,
+      "section_count": 2,
+      "total_score": 42.0,
+      "scored_count": 10,
+      "unscored_count": 0,
+      "score_complete": true,
+      "sections": [
+        {
+          "id": 1,
+          "paper_id": 1,
+          "name": "一、选择题",
+          "seq": 1,
+          "description": null,
+          "item_count": 6,
+          "subtotal": 18.0,
+          "unscored_count": 0
+        },
+        {
+          "id": 2,
+          "paper_id": 1,
+          "name": "二、计算题",
+          "seq": 2,
+          "description": null,
+          "item_count": 4,
+          "subtotal": 24.0,
+          "unscored_count": 0
+        }
+      ],
+      "ungrouped": null,
+      "qtype_distribution": {
+        "选择题": 6,
+        "计算解答题": 4
+      }
+    },
+    "sections": [
+      {
+        "section_id": 1,
+        "name": "一、选择题",
+        "seq": 1,
+        "description": null,
+        "item_count": 6,
+        "subtotal": 18.0,
+        "questions": [
+          {
+            "item_id": 3,
+            "seq": 1,
+            "question_id": 3759,
+            "question_version": 1,
+            "number": "7",
+            "qtype": "选择题",
+            "difficulty": "未标注",
+            "score": 3.0,
+            "text": "7．如图所示，甲、乙两人在完全相同的沙滩散步，留下深浅相同、大小不同的脚印。则（　　）\n\tA．甲对沙滩的压强较大\tB．乙对沙滩的压强较小\n\tC．甲所受的重力较大\tD．甲所受重力与乙相等\n【答案】C\n【详解】AB．甲、乙两人在沙地上留下的脚印深浅相同，则他们对沙地的压强相等，即⟦F48⟧，故AB错误；\nCD．因⟦F49⟧，由⟦F50⟧可得，压强大小相同，则⟦F51⟧，由于物体对水平面的压力等于重力，因此甲的重力较大，故C正确，D错误。\n故选C。",
+            "plain_text": "7．如图所示，甲、乙两人在完全相同的沙滩散步，留下深浅相同、大小不同的脚印。则（　　）\n\tA．甲对沙滩的压强较大\tB．乙对沙滩的压强较小\n\tC．甲所受的重力较大\tD．甲所受重力与乙相等\n【答案】C\n【详解】AB．甲、乙两人在沙地上留下的脚印深浅相同，则他们对沙地的压强相等，即，故AB错误；\nCD．因，由可得，压强大小相同，则，由于物体对水平面的压力等于重力，因此甲的重力较大，故C正确，D错误。\n故选C。",
+            "formulas": [
+              {
+                "fid": "F48",
+                "seq": 1,
+                "kind": "mathtype",
+                "status": "OK",
+                "latex": "p_{ {\\text{甲}} } =p_{ {\\text{乙}} }",
+                "progid": "Equation.DSMT4",
+                "part": "embeddings/oleObject48.bin",
+                "preview": "media/image53.wmf",
+                "needs_review": 0
+              },
+              {
+                "fid": "F49",
+                "seq": 2,
+                "kind": "mathtype",
+                "status": "OK",
+                "latex": "S_{ {\\text{甲}} } >S_{ {\\text{乙}} }",
+                "progid": "Equation.DSMT4",
+                "part": "embeddings/oleObject49.bin",
+                "preview": "media/image54.wmf",
+                "needs_review": 0
+              },
+              {
+                "fid": "F50",
+                "seq": 3,
+                "kind": "mathtype",
+                "status": "OK",
+                "latex": "p=\\frac { F } { S }",
+                "progid": "Equation.DSMT4",
+                "part": "embeddings/oleObject50.bin",
+                "preview": "media/image55.wmf",
+                "needs_review": 0
+              },
+              {
+                "fid": "F51",
+                "seq": 4,
+                "kind": "mathtype",
+                "status": "OK",
+                "latex": "F_{ {\\text{甲}} } >F_{ {\\text{乙}} }",
+                "progid": "Equation.DSMT4",
+                "part": "embeddings/oleObject51.bin",
+                "preview": "media/image56.wmf",
+                "needs_review": 0
+              }
+            ],
+            "latex_list": [
+              "p_{ {\\text{甲}} } =p_{ {\\text{乙}} }",
+              "S_{ {\\text{甲}} } >S_{ {\\text{乙}} }",
+              "p=\\frac { F } { S }",
+              "F_{ {\\text{甲}} } >F_{ {\\text{乙}} }"
+            ],
+            "images": [
+              {
+                "media_path": "media/image52.png",
+                "sha256": "99b0c28f4daaf80271ac9ce6a5e5b17dac639b1410b0b4417c64dfbf4d32c8a3",
+                "offline_url": "media/q3759_img3121.png",
+                "natural_w": 669,
+                "natural_h": 243
+              }
+            ],
+            "image_paths": [
+              "media/image52.png"
+            ],
+            "answer": null,
+            "analysis": null,
+            "answer_source": "inline",
+            "show_answer": false,
+            "show_analysis": false,
+            "source": {
+              "source_id": 98,
+              "file_name": "专题06 固体压强的计算（6大考点）（解析版）.docx",
+              "stage": "初中",
+              "subject": "物理",
+              "grade": "待补充",
+              "textbook": "待补充",
+              "chapter": "待补充",
+              "start_paragraph": 72,
+              "end_paragraph": 79
+            }
+          },
+          {
+            "item_id": 1,
+            "seq": 2,
+            "question_id": 3753,
+            "question_version": 1,
+            "number": "1",
+            "qtype": "选择题",
+            "difficulty": "未标注",
+            "score": 3.0,
+            "text": "1．图中小红和滑雪板的总重大于小明的体重，小明陷入雪里，小红却没有。滑雪板和小明对雪地的压力和压强，下列说法正确的是（    ）\n\tA．小明对雪地的压强较大\tB．小明对雪地的压力较大\n\tC．他们对雪地的压强相等\tD．他们对雪地的压力相等\n【答案】A\n【详解】AC．压强是反映压力作用效果的物理量。由图可知，小红穿的滑雪板使雪地的凹陷程度小，而小明的脚使雪地的凹陷程度大，所以小明对雪地的压强较大，故A正确，C错误；\nBD．物体对水平地面的压力大小等于物体的总重力大小，因为小红和滑雪板的总重力大于小明的重力，所以小红和滑雪板对雪地的压力大，故BD错误。\n故选A。",
+            "plain_text": "1．图中小红和滑雪板的总重大于小明的体重，小明陷入雪里，小红却没有。滑雪板和小明对雪地的压力和压强，下列说法正确的是（    ）\n\tA．小明对雪地的压强较大\tB．小明对雪地的压力较大\n\tC．他们对雪地的压强相等\tD．他们对雪地的压力相等\n【答案】A\n【详解】AC．压强是反映压力作用效果的物理量。由图可知，小红穿的滑雪板使雪地的凹陷程度小，而小明的脚使雪地的凹陷程度大，所以小明对雪地的压强较大，故A正确，C错误；\nBD．物体对水平地面的压力大小等于物体的总重力大小，因为小红和滑雪板的总重力大于小明的重力，所以小红和滑雪板对雪地的压力大，故BD错误。\n故选A。",
+            "formulas": [],
+            "latex_list": [],
+            "images": [
+              {
+                "media_path": "media/image3.png",
+                "sha256": "3e62e333d878513ef8d3499f1cac108741fdec97e5bf6324ca327986e7a694ca",
+                "offline_url": "media/q3753_img3116.png",
+                "natural_w": 619,
+                "natural_h": 273
+              }
+            ],
+            "image_paths": [
+              "media/image3.png"
+            ],
+            "answer": null,
+            "analysis": null,
+            "answer_source": "inline",
+            "show_answer": false,
+            "show_analysis": false,
+            "source": {
+              "source_id": 98,
+              "file_name": "专题06 固体压强的计算（6大考点）（解析版）.docx",
+              "stage": "初中",
+              "subject": "物理",
+              "grade": "待补充",
+              "textbook": "待补充",
+              "chapter": "待补充",
+              "start_paragraph": 15,
+              "end_paragraph": 22
+            }
+          },
+          {
+            "item_id": 2,
+            "seq": 3,
+            "question_id": 3754,
+            "question_version": 1,
+            "number": "2",
+            "qtype": "选择题",
+            "difficulty": "未标注",
+            "score": 3.0,
+            "text": "2．平放在水平地面上的实心正方体a、b，分别用质量相等的甲、乙两种物质制成，如图所示是甲、乙两种物质的质量和体积的关系图像，下列正确的是（    ）\nA．实心正方体a、b对地面的压力之比为4∶1\nB．实心正方体a、b对地面的压力之比为8∶1\nC．实心正方体a、b的体积之比为8∶1\nD．实心正方体a、b对水平地面的压强之比为4∶1\n【答案】D\n【详解】AB．正方体对地面的压力等于其重力，由于a、b质量相等，所以重力相等，对地面的压力也相等，则实心正方体a、b对地面的压力之比为1∶1。故AB错误；\nCD．由图可知，当甲的体积为⟦F1⟧时，质量为8g，所以甲的密度⟦F2⟧\n当乙的体积为⟦F3⟧时，质量为4g，所以乙的密度为⟦F4⟧\n所以⟦F5⟧∶⟦F6⟧∶1。由⟦F7⟧可得⟦F8⟧，由⟦F9⟧∶⟦F10⟧∶1，⟦F11⟧∶⟦F12⟧∶1，可得⟦F13⟧，由⟦F14⟧可得，a、b两正方体棱长之比⟦F15⟧。因为正方体对地面的压强⟦F16⟧\n所以，两正方体a、b对水平地面的压强之比⟦F17⟧\n故C错误，D正确。\n故选D。",
+            "plain_text": "2．平放在水平地面上的实心正方体a、b，分别用质量相等的甲、乙两种物质制成，如图所示是甲、乙两种物质的质量和体积的关系图像，下列正确的是（    ）\nA．实心正方体a、b对地面的压力之比为4∶1\nB．实心正方体a、b对地面的压力之比为8∶1\nC．实心正方体a、b的体积之比为8∶1\nD．实心正方体a、b对水平地面的压强之比为4∶1\n【答案】D\n【详解】AB．正方体对地面的压力等于其重力，由于a、b质量相等，所以重力相等，对地面的压力也相等，则实心正方体a、b对地面的压力之比为1∶1。故AB错误；\nCD．由图可知，当甲的体积为时，质量为8g，所以甲的密度\n当乙的体积为时，质量为4g，所以乙的密度为\n所以∶∶1。由可得，由∶∶1，∶∶1，可得，由可得，a、b两正方体棱长之比。因为正方体对地面的压强\n所以，两正方体a、b对水平地面的压强之比\n故C错误，D正确。\n故选D。",
+            "formulas": [
+              {
+                "fid": "F1",
+                "seq": 1,
+                "kind": "mathtype",
+                "status": "OK",
+                "latex": "1cm ^ { 3 }",
+                "progid": "Equation.DSMT4",
+                "part": "embeddings/oleObject1.bin",
+                "preview": "media/image5.wmf",
+                "needs_review": 0
+              },
+              {
+                "fid": "F2",
+                "seq": 2,
+                "kind": "mathtype",
+                "status": "OK",
+                "latex": "\\rho _{ {\\text{甲}} } =\\frac { m_{ {\\text{甲}} } } { V_{ {\\text{甲}} } }=\\frac { 8{ \\rm{ g } } } { 1cm ^ { 3 } }=8{ \\rm{ g } }/cm ^ { 3 }",
+                "progid": "Equation.DSMT4",
+                "part": "embeddings/oleObject2.bin",
+                "preview": "media/image6.wmf",
+                "needs_review": 0
+              },
+              {
+                "fid": "F3",
+                "seq": 3,
+                "kind": "mathtype",
+                "status": "OK",
+                "latex": "4cm ^ { 3 }",
+                "progid": "Equation.DSMT4",
+                "part": "embeddings/oleObject3.bin",
+                "preview": "media/image7.wmf",
+                "needs_review": 0
+              },
+              {
+                "fid": "F4",
+                "seq": 4,
+                "kind": "mathtype",
+                "status": "OK",
+                "latex": "\\rho _{ {\\text{乙}} } =\\frac { m_{ {\\text{乙}} } } { V_{ {\\text{乙}} } }=\\frac { 4{ \\rm{ g } } } { 4cm ^ { 3 } }=1{ \\rm{ g } }/cm ^ { 3 }",
+                "progid": "Equation.DSMT4",
+                "part": "embeddings/oleObject4.bin",
+                "preview": "media/image8.wmf",
+                "needs_review": 0
+              },
+              {
+                "fid": "F5",
+                "seq": 5,
+                "kind": "mathtype",
+                "status": "OK",
+                "latex": "\\rho _{ a }",
+                "progid": "Equation.DSMT4",
+                "part": "embeddings/oleObject5.bin",
+                "preview": "media/image9.wmf",
+                "needs_review": 0
+              },
+              {
+                "fid": "F6",
+                "seq": 6,
+                "kind": "mathtype",
+                "status": "OK",
+                "latex": "\\rho _{ b } =8",
+                "progid": "Equation.DSMT4",
+                "part": "embeddings/oleObject6.bin",
+                "preview": "media/image10.wmf",
+                "needs_review": 0
+              },
+              {
+                "fid": "F7",
+                "seq": 7,
+                "kind": "mathtype",
+                "status": "OK",
+                "latex": "\\rho =\\frac { m } { V }",
+                "progid": "Equation.DSMT4",
+                "part": "embeddings/oleObject7.bin",
+                "preview": "media/image11.wmf",
+                "needs_review": 0
+              },
+              {
+                "fid": "F8",
+                "seq": 8,
+                "kind": "mathtype",
+                "status": "OK",
+                "latex": "V=\\frac { m } { \\rho }",
+                "progid": "Equation.DSMT4",
+                "part": "embeddings/oleObject8.bin",
+                "preview": "media/image12.wmf",
+                "needs_review": 0
+              },
+              {
+                "fid": "F9",
+                "seq": 9,
+                "kind": "mathtype",
+                "status": "OK",
+                "latex": "\\rho _{ a }",
+                "progid": "Equation.DSMT4",
+                "part": "embeddings/oleObject9.bin",
+                "preview": "media/image9.wmf",
+                "needs_review": 0
+              },
+              {
+                "fid": "F10",
+                "seq": 10,
+                "kind": "mathtype",
+                "status": "OK",
+                "latex": "\\rho _{ b } =8",
+                "progid": "Equation.DSMT4",
+                "part": "embeddings/oleObject10.bin",
+                "preview": "media/image10.wmf",
+                "needs_review": 0
+              },
+              {
+                "fid": "F11",
+                "seq": 11,
+                "kind": "mathtype",
+                "status": "OK",
+                "latex": "m_{ a }",
+                "progid": "Equation.DSMT4",
+                "part": "embeddings/oleObject11.bin",
+                "preview": "media/image13.wmf",
+                "needs_review": 0
+              },
+              {
+                "fid": "F12",
+                "seq": 12,
+                "kind": "mathtype",
+                "status": "OK",
+                "latex": "m_{ b } =1",
+                "progid": "Equation.DSMT4",
+                "part": "embeddings/oleObject12.bin",
+                "preview": "media/image14.wmf",
+                "needs_review": 0
+              },
+              {
+                "fid": "F13",
+                "seq": 13,
+                "kind": "mathtype",
+                "status": "OK",
+                "latex": "V_{ a } \\,\\!:V_{ b } =1\\,\\!:8",
+                "progid": "Equation.DSMT4",
+                "part": "embeddings/oleObject13.bin",
+                "preview": "media/image15.wmf",
+                "needs_review": 0
+              },
+              {
+                "fid": "F14",
+                "seq": 14,
+                "kind": "mathtype",
+                "status": "OK",
+                "latex": "V=L ^ { 3 }",
+                "progid": "Equation.DSMT4",
+                "part": "embeddings/oleObject14.bin",
+                "preview": "media/image16.wmf",
+                "needs_review": 0
+              },
+              {
+                "fid": "F15",
+                "seq": 15,
+                "kind": "mathtype",
+                "status": "OK",
+                "latex": "L_{ a } \\,\\!:L_{ b } =1\\,\\!:2",
+                "progid": "Equation.DSMT4",
+                "part": "embeddings/oleObject15.bin",
+                "preview": "media/image17.wmf",
+                "needs_review": 0
+              },
+              {
+                "fid": "F16",
+                "seq": 16,
+                "kind": "mathtype",
+                "status": "OK",
+                "latex": "p=\\frac { F } { S }=\\frac { G } { S }=\\frac { mg } { S }=\\frac { \\rho Vg } { S }=\\rho Lg",
+                "progid": "Equation.DSMT4",
+                "part": "embeddings/oleObject16.bin",
+                "preview": "media/image18.wmf",
+                "needs_review": 0
+              },
+              {
+                "fid": "F17",
+                "seq": 17,
+                "kind": "mathtype",
+                "status": "OK",
+                "latex": "\\frac { p_{ a } } { p_{ b } }=\\frac { \\rho _{ a } L_{ a } g } { \\rho _{ b } L_{ b } g }=\\frac { 8\\times 1 } { 1\\times 2 }=\\frac { 4 } { 1 }",
+                "progid": "Equation.DSMT4",
+                "part": "embeddings/oleObject17.bin",
+                "preview": "media/image19.wmf",
+                "needs_review": 0
+              }
+            ],
+            "latex_list": [
+              "1cm ^ { 3 }",
+              "\\rho _{ {\\text{甲}} } =\\frac { m_{ {\\text{甲}} } } { V_{ {\\text{甲}} } }=\\frac { 8{ \\rm{ g } } } { 1cm ^ { 3 } }=8{ \\rm{ g } }/cm ^ { 3 }",
+              "4cm ^ { 3 }",
+              "\\rho _{ {\\text{乙}} } =\\frac { m_{ {\\text{乙}} } } { V_{ {\\text{乙}} } }=\\frac { 4{ \\rm{ g } } } { 4cm ^ { 3 } }=1{ \\rm{ g } }/cm ^ { 3 }",
+              "\\rho _{ a }",
+              "\\rho _{ b } =8",
+              "\\rho =\\frac { m } { V }",
+              "V=\\frac { m } { \\rho }",
+              "\\rho _{ a }",
+              "\\rho _{ b } =8",
+              "m_{ a }",
+              "m_{ b } =1",
+              "V_{ a } \\,\\!:V_{ b } =1\\,\\!:8",
+              "V=L ^ { 3 }",
+              "L_{ a } \\,\\!:L_{ b } =1\\,\\!:2",
+              "p=\\frac { F } { S }=\\frac { G } { S }=\\frac { mg } { S }=\\frac { \\rho Vg } { S }=\\rho Lg",
+              "\\frac { p_{ a } } { p_{ b } }=\\frac { \\rho _{ a } L_{ a } g } { \\rho _{ b } L_{ b } g }=\\frac { 8\\times 1 } { 1\\times 2 }=\\frac { 4 } { 1 }"
+            ],
+            "images": [
+              {
+                "media_path": "media/image4.png",
+                "sha256": "cbcbb38a17fe2bdb8b24bb1d05eb64df6f06d42d48e0cb2206b6d24f4f3255e3",
+                "offline_url": "media/q3754_img3117.png",
+                "natural_w": 374,
+                "natural_h": 355
+              }
+            ],
+            "image_paths": [
+              "media/image4.png"
+            ],
+            "answer": null,
+            "analysis": null,
+            "answer_source": "inline",
+            "show_answer": false,
+            "show_analysis": false,
+            "source": {
+              "source_id": 98,
+              "file_name": "专题06 固体压强的计算（6大考点）（解析版）.docx",
+              "stage": "初中",
+              "subject": "物理",
+              "grade": "待补充",
+              "textbook": "待补充",
+              "chapter": "待补充",
+              "start_paragraph": 23,
+              "end_paragraph": 36
+            }
+          },
+          {
+            "item_id": 4,
+            "seq": 4,
+            "question_id": 3760,
+            "question_version": 1,
+            "number": "8",
+            "qtype": "选择题",
+            "difficulty": "未标注",
+            "score": 3.0,
+            "text": "8．如图所示，轻质细绳将物体A和B通过两个定滑轮（定滑轮可以改变力的方向，但不改变力的大小）分别连在一个轻质弹簧测力计的两端（不计摩擦），物体B悬在空中，物体A置于水平地面上，整个装置处于静止状态。其中，物体A和B分别是边长为20cm和30cm的正方体，物体A的重力为100N，物体B的重力为20N，则下列说法正确的是（    ）\nA．弹簧测力计的合力为80N\nB．弹簧测力计的示数为80N\nC．物体A对水平地面的压强为2000Pa\nD．若用30N的力竖直向下拉B，则A受到的合力为50N\n【答案】C\n【详解】A．弹簧测力计处于静止状态，属于平衡状态，所以它受到的合力为0N，故A错误；\nB．弹簧测力计的示数等于其一端受到的拉力大小。装置静止，物体B对弹簧测力计的拉力等于B的重力，即⟦F52⟧\n由于弹簧测力计处于静止状态，故受到A的拉力也等于20N，所以弹簧测力计的示数为20N，故B错误；\nC．物体A静止在水平地面上，受到竖直向下的重力、竖直向上的支持力和绳子竖直向上的拉力。因为整个装置处于静止状态，所以绳子对A的拉力等于弹簧测力计的示数，即⟦F53⟧，所以地面对A的支持力⟦F54⟧\n物体A对水平地面的压力与地面对A的支持力是一对相互作用力，大小相等，即⟦F55⟧\n物体A的底面积⟦F56⟧\n物体A对水平地面的压强⟦F57⟧，故C正确；\nD．若用30N的力竖直向下拉B，此时绳子对A的拉力⟦F58⟧\n所以物体A仍然静止在地面上，处于平衡状态，其受到的合力为0N，故D错误。\n故选C。",
+            "plain_text": "8．如图所示，轻质细绳将物体A和B通过两个定滑轮（定滑轮可以改变力的方向，但不改变力的大小）分别连在一个轻质弹簧测力计的两端（不计摩擦），物体B悬在空中，物体A置于水平地面上，整个装置处于静止状态。其中，物体A和B分别是边长为20cm和30cm的正方体，物体A的重力为100N，物体B的重力为20N，则下列说法正确的是（    ）\nA．弹簧测力计的合力为80N\nB．弹簧测力计的示数为80N\nC．物体A对水平地面的压强为2000Pa\nD．若用30N的力竖直向下拉B，则A受到的合力为50N\n【答案】C\n【详解】A．弹簧测力计处于静止状态，属于平衡状态，所以它受到的合力为0N，故A错误；\nB．弹簧测力计的示数等于其一端受到的拉力大小。装置静止，物体B对弹簧测力计的拉力等于B的重力，即\n由于弹簧测力计处于静止状态，故受到A的拉力也等于20N，所以弹簧测力计的示数为20N，故B错误；\nC．物体A静止在水平地面上，受到竖直向下的重力、竖直向上的支持力和绳子竖直向上的拉力。因为整个装置处于静止状态，所以绳子对A的拉力等于弹簧测力计的示数，即，所以地面对A的支持力\n物体A对水平地面的压力与地面对A的支持力是一对相互作用力，大小相等，即\n物体A的底面积\n物体A对水平地面的压强，故C正确；\nD．若用30N的力竖直向下拉B，此时绳子对A的拉力\n所以物体A仍然静止在地面上，处于平衡状态，其受到的合力为0N，故D错误。\n故选C。",
+            "formulas": [
+              {
+                "fid": "F52",
+                "seq": 1,
+                "kind": "mathtype",
+                "status": "OK",
+                "latex": "F=G_{ { \\rm{ B } } } =20{ \\rm{ N } }",
+                "progid": "Equation.DSMT4",
+                "part": "embeddings/oleObject52.bin",
+                "preview": "media/image58.wmf",
+                "needs_review": 0
+              },
+              {
+                "fid": "F53",
+                "seq": 2,
+                "kind": "mathtype",
+                "status": "OK",
+                "latex": "F_{ {\\text{拉}} } =20{ \\rm{ N } }",
+                "progid": "Equation.DSMT4",
+                "part": "embeddings/oleObject53.bin",
+                "preview": "media/image59.wmf",
+                "needs_review": 0
+              },
+              {
+                "fid": "F54",
+                "seq": 3,
+                "kind": "mathtype",
+                "status": "OK",
+                "latex": "F_{ {\\text{支}} } =G_{ { \\rm{ A } } } -F_{ {\\text{拉}} } =100{ \\rm{ N } }-20{ \\rm{ N } }=80{ \\rm{ N } }",
+                "progid": "Equation.DSMT4",
+                "part": "embeddings/oleObject54.bin",
+                "preview": "media/image60.wmf",
+                "needs_review": 0
+              },
+              {
+                "fid": "F55",
+                "seq": 4,
+                "kind": "mathtype",
+                "status": "OK",
+                "latex": "F_{ {\\text{压}} } =F_{ {\\text{支}} } =80{ \\rm{ N } }",
+                "progid": "Equation.DSMT4",
+                "part": "embeddings/oleObject55.bin",
+                "preview": "media/image61.wmf",
+                "needs_review": 0
+              },
+              {
+                "fid": "F56",
+                "seq": 5,
+                "kind": "mathtype",
+                "status": "OK",
+                "latex": "S_{ { \\rm{ A } } } =l_{ { \\rm{ A } } } ^{ 2 }=(20{ \\rm{ c } }{ \\rm{ m } }) ^ { 2 } =400{ \\rm{ c } }{ \\rm{ m } } ^ { { \\rm{ 2 } } } =0.04{ \\rm{ m } } ^ { { \\rm{ 2 } } }",
+                "progid": "Equation.DSMT4",
+                "part": "embeddings/oleObject56.bin",
+                "preview": "media/image62.wmf",
+                "needs_review": 0
+              },
+              {
+                "fid": "F57",
+                "seq": 6,
+                "kind": "mathtype",
+                "status": "OK",
+                "latex": "p=\\frac { F_{ {\\text{压}} } } { S_{ { \\rm{ A } } } }=\\frac { 80{ \\rm{ N } } } { 0.04{ \\rm{ m } } ^ { { \\rm{ 2 } } } }=2000{ \\rm{ P } }{ \\rm{ a } }",
+                "progid": "Equation.DSMT4",
+                "part": "embeddings/oleObject57.bin",
+                "preview": "media/image63.wmf",
+                "needs_review": 0
+              },
+              {
+                "fid": "F58",
+                "seq": 7,
+                "kind": "mathtype",
+                "status": "OK",
+                "latex": "F_{ {\\text{拉}}{ \\rm{ A } } } =G_{ { \\rm{ B } } } +F_{ {\\text{拉}}{ \\rm{ B } } } =20{ \\rm{ N } }+30{ \\rm{ N } }=50{ \\rm{ N } } < { \\rm{ 1 } }{ \\rm{ 0 } }{ \\rm{ 0 } }{ \\rm{ N } }",
+                "progid": "Equation.DSMT4",
+                "part": "embeddings/oleObject58.bin",
+                "preview": "media/image64.wmf",
+                "needs_review": 0
+              }
+            ],
+            "latex_list": [
+              "F=G_{ { \\rm{ B } } } =20{ \\rm{ N } }",
+              "F_{ {\\text{拉}} } =20{ \\rm{ N } }",
+              "F_{ {\\text{支}} } =G_{ { \\rm{ A } } } -F_{ {\\text{拉}} } =100{ \\rm{ N } }-20{ \\rm{ N } }=80{ \\rm{ N } }",
+              "F_{ {\\text{压}} } =F_{ {\\text{支}} } =80{ \\rm{ N } }",
+              "S_{ { \\rm{ A } } } =l_{ { \\rm{ A } } } ^{ 2 }=(20{ \\rm{ c } }{ \\rm{ m } }) ^ { 2 } =400{ \\rm{ c } }{ \\rm{ m } } ^ { { \\rm{ 2 } } } =0.04{ \\rm{ m } } ^ { { \\rm{ 2 } } }",
+              "p=\\frac { F_{ {\\text{压}} } } { S_{ { \\rm{ A } } } }=\\frac { 80{ \\rm{ N } } } { 0.04{ \\rm{ m } } ^ { { \\rm{ 2 } } } }=2000{ \\rm{ P } }{ \\rm{ a } }",
+              "F_{ {\\text{拉}}{ \\rm{ A } } } =G_{ { \\rm{ B } } } +F_{ {\\text{拉}}{ \\rm{ B } } } =20{ \\rm{ N } }+30{ \\rm{ N } }=50{ \\rm{ N } } < { \\rm{ 1 } }{ \\rm{ 0 } }{ \\rm{ 0 } }{ \\rm{ N } }"
+            ],
+            "images": [
+              {
+                "media_path": "media/image57.png",
+                "sha256": "7bf9189eec8138c579cce695aa8525a347b3f7b938fad7b616cf40aa2a52f55a",
+                "offline_url": "media/q3760_img3122.png",
+                "natural_w": 541,
+                "natural_h": 257
+              }
+            ],
+            "image_paths": [
+              "media/image57.png"
+            ],
+            "answer": null,
+            "analysis": null,
+            "answer_source": "inline",
+            "show_answer": false,
+            "show_analysis": false,
+            "source": {
+              "source_id": 98,
+              "file_name": "专题06 固体压强的计算（6大考点）（解析版）.docx",
+              "stage": "初中",
+              "subject": "物理",
+              "grade": "待补充",
+              "textbook": "待补充",
+              "chapter": "待补充",
+              "start_paragraph": 80,
+              "end_paragraph": 96
+            }
+          },
+          {
+            "item_id": 5,
+            "seq": 5,
+            "question_id": 3761,
+            "question_version": 1,
+            "number": "9",
+            "qtype": "选择题",
+            "difficulty": "未标注",
+            "score": 3.0,
+            "text": "9．如图所示，形状、体积相同的实心长方体甲、乙置于水平地面，对地面的压力分别为⟦F59⟧、⟦F60⟧，将它们顺时针旋转90°，此时甲、乙对地面的压强分别为⟦F61⟧、⟦F62⟧，对地面压强的变化量分别为⟦F63⟧、⟦F64⟧，若⟦F65⟧，则（　　）\n\tA．⟦F66⟧，⟦F67⟧\tB．⟦F68⟧，⟦F69⟧\n\tC．⟦F70⟧，⟦F71⟧\tD．⟦F72⟧，⟦F73⟧\n【答案】A\n【详解】设两长方体竖直放置时与地面接触面积为a，平躺放置时与地面的接触面积为b，放置方式变化时，压强变化量为⟦F74⟧，因为⟦F75⟧，所以⟦F76⟧，又因为旋转后⟦F77⟧，根据⟦F78⟧可知⟦F79⟧，故A符合题意，BCD不符合题意。\n故选A。",
+            "plain_text": "9．如图所示，形状、体积相同的实心长方体甲、乙置于水平地面，对地面的压力分别为、，将它们顺时针旋转90°，此时甲、乙对地面的压强分别为、，对地面压强的变化量分别为、，若，则（　　）\n\tA．，\tB．，\n\tC．，\tD．，\n【答案】A\n【详解】设两长方体竖直放置时与地面接触面积为a，平躺放置时与地面的接触面积为b，放置方式变化时，压强变化量为，因为，所以，又因为旋转后，根据可知，故A符合题意，BCD不符合题意。\n故选A。",
+            "formulas": [
+              {
+                "fid": "F59",
+                "seq": 1,
+                "kind": "mathtype",
+                "status": "OK",
+                "latex": "F_{ {\\text{甲}} }",
+                "progid": "Equation.DSMT4",
+                "part": "embeddings/oleObject59.bin",
+                "preview": "media/image65.wmf",
+                "needs_review": 0
+              },
+              {
+                "fid": "F60",
+                "seq": 2,
+                "kind": "mathtype",
+                "status": "OK",
+                "latex": "F_{ {\\text{乙}} }",
+                "progid": "Equation.DSMT4",
+                "part": "embeddings/oleObject60.bin",
+                "preview": "media/image66.wmf",
+                "needs_review": 0
+              },
+              {
+                "fid": "F61",
+                "seq": 3,
+                "kind": "mathtype",
+                "status": "OK",
+                "latex": "p_{ {\\text{甲}} } ^ { \\text{�} }",
+                "progid": "Equation.DSMT4",
+                "part": "embeddings/oleObject61.bin",
+                "preview": "media/image67.wmf",
+                "needs_review": 0
+              },
+              {
+                "fid": "F62",
+                "seq": 4,
+                "kind": "mathtype",
+                "status": "OK",
+                "latex": "p_{ {\\text{乙}} } ^ { \\text{�} }",
+                "progid": "Equation.DSMT4",
+                "part": "embeddings/oleObject62.bin",
+                "preview": "media/image68.wmf",
+                "needs_review": 0
+              },
+              {
+                "fid": "F63",
+                "seq": 5,
+                "kind": "mathtype",
+                "status": "OK",
+                "latex": "\\Delta p_{ {\\text{甲}} }",
+                "progid": "Equation.DSMT4",
+                "part": "embeddings/oleObject63.bin",
+                "preview": "media/image69.wmf",
+                "needs_review": 0
+              },
+              {
+                "fid": "F64",
+                "seq": 6,
+                "kind": "mathtype",
+                "status": "OK",
+                "latex": "\\Delta p_{ {\\text{乙}} }",
+                "progid": "Equation.DSMT4",
+                "part": "embeddings/oleObject64.bin",
+                "preview": "media/image70.wmf",
+                "needs_review": 0
+              },
+              {
+                "fid": "F65",
+                "seq": 7,
+                "kind": "mathtype",
+                "status": "OK",
+                "latex": "\\Delta p_{ {\\text{甲}} } >\\Delta p_{ {\\text{乙}} }",
+                "progid": "Equation.DSMT4",
+                "part": "embeddings/oleObject65.bin",
+                "preview": "media/image71.wmf",
+                "needs_review": 0
+              },
+              {
+                "fid": "F66",
+                "seq": 8,
+                "kind": "mathtype",
+                "status": "OK",
+                "latex": "F_{ {\\text{甲}} } >F_{ {\\text{乙}} }",
+                "progid": "Equation.DSMT4",
+                "part": "embeddings/oleObject66.bin",
+                "preview": "media/image56.wmf",
+                "needs_review": 0
+              },
+              {
+                "fid": "F67",
+                "seq": 9,
+                "kind": "mathtype",
+                "status": "OK",
+                "latex": "p_{ {\\text{甲}} } ^ { \\prime } >p_{ {\\text{乙}} } ^ { \\prime }",
+                "progid": "Equation.DSMT4",
+                "part": "embeddings/oleObject67.bin",
+                "preview": "media/image73.wmf",
+                "needs_review": 0
+              },
+              {
+                "fid": "F68",
+                "seq": 10,
+                "kind": "mathtype",
+                "status": "OK",
+                "latex": "F_{ {\\text{甲}} } >F_{ {\\text{乙}} }",
+                "progid": "Equation.DSMT4",
+                "part": "embeddings/oleObject68.bin",
+                "preview": "media/image56.wmf",
+                "needs_review": 0
+              },
+              {
+                "fid": "F69",
+                "seq": 11,
+                "kind": "mathtype",
+                "status": "OK",
+                "latex": "p_{ {\\text{甲}} } ^ { \\text{�} < p_{ {\\text{乙}} } ^ { \\text{�} } }",
+                "progid": "Equation.DSMT4",
+                "part": "embeddings/oleObject69.bin",
+                "preview": "media/image74.wmf",
+                "needs_review": 0
+              },
+              {
+                "fid": "F70",
+                "seq": 12,
+                "kind": "mathtype",
+                "status": "OK",
+                "latex": "F_{ {\\text{甲}} } < F_{ {\\text{乙}} }",
+                "progid": "Equation.DSMT4",
+                "part": "embeddings/oleObject70.bin",
+                "preview": "media/image75.wmf",
+                "needs_review": 0
+              },
+              {
+                "fid": "F71",
+                "seq": 13,
+                "kind": "mathtype",
+                "status": "OK",
+                "latex": "p_{ {\\text{甲}} } ^ { \\prime } >p_{ {\\text{乙}} } ^ { \\prime }",
+                "progid": "Equation.DSMT4",
+                "part": "embeddings/oleObject71.bin",
+                "preview": "media/image73.wmf",
+                "needs_review": 0
+              },
+              {
+                "fid": "F72",
+                "seq": 14,
+                "kind": "mathtype",
+                "status": "OK",
+                "latex": "F_{ {\\text{甲}} } < F_{ {\\text{乙}} }",
+                "progid": "Equation.DSMT4",
+                "part": "embeddings/oleObject72.bin",
+                "preview": "media/image75.wmf",
+                "needs_review": 0
+              },
+              {
+                "fid": "F73",
+                "seq": 15,
+                "kind": "mathtype",
+                "status": "OK",
+                "latex": "p_{ {\\text{甲}} } ^ { \\text{�} < p_{ {\\text{乙}} } ^ { \\text{�} } }",
+                "progid": "Equation.DSMT4",
+                "part": "embeddings/oleObject73.bin",
+                "preview": "media/image74.wmf",
+                "needs_review": 0
+              },
+              {
+                "fid": "F74",
+                "seq": 16,
+                "kind": "mathtype",
+                "status": "OK",
+                "latex": "{ \\rm{ \\Delta } }p=p_{ {\\text{竖}} } -p_{ {\\text{平}} } =\\frac { F } { a }-\\frac { F } { b }=\\ \\frac { b-a } { ab }\\cdot F",
+                "progid": "Equation.DSMT4",
+                "part": "embeddings/oleObject74.bin",
+                "preview": "media/image76.wmf",
+                "needs_review": 0
+              },
+              {
+                "fid": "F75",
+                "seq": 17,
+                "kind": "mathtype",
+                "status": "OK",
+                "latex": "{ \\rm{ \\Delta } }p_{ {\\text{甲}} } >{ \\rm{ \\Delta } }p_{ {\\text{乙}} }",
+                "progid": "Equation.DSMT4",
+                "part": "embeddings/oleObject75.bin",
+                "preview": "media/image77.wmf",
+                "needs_review": 0
+              },
+              {
+                "fid": "F76",
+                "seq": 18,
+                "kind": "mathtype",
+                "status": "OK",
+                "latex": "F_{ {\\text{甲}} } >F_{ {\\text{乙}} }",
+                "progid": "Equation.DSMT4",
+                "part": "embeddings/oleObject76.bin",
+                "preview": "media/image56.wmf",
+                "needs_review": 0
+              },
+              {
+                "fid": "F77",
+                "seq": 19,
+                "kind": "mathtype",
+                "status": "OK",
+                "latex": "S_{ {\\text{甲}} } < S_{ {\\text{乙}} }",
+                "progid": "Equation.DSMT4",
+                "part": "embeddings/oleObject77.bin",
+                "preview": "media/image78.wmf",
+                "needs_review": 0
+              },
+              {
+                "fid": "F78",
+                "seq": 20,
+                "kind": "mathtype",
+                "status": "OK",
+                "latex": "p=\\frac { F } { S }",
+                "progid": "Equation.DSMT4",
+                "part": "embeddings/oleObject78.bin",
+                "preview": "media/image55.wmf",
+                "needs_review": 0
+              },
+              {
+                "fid": "F79",
+                "seq": 21,
+                "kind": "mathtype",
+                "status": "OK",
+                "latex": "p'_{ {\\text{甲}} } {\\text{}}'>p'_{ {\\text{乙}} } {\\text{}}'",
+                "progid": "Equation.DSMT4",
+                "part": "embeddings/oleObject79.bin",
+                "preview": "media/image79.wmf",
+                "needs_review": 0
+              }
+            ],
+            "latex_list": [
+              "F_{ {\\text{甲}} }",
+              "F_{ {\\text{乙}} }",
+              "p_{ {\\text{甲}} } ^ { \\text{�} }",
+              "p_{ {\\text{乙}} } ^ { \\text{�} }",
+              "\\Delta p_{ {\\text{甲}} }",
+              "\\Delta p_{ {\\text{乙}} }",
+              "\\Delta p_{ {\\text{甲}} } >\\Delta p_{ {\\text{乙}} }",
+              "F_{ {\\text{甲}} } >F_{ {\\text{乙}} }",
+              "p_{ {\\text{甲}} } ^ { \\prime } >p_{ {\\text{乙}} } ^ { \\prime }",
+              "F_{ {\\text{甲}} } >F_{ {\\text{乙}} }",
+              "p_{ {\\text{甲}} } ^ { \\text{�} < p_{ {\\text{乙}} } ^ { \\text{�} } }",
+              "F_{ {\\text{甲}} } < F_{ {\\text{乙}} }",
+              "p_{ {\\text{甲}} } ^ { \\prime } >p_{ {\\text{乙}} } ^ { \\prime }",
+              "F_{ {\\text{甲}} } < F_{ {\\text{乙}} }",
+              "p_{ {\\text{甲}} } ^ { \\text{�} < p_{ {\\text{乙}} } ^ { \\text{�} } }",
+              "{ \\rm{ \\Delta } }p=p_{ {\\text{竖}} } -p_{ {\\text{平}} } =\\frac { F } { a }-\\frac { F } { b }=\\ \\frac { b-a } { ab }\\cdot F",
+              "{ \\rm{ \\Delta } }p_{ {\\text{甲}} } >{ \\rm{ \\Delta } }p_{ {\\text{乙}} }",
+              "F_{ {\\text{甲}} } >F_{ {\\text{乙}} }",
+              "S_{ {\\text{甲}} } < S_{ {\\text{乙}} }",
+              "p=\\frac { F } { S }",
+              "p'_{ {\\text{甲}} } {\\text{}}'>p'_{ {\\text{乙}} } {\\text{}}'"
+            ],
+            "images": [
+              {
+                "media_path": "media/image72.png",
+                "sha256": "8f7aa68df9afe771e98cac78e3051536911f6273205a283657a94d548c9e6b48",
+                "offline_url": "media/q3761_img3123.png",
+                "natural_w": 361,
+                "natural_h": 96
+              }
+            ],
+            "image_paths": [
+              "media/image72.png"
+            ],
+            "answer": null,
+            "analysis": null,
+            "answer_source": "inline",
+            "show_answer": false,
+            "show_analysis": false,
+            "source": {
+              "source_id": 98,
+              "file_name": "专题06 固体压强的计算（6大考点）（解析版）.docx",
+              "stage": "初中",
+              "subject": "物理",
+              "grade": "待补充",
+              "textbook": "待补充",
+              "chapter": "待补充",
+              "start_paragraph": 97,
+              "end_paragraph": 103
+            }
+          },
+          {
+            "item_id": 6,
+            "seq": 6,
+            "question_id": 3767,
+            "question_version": 1,
+            "number": "15",
+            "qtype": "选择题",
+            "difficulty": "未标注",
+            "score": 3.0,
+            "text": "15．如图所示，甲、乙两个实心长方体物体，同一顶点三条棱长均为24cm、12cm和12cm，以图示方式置于水平地面上，甲和乙均沿竖直方向截取二分之一的体积，并将截取部分叠放在各自剩余部分上方，若甲对地面的压强增大900Pa，乙对地面的压强增大600Pa，则甲乙两实心长方体的密度之比为（　　）\n\t\t\tA．⟦F128⟧\tB．⟦F129⟧\tC．⟦F130⟧\tD．⟦F131⟧\n【答案】C\n【详解】甲和乙均沿竖直方向截取二分之一的体积，并将截取部分叠放在各自剩余部分上方，剩余底面积为原来的⟦F132⟧，总重力不变，叠放后对地面的压力仍等于原长方体重力，物体对地面的压强变化量⟦F133⟧\n又有⟦F134⟧\n可得⟦F135⟧\n甲对地面的压强增大900Pa，可得⟦F136⟧①\n乙对地面的压强增大600Pa，可得⟦F137⟧②\n联立①②，可得甲乙两实心长方体的密度之比为⟦F138⟧，故选C。",
+            "plain_text": "15．如图所示，甲、乙两个实心长方体物体，同一顶点三条棱长均为24cm、12cm和12cm，以图示方式置于水平地面上，甲和乙均沿竖直方向截取二分之一的体积，并将截取部分叠放在各自剩余部分上方，若甲对地面的压强增大900Pa，乙对地面的压强增大600Pa，则甲乙两实心长方体的密度之比为（　　）\n\t\t\tA．\tB．\tC．\tD．\n【答案】C\n【详解】甲和乙均沿竖直方向截取二分之一的体积，并将截取部分叠放在各自剩余部分上方，剩余底面积为原来的，总重力不变，叠放后对地面的压力仍等于原长方体重力，物体对地面的压强变化量\n又有\n可得\n甲对地面的压强增大900Pa，可得①\n乙对地面的压强增大600Pa，可得②\n联立①②，可得甲乙两实心长方体的密度之比为，故选C。",
+            "formulas": [
+              {
+                "fid": "F128",
+                "seq": 1,
+                "kind": "mathtype",
+                "status": "OK",
+                "latex": "4\\,\\!:3",
+                "progid": "Equation.DSMT4",
+                "part": "embeddings/oleObject128.bin",
+                "preview": "media/image131.wmf",
+                "needs_review": 0
+              },
+              {
+                "fid": "F129",
+                "seq": 2,
+                "kind": "mathtype",
+                "status": "OK",
+                "latex": "16\\,\\!:9",
+                "progid": "Equation.DSMT4",
+                "part": "embeddings/oleObject129.bin",
+                "preview": "media/image132.wmf",
+                "needs_review": 0
+              },
+              {
+                "fid": "F130",
+                "seq": 3,
+                "kind": "mathtype",
+                "status": "OK",
+                "latex": "3\\,\\!:4",
+                "progid": "Equation.DSMT4",
+                "part": "embeddings/oleObject130.bin",
+                "preview": "media/image133.wmf",
+                "needs_review": 0
+              },
+              {
+                "fid": "F131",
+                "seq": 4,
+                "kind": "mathtype",
+                "status": "OK",
+                "latex": "9\\,\\!:16",
+                "progid": "Equation.DSMT4",
+                "part": "embeddings/oleObject131.bin",
+                "preview": "media/image134.wmf",
+                "needs_review": 0
+              },
+              {
+                "fid": "F132",
+                "seq": 5,
+                "kind": "mathtype",
+                "status": "OK",
+                "latex": "\\frac { 1 } { 2 }",
+                "progid": "Equation.DSMT4",
+                "part": "embeddings/oleObject132.bin",
+                "preview": "media/image135.wmf",
+                "needs_review": 0
+              },
+              {
+                "fid": "F133",
+                "seq": 6,
+                "kind": "mathtype",
+                "status": "OK",
+                "latex": "{ \\rm{ \\Delta } }p=p_{ {\\text{现}} } -p_{ {\\text{原}} } =\\frac { F } { \\frac { 1 } { 2 }S }-\\frac { F } { S }=\\frac { G } { \\frac { 1 } { 2 }S }-\\frac { G } { S }",
+                "progid": "Equation.DSMT4",
+                "part": "embeddings/oleObject133.bin",
+                "preview": "media/image136.wmf",
+                "needs_review": 0
+              },
+              {
+                "fid": "F134",
+                "seq": 7,
+                "kind": "mathtype",
+                "status": "OK",
+                "latex": "G=mg=\\rho Vg=\\rho shg",
+                "progid": "Equation.DSMT4",
+                "part": "embeddings/oleObject134.bin",
+                "preview": "media/image137.wmf",
+                "needs_review": 0
+              },
+              {
+                "fid": "F135",
+                "seq": 8,
+                "kind": "mathtype",
+                "status": "OK",
+                "latex": "{ \\rm{ \\Delta } }p=\\frac { G } { \\frac { 1 } { 2 }S }-\\frac { G } { S }=\\frac { \\rho Shg } { \\frac { 1 } { 2 }S }-\\frac { \\rho Shg } { S }=\\rho hg",
+                "progid": "Equation.DSMT4",
+                "part": "embeddings/oleObject135.bin",
+                "preview": "media/image138.wmf",
+                "needs_review": 0
+              },
+              {
+                "fid": "F136",
+                "seq": 9,
+                "kind": "mathtype",
+                "status": "OK",
+                "latex": "900{ \\rm{ P } }{ \\rm{ a } }{ \\rm{ = } }\\rho _{ {\\text{甲}} } h_{ {\\text{甲}} } g",
+                "progid": "Equation.DSMT4",
+                "part": "embeddings/oleObject136.bin",
+                "preview": "media/image139.wmf",
+                "needs_review": 0
+              },
+              {
+                "fid": "F137",
+                "seq": 10,
+                "kind": "mathtype",
+                "status": "OK",
+                "latex": "600{ \\rm{ P } }{ \\rm{ a } }{ \\rm{ = } }\\rho _{ {\\text{乙}} } h_{ {\\text{乙}} } g",
+                "progid": "Equation.DSMT4",
+                "part": "embeddings/oleObject137.bin",
+                "preview": "media/image140.wmf",
+                "needs_review": 0
+              },
+              {
+                "fid": "F138",
+                "seq": 11,
+                "kind": "mathtype",
+                "status": "OK",
+                "latex": "\\frac { \\rho _{ {\\text{甲}} } } { \\rho _{ {\\text{乙}} } }{ \\rm{ = } }\\frac { \\frac { 900{ \\rm{ P } }{ \\rm{ a } } } { h_{ {\\text{甲}} } g } } { \\frac { 600{ \\rm{ P } }{ \\rm{ a } } } { h_{ {\\text{乙}} } g } }=\\frac { 900{ \\rm{ P } }{ \\rm{ a } } } { h_{ {\\text{甲}} } g }\\times \\frac { h_{ {\\text{乙}} } g } { 600{ \\rm{ P } }{ \\rm{ a } } }=\\frac { 900{ \\rm{ P } }{ \\rm{ a } } } { 0.24{ \\rm{ m } }\\times g }\\times \\frac { 0.12{ \\rm{ m } }\\times g } { 600{ \\rm{ P } }{ \\rm{ a } } }=\\frac { 3 } { 4 }",
+                "progid": "Equation.DSMT4",
+                "part": "embeddings/oleObject138.bin",
+                "preview": "media/image141.wmf",
+                "needs_review": 0
+              }
+            ],
+            "latex_list": [
+              "4\\,\\!:3",
+              "16\\,\\!:9",
+              "3\\,\\!:4",
+              "9\\,\\!:16",
+              "\\frac { 1 } { 2 }",
+              "{ \\rm{ \\Delta } }p=p_{ {\\text{现}} } -p_{ {\\text{原}} } =\\frac { F } { \\frac { 1 } { 2 }S }-\\frac { F } { S }=\\frac { G } { \\frac { 1 } { 2 }S }-\\frac { G } { S }",
+              "G=mg=\\rho Vg=\\rho shg",
+              "{ \\rm{ \\Delta } }p=\\frac { G } { \\frac { 1 } { 2 }S }-\\frac { G } { S }=\\frac { \\rho Shg } { \\frac { 1 } { 2 }S }-\\frac { \\rho Shg } { S }=\\rho hg",
+              "900{ \\rm{ P } }{ \\rm{ a } }{ \\rm{ = } }\\rho _{ {\\text{甲}} } h_{ {\\text{甲}} } g",
+              "600{ \\rm{ P } }{ \\rm{ a } }{ \\rm{ = } }\\rho _{ {\\text{乙}} } h_{ {\\text{乙}} } g",
+              "\\frac { \\rho _{ {\\text{甲}} } } { \\rho _{ {\\text{乙}} } }{ \\rm{ = } }\\frac { \\frac { 900{ \\rm{ P } }{ \\rm{ a } } } { h_{ {\\text{甲}} } g } } { \\frac { 600{ \\rm{ P } }{ \\rm{ a } } } { h_{ {\\text{乙}} } g } }=\\frac { 900{ \\rm{ P } }{ \\rm{ a } } } { h_{ {\\text{甲}} } g }\\times \\frac { h_{ {\\text{乙}} } g } { 600{ \\rm{ P } }{ \\rm{ a } } }=\\frac { 900{ \\rm{ P } }{ \\rm{ a } } } { 0.24{ \\rm{ m } }\\times g }\\times \\frac { 0.12{ \\rm{ m } }\\times g } { 600{ \\rm{ P } }{ \\rm{ a } } }=\\frac { 3 } { 4 }"
+            ],
+            "images": [
+              {
+                "media_path": "media/image130.png",
+                "sha256": "b9189307fa5b2fd558ef0ee4acc0c7d78c2a402b587e9516d34da028406688c3",
+                "offline_url": "media/q3767_img3128.png",
+                "natural_w": 458,
+                "natural_h": 179
+              }
+            ],
+            "image_paths": [
+              "media/image130.png"
+            ],
+            "answer": null,
+            "analysis": null,
+            "answer_source": "inline",
+            "show_answer": false,
+            "show_analysis": false,
+            "source": {
+              "source_id": 98,
+              "file_name": "专题06 固体压强的计算（6大考点）（解析版）.docx",
+              "stage": "初中",
+              "subject": "物理",
+              "grade": "待补充",
+              "textbook": "待补充",
+              "chapter": "待补充",
+              "start_paragraph": 139,
+              "end_paragraph": 148
+            }
+          }
+        ]
+      },
+      {
+        "section_id": 2,
+        "name": "二、计算题",
+        "seq": 2,
+        "description": null,
+        "item_count": 4,
+        "subtotal": 24.0,
+        "questions": [
+          {
+            "item_id": 7,
+            "seq": 7,
+            "question_id": 6386,
+            "question_version": 1,
+            "number": "1",
+            "qtype": "计算解答题",
+            "difficulty": "未标注",
+            "score": 6.0,
+            "text": "1．（24-25八年级下·四川内江·期中）小米公司第一款纯电轿车小米SU7于2024年3月28日正式发布，如图所示。该车质量约为2000kg，轮胎与地面接触总面积为8×10-2m2。求：\n(1)车的重力；(2)静止时车对地面的压强。",
+            "plain_text": "1．（24-25八年级下·四川内江·期中）小米公司第一款纯电轿车小米SU7于2024年3月28日正式发布，如图所示。该车质量约为2000kg，轮胎与地面接触总面积为8×10-2m2。求：\n(1)车的重力；(2)静止时车对地面的压强。",
+            "formulas": [],
+            "latex_list": [],
+            "images": [],
+            "image_paths": [],
+            "answer": null,
+            "analysis": null,
+            "answer_source": null,
+            "show_answer": false,
+            "show_analysis": false,
+            "source": {
+              "source_id": 171,
+              "file_name": "考点四（压强和浮力）计算题 专项练习-2025-2026学年苏科版物理八年级下学期.docx",
+              "stage": "初中",
+              "subject": "物理",
+              "grade": "八年级下册",
+              "textbook": "苏科版",
+              "chapter": "待补充",
+              "start_paragraph": 2,
+              "end_paragraph": 4
+            }
+          },
+          {
+            "item_id": 8,
+            "seq": 8,
+            "question_id": 6387,
+            "question_version": 1,
+            "number": "2",
+            "qtype": "计算解答题",
+            "difficulty": "未标注",
+            "score": 6.0,
+            "text": "2．（2025·江苏扬州·中考真题）某无人快递配送车轮胎与水平地面接触的总面积为⟦F1⟧，对地面的压强为⟦F2⟧，在大小为400N的牵引力作用下匀速行驶，g取10N/kg．求：\n(1)配送车所受阻力f的大小；(2)配送车与货物的总质量m。",
+            "plain_text": "2．（2025·江苏扬州·中考真题）某无人快递配送车轮胎与水平地面接触的总面积为，对地面的压强为，在大小为400N的牵引力作用下匀速行驶，g取10N/kg．求：\n(1)配送车所受阻力f的大小；(2)配送车与货物的总质量m。",
+            "formulas": [
+              {
+                "fid": "F1",
+                "seq": 1,
+                "kind": "mathtype",
+                "status": "OK",
+                "latex": "500{ \\rm{ c } }{ \\rm{ m } } ^ { 2 }",
+                "progid": "Equation.DSMT4",
+                "part": "embeddings/oleObject1.bin",
+                "preview": "media/image3.wmf",
+                "needs_review": 0
+              },
+              {
+                "fid": "F2",
+                "seq": 2,
+                "kind": "mathtype",
+                "status": "OK",
+                "latex": "1\\times 10 ^ { 5 } { \\rm{ P } }{ \\rm{ a } }",
+                "progid": "Equation.DSMT4",
+                "part": "embeddings/oleObject2.bin",
+                "preview": "media/image4.wmf",
+                "needs_review": 0
+              }
+            ],
+            "latex_list": [
+              "500{ \\rm{ c } }{ \\rm{ m } } ^ { 2 }",
+              "1\\times 10 ^ { 5 } { \\rm{ P } }{ \\rm{ a } }"
+            ],
+            "images": [
+              {
+                "media_path": "media/image5.png",
+                "sha256": "599ea23656ba2197f45bee280d3d3e66d0129caa14d6a1e9176ad8b73b0c6afb",
+                "offline_url": "media/q6387_img5603.png",
+                "natural_w": 544,
+                "natural_h": 375
+              }
+            ],
+            "image_paths": [
+              "media/image5.png"
+            ],
+            "answer": null,
+            "analysis": null,
+            "answer_source": null,
+            "show_answer": false,
+            "show_analysis": false,
+            "source": {
+              "source_id": 171,
+              "file_name": "考点四（压强和浮力）计算题 专项练习-2025-2026学年苏科版物理八年级下学期.docx",
+              "stage": "初中",
+              "subject": "物理",
+              "grade": "八年级下册",
+              "textbook": "苏科版",
+              "chapter": "待补充",
+              "start_paragraph": 5,
+              "end_paragraph": 8
+            }
+          },
+          {
+            "item_id": 9,
+            "seq": 9,
+            "question_id": 6388,
+            "question_version": 1,
+            "number": "3",
+            "qtype": "计算解答题",
+            "difficulty": "未标注",
+            "score": 6.0,
+            "text": "3．（24-25八年级下·北京通州·期中）某地有一处古代建筑群，其中一座房屋屹立千年，依旧稳固。已知该房屋屋顶面积为⟦F3⟧，当地的大气压强值为⟦F4⟧。求：屋顶的上表面承受的大气压力。",
+            "plain_text": "3．（24-25八年级下·北京通州·期中）某地有一处古代建筑群，其中一座房屋屹立千年，依旧稳固。已知该房屋屋顶面积为，当地的大气压强值为。求：屋顶的上表面承受的大气压力。",
+            "formulas": [
+              {
+                "fid": "F3",
+                "seq": 1,
+                "kind": "mathtype",
+                "status": "OK",
+                "latex": "80{ \\rm{ m } } ^ { 2 }",
+                "progid": "Equation.DSMT4",
+                "part": "embeddings/oleObject3.bin",
+                "preview": "media/image6.wmf",
+                "needs_review": 0
+              },
+              {
+                "fid": "F4",
+                "seq": 2,
+                "kind": "mathtype",
+                "status": "OK",
+                "latex": "1\\times 10 ^ { 5 } { \\rm{ P } }{ \\rm{ a } }",
+                "progid": "Equation.DSMT4",
+                "part": "embeddings/oleObject4.bin",
+                "preview": "media/image4.wmf",
+                "needs_review": 0
+              }
+            ],
+            "latex_list": [
+              "80{ \\rm{ m } } ^ { 2 }",
+              "1\\times 10 ^ { 5 } { \\rm{ P } }{ \\rm{ a } }"
+            ],
+            "images": [],
+            "image_paths": [],
+            "answer": null,
+            "analysis": null,
+            "answer_source": null,
+            "show_answer": false,
+            "show_analysis": false,
+            "source": {
+              "source_id": 171,
+              "file_name": "考点四（压强和浮力）计算题 专项练习-2025-2026学年苏科版物理八年级下学期.docx",
+              "stage": "初中",
+              "subject": "物理",
+              "grade": "八年级下册",
+              "textbook": "苏科版",
+              "chapter": "待补充",
+              "start_paragraph": 9,
+              "end_paragraph": 10
+            }
+          },
+          {
+            "item_id": 10,
+            "seq": 10,
+            "question_id": 6389,
+            "question_version": 1,
+            "number": "4",
+            "qtype": "计算解答题",
+            "difficulty": "未标注",
+            "score": 6.0,
+            "text": "4．（25-26八年级下·福建福州·月考）图为某驱逐舰，满载时排水量8000t。（海水密度约为⟦F5⟧，g取10N/kg）。\n(1)驱逐舰满载时受到的浮力是多少？\n(2)若驱逐舰某次排开水的体积是5000m3，则此时驱逐舰受到的浮力是多少？",
+            "plain_text": "4．（25-26八年级下·福建福州·月考）图为某驱逐舰，满载时排水量8000t。（海水密度约为，g取10N/kg）。\n(1)驱逐舰满载时受到的浮力是多少？\n(2)若驱逐舰某次排开水的体积是5000m3，则此时驱逐舰受到的浮力是多少？",
+            "formulas": [
+              {
+                "fid": "F5",
+                "seq": 1,
+                "kind": "mathtype",
+                "status": "OK",
+                "latex": "1.0\\times 10 ^ { 3 } { \\rm{ k } }{ \\rm{ g } }/{ \\rm{ m } } ^ { 3 }",
+                "progid": "Equation.DSMT4",
+                "part": "embeddings/oleObject5.bin",
+                "preview": "media/image7.wmf",
+                "needs_review": 0
+              }
+            ],
+            "latex_list": [
+              "1.0\\times 10 ^ { 3 } { \\rm{ k } }{ \\rm{ g } }/{ \\rm{ m } } ^ { 3 }"
+            ],
+            "images": [
+              {
+                "media_path": "media/image8.png",
+                "sha256": "571570a8f2bcaf0acfceb55255530f0d747ec019097dc6808c234098371ba83e",
+                "offline_url": "media/q6389_img5604.png",
+                "natural_w": 259,
+                "natural_h": 160
+              }
+            ],
+            "image_paths": [
+              "media/image8.png"
+            ],
+            "answer": null,
+            "analysis": null,
+            "answer_source": null,
+            "show_answer": false,
+            "show_analysis": false,
+            "source": {
+              "source_id": 171,
+              "file_name": "考点四（压强和浮力）计算题 专项练习-2025-2026学年苏科版物理八年级下学期.docx",
+              "stage": "初中",
+              "subject": "物理",
+              "grade": "八年级下册",
+              "textbook": "苏科版",
+              "chapter": "待补充",
+              "start_paragraph": 11,
+              "end_paragraph": 15
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "answer": {
+    "paper": {
+      "id": 1,
+      "title": "八年级物理·浮力与压强单元测验",
+      "subject": "物理",
+      "stage": "初中",
+      "grade": "八年级下册",
+      "template": "考试",
+      "answer_mode": "答案解析版",
+      "created_by": "待补充",
+      "status": "草稿",
+      "created_at": "2026-10-06T21:42:13"
+    },
+    "answer_mode": "答案解析版",
+    "generated_at": "2026-10-07T19:19:25",
+    "summary": {
+      "paper_id": 1,
+      "title": "八年级物理·浮力与压强单元测验",
+      "subject": "物理",
+      "stage": "初中",
+      "grade": "八年级下册",
+      "template": "考试",
+      "answer_mode": "学生版",
+      "status": "草稿",
+      "item_count": 10,
+      "section_count": 2,
+      "total_score": 42.0,
+      "scored_count": 10,
+      "unscored_count": 0,
+      "score_complete": true,
+      "sections": [
+        {
+          "id": 1,
+          "paper_id": 1,
+          "name": "一、选择题",
+          "seq": 1,
+          "description": null,
+          "item_count": 6,
+          "subtotal": 18.0,
+          "unscored_count": 0
+        },
+        {
+          "id": 2,
+          "paper_id": 1,
+          "name": "二、计算题",
+          "seq": 2,
+          "description": null,
+          "item_count": 4,
+          "subtotal": 24.0,
+          "unscored_count": 0
+        }
+      ],
+      "ungrouped": null,
+      "qtype_distribution": {
+        "选择题": 6,
+        "计算解答题": 4
+      }
+    },
+    "sections": [
+      {
+        "section_id": 1,
+        "name": "一、选择题",
+        "seq": 1,
+        "description": null,
+        "item_count": 6,
+        "subtotal": 18.0,
+        "questions": [
+          {
+            "item_id": 3,
+            "seq": 1,
+            "question_id": 3759,
+            "question_version": 1,
+            "number": "7",
+            "qtype": "选择题",
+            "difficulty": "未标注",
+            "score": 3.0,
+            "text": "7．如图所示，甲、乙两人在完全相同的沙滩散步，留下深浅相同、大小不同的脚印。则（　　）\n\tA．甲对沙滩的压强较大\tB．乙对沙滩的压强较小\n\tC．甲所受的重力较大\tD．甲所受重力与乙相等\n【答案】C\n【详解】AB．甲、乙两人在沙地上留下的脚印深浅相同，则他们对沙地的压强相等，即⟦F48⟧，故AB错误；\nCD．因⟦F49⟧，由⟦F50⟧可得，压强大小相同，则⟦F51⟧，由于物体对水平面的压力等于重力，因此甲的重力较大，故C正确，D错误。\n故选C。",
+            "plain_text": "7．如图所示，甲、乙两人在完全相同的沙滩散步，留下深浅相同、大小不同的脚印。则（　　）\n\tA．甲对沙滩的压强较大\tB．乙对沙滩的压强较小\n\tC．甲所受的重力较大\tD．甲所受重力与乙相等\n【答案】C\n【详解】AB．甲、乙两人在沙地上留下的脚印深浅相同，则他们对沙地的压强相等，即，故AB错误；\nCD．因，由可得，压强大小相同，则，由于物体对水平面的压力等于重力，因此甲的重力较大，故C正确，D错误。\n故选C。",
+            "formulas": [
+              {
+                "fid": "F48",
+                "seq": 1,
+                "kind": "mathtype",
+                "status": "OK",
+                "latex": "p_{ {\\text{甲}} } =p_{ {\\text{乙}} }",
+                "progid": "Equation.DSMT4",
+                "part": "embeddings/oleObject48.bin",
+                "preview": "media/image53.wmf",
+                "needs_review": 0
+              },
+              {
+                "fid": "F49",
+                "seq": 2,
+                "kind": "mathtype",
+                "status": "OK",
+                "latex": "S_{ {\\text{甲}} } >S_{ {\\text{乙}} }",
+                "progid": "Equation.DSMT4",
+                "part": "embeddings/oleObject49.bin",
+                "preview": "media/image54.wmf",
+                "needs_review": 0
+              },
+              {
+                "fid": "F50",
+                "seq": 3,
+                "kind": "mathtype",
+                "status": "OK",
+                "latex": "p=\\frac { F } { S }",
+                "progid": "Equation.DSMT4",
+                "part": "embeddings/oleObject50.bin",
+                "preview": "media/image55.wmf",
+                "needs_review": 0
+              },
+              {
+                "fid": "F51",
+                "seq": 4,
+                "kind": "mathtype",
+                "status": "OK",
+                "latex": "F_{ {\\text{甲}} } >F_{ {\\text{乙}} }",
+                "progid": "Equation.DSMT4",
+                "part": "embeddings/oleObject51.bin",
+                "preview": "media/image56.wmf",
+                "needs_review": 0
+              }
+            ],
+            "latex_list": [
+              "p_{ {\\text{甲}} } =p_{ {\\text{乙}} }",
+              "S_{ {\\text{甲}} } >S_{ {\\text{乙}} }",
+              "p=\\frac { F } { S }",
+              "F_{ {\\text{甲}} } >F_{ {\\text{乙}} }"
+            ],
+            "images": [
+              {
+                "media_path": "media/image52.png",
+                "sha256": "99b0c28f4daaf80271ac9ce6a5e5b17dac639b1410b0b4417c64dfbf4d32c8a3",
+                "offline_url": "media/q3759_img3121.png",
+                "natural_w": 669,
+                "natural_h": 243
+              }
+            ],
+            "image_paths": [
+              "media/image52.png"
+            ],
+            "answer": "C",
+            "analysis": "AB．甲、乙两人在沙地上留下的脚印深浅相同，则他们对沙地的压强相等，即⟦F48⟧，故AB错误；\nCD．因⟦F49⟧，由⟦F50⟧可得，压强大小相同，则⟦F51⟧，由于物体对水平面的压力等于重力，因此甲的重力较大，故C正确，D错误。\n故选C。",
+            "answer_source": "inline",
+            "show_answer": true,
+            "show_analysis": true,
+            "source": {
+              "source_id": 98,
+              "file_name": "专题06 固体压强的计算（6大考点）（解析版）.docx",
+              "stage": "初中",
+              "subject": "物理",
+              "grade": "待补充",
+              "textbook": "待补充",
+              "chapter": "待补充",
+              "start_paragraph": 72,
+              "end_paragraph": 79
+            }
+          },
+          {
+            "item_id": 1,
+            "seq": 2,
+            "question_id": 3753,
+            "question_version": 1,
+            "number": "1",
+            "qtype": "选择题",
+            "difficulty": "未标注",
+            "score": 3.0,
+            "text": "1．图中小红和滑雪板的总重大于小明的体重，小明陷入雪里，小红却没有。滑雪板和小明对雪地的压力和压强，下列说法正确的是（    ）\n\tA．小明对雪地的压强较大\tB．小明对雪地的压力较大\n\tC．他们对雪地的压强相等\tD．他们对雪地的压力相等\n【答案】A\n【详解】AC．压强是反映压力作用效果的物理量。由图可知，小红穿的滑雪板使雪地的凹陷程度小，而小明的脚使雪地的凹陷程度大，所以小明对雪地的压强较大，故A正确，C错误；\nBD．物体对水平地面的压力大小等于物体的总重力大小，因为小红和滑雪板的总重力大于小明的重力，所以小红和滑雪板对雪地的压力大，故BD错误。\n故选A。",
+            "plain_text": "1．图中小红和滑雪板的总重大于小明的体重，小明陷入雪里，小红却没有。滑雪板和小明对雪地的压力和压强，下列说法正确的是（    ）\n\tA．小明对雪地的压强较大\tB．小明对雪地的压力较大\n\tC．他们对雪地的压强相等\tD．他们对雪地的压力相等\n【答案】A\n【详解】AC．压强是反映压力作用效果的物理量。由图可知，小红穿的滑雪板使雪地的凹陷程度小，而小明的脚使雪地的凹陷程度大，所以小明对雪地的压强较大，故A正确，C错误；\nBD．物体对水平地面的压力大小等于物体的总重力大小，因为小红和滑雪板的总重力大于小明的重力，所以小红和滑雪板对雪地的压力大，故BD错误。\n故选A。",
+            "formulas": [],
+            "latex_list": [],
+            "images": [
+              {
+                "media_path": "media/image3.png",
+                "sha256": "3e62e333d878513ef8d3499f1cac108741fdec97e5bf6324ca327986e7a694ca",
+                "offline_url": "media/q3753_img3116.png",
+                "natural_w": 619,
+                "natural_h": 273
+              }
+            ],
+            "image_paths": [
+              "media/image3.png"
+            ],
+            "answer": "A",
+            "analysis": "AC．压强是反映压力作用效果的物理量。由图可知，小红穿的滑雪板使雪地的凹陷程度小，而小明的脚使雪地的凹陷程度大，所以小明对雪地的压强较大，故A正确，C错误；\nBD．物体对水平地面的压力大小等于物体的总重力大小，因为小红和滑雪板的总重力大于小明的重力，所以小红和滑雪板对雪地的压力大，故BD错误。\n故选A。",
+            "answer_source": "inline",
+            "show_answer": true,
+            "show_analysis": true,
+            "source": {
+              "source_id": 98,
+              "file_name": "专题06 固体压强的计算（6大考点）（解析版）.docx",
+              "stage": "初中",
+              "subject": "物理",
+              "grade": "待补充",
+              "textbook": "待补充",
+              "chapter": "待补充",
+              "start_paragraph": 15,
+              "end_paragraph": 22
+            }
+          },
+          {
+            "item_id": 2,
+            "seq": 3,
+            "question_id": 3754,
+            "question_version": 1,
+            "number": "2",
+            "qtype": "选择题",
+            "difficulty": "未标注",
+            "score": 3.0,
+            "text": "2．平放在水平地面上的实心正方体a、b，分别用质量相等的甲、乙两种物质制成，如图所示是甲、乙两种物质的质量和体积的关系图像，下列正确的是（    ）\nA．实心正方体a、b对地面的压力之比为4∶1\nB．实心正方体a、b对地面的压力之比为8∶1\nC．实心正方体a、b的体积之比为8∶1\nD．实心正方体a、b对水平地面的压强之比为4∶1\n【答案】D\n【详解】AB．正方体对地面的压力等于其重力，由于a、b质量相等，所以重力相等，对地面的压力也相等，则实心正方体a、b对地面的压力之比为1∶1。故AB错误；\nCD．由图可知，当甲的体积为⟦F1⟧时，质量为8g，所以甲的密度⟦F2⟧\n当乙的体积为⟦F3⟧时，质量为4g，所以乙的密度为⟦F4⟧\n所以⟦F5⟧∶⟦F6⟧∶1。由⟦F7⟧可得⟦F8⟧，由⟦F9⟧∶⟦F10⟧∶1，⟦F11⟧∶⟦F12⟧∶1，可得⟦F13⟧，由⟦F14⟧可得，a、b两正方体棱长之比⟦F15⟧。因为正方体对地面的压强⟦F16⟧\n所以，两正方体a、b对水平地面的压强之比⟦F17⟧\n故C错误，D正确。\n故选D。",
+            "plain_text": "2．平放在水平地面上的实心正方体a、b，分别用质量相等的甲、乙两种物质制成，如图所示是甲、乙两种物质的质量和体积的关系图像，下列正确的是（    ）\nA．实心正方体a、b对地面的压力之比为4∶1\nB．实心正方体a、b对地面的压力之比为8∶1\nC．实心正方体a、b的体积之比为8∶1\nD．实心正方体a、b对水平地面的压强之比为4∶1\n【答案】D\n【详解】AB．正方体对地面的压力等于其重力，由于a、b质量相等，所以重力相等，对地面的压力也相等，则实心正方体a、b对地面的压力之比为1∶1。故AB错误；\nCD．由图可知，当甲的体积为时，质量为8g，所以甲的密度\n当乙的体积为时，质量为4g，所以乙的密度为\n所以∶∶1。由可得，由∶∶1，∶∶1，可得，由可得，a、b两正方体棱长之比。因为正方体对地面的压强\n所以，两正方体a、b对水平地面的压强之比\n故C错误，D正确。\n故选D。",
+            "formulas": [
+              {
+                "fid": "F1",
+                "seq": 1,
+                "kind": "mathtype",
+                "status": "OK",
+                "latex": "1cm ^ { 3 }",
+                "progid": "Equation.DSMT4",
+                "part": "embeddings/oleObject1.bin",
+                "preview": "media/image5.wmf",
+                "needs_review": 0
+              },
+              {
+                "fid": "F2",
+                "seq": 2,
+                "kind": "mathtype",
+                "status": "OK",
+                "latex": "\\rho _{ {\\text{甲}} } =\\frac { m_{ {\\text{甲}} } } { V_{ {\\text{甲}} } }=\\frac { 8{ \\rm{ g } } } { 1cm ^ { 3 } }=8{ \\rm{ g } }/cm ^ { 3 }",
+                "progid": "Equation.DSMT4",
+                "part": "embeddings/oleObject2.bin",
+                "preview": "media/image6.wmf",
+                "needs_review": 0
+              },
+              {
+                "fid": "F3",
+                "seq": 3,
+                "kind": "mathtype",
+                "status": "OK",
+                "latex": "4cm ^ { 3 }",
+                "progid": "Equation.DSMT4",
+                "part": "embeddings/oleObject3.bin",
+                "preview": "media/image7.wmf",
+                "needs_review": 0
+              },
+              {
+                "fid": "F4",
+                "seq": 4,
+                "kind": "mathtype",
+                "status": "OK",
+                "latex": "\\rho _{ {\\text{乙}} } =\\frac { m_{ {\\text{乙}} } } { V_{ {\\text{乙}} } }=\\frac { 4{ \\rm{ g } } } { 4cm ^ { 3 } }=1{ \\rm{ g } }/cm ^ { 3 }",
+                "progid": "Equation.DSMT4",
+                "part": "embeddings/oleObject4.bin",
+                "preview": "media/image8.wmf",
+                "needs_review": 0
+              },
+              {
+                "fid": "F5",
+                "seq": 5,
+                "kind": "mathtype",
+                "status": "OK",
+                "latex": "\\rho _{ a }",
+                "progid": "Equation.DSMT4",
+                "part": "embeddings/oleObject5.bin",
+                "preview": "media/image9.wmf",
+                "needs_review": 0
+              },
+              {
+                "fid": "F6",
+                "seq": 6,
+                "kind": "mathtype",
+                "status": "OK",
+                "latex": "\\rho _{ b } =8",
+                "progid": "Equation.DSMT4",
+                "part": "embeddings/oleObject6.bin",
+                "preview": "media/image10.wmf",
+                "needs_review": 0
+              },
+              {
+                "fid": "F7",
+                "seq": 7,
+                "kind": "mathtype",
+                "status": "OK",
+                "latex": "\\rho =\\frac { m } { V }",
+                "progid": "Equation.DSMT4",
+                "part": "embeddings/oleObject7.bin",
+                "preview": "media/image11.wmf",
+                "needs_review": 0
+              },
+              {
+                "fid": "F8",
+                "seq": 8,
+                "kind": "mathtype",
+                "status": "OK",
+                "latex": "V=\\frac { m } { \\rho }",
+                "progid": "Equation.DSMT4",
+                "part": "embeddings/oleObject8.bin",
+                "preview": "media/image12.wmf",
+                "needs_review": 0
+              },
+              {
+                "fid": "F9",
+                "seq": 9,
+                "kind": "mathtype",
+                "status": "OK",
+                "latex": "\\rho _{ a }",
+                "progid": "Equation.DSMT4",
+                "part": "embeddings/oleObject9.bin",
+                "preview": "media/image9.wmf",
+                "needs_review": 0
+              },
+              {
+                "fid": "F10",
+                "seq": 10,
+                "kind": "mathtype",
+                "status": "OK",
+                "latex": "\\rho _{ b } =8",
+                "progid": "Equation.DSMT4",
+                "part": "embeddings/oleObject10.bin",
+                "preview": "media/image10.wmf",
+                "needs_review": 0
+              },
+              {
+                "fid": "F11",
+                "seq": 11,
+                "kind": "mathtype",
+                "status": "OK",
+                "latex": "m_{ a }",
+                "progid": "Equation.DSMT4",
+                "part": "embeddings/oleObject11.bin",
+                "preview": "media/image13.wmf",
+                "needs_review": 0
+              },
+              {
+                "fid": "F12",
+                "seq": 12,
+                "kind": "mathtype",
+                "status": "OK",
+                "latex": "m_{ b } =1",
+                "progid": "Equation.DSMT4",
+                "part": "embeddings/oleObject12.bin",
+                "preview": "media/image14.wmf",
+                "needs_review": 0
+              },
+              {
+                "fid": "F13",
+                "seq": 13,
+                "kind": "mathtype",
+                "status": "OK",
+                "latex": "V_{ a } \\,\\!:V_{ b } =1\\,\\!:8",
+                "progid": "Equation.DSMT4",
+                "part": "embeddings/oleObject13.bin",
+                "preview": "media/image15.wmf",
+                "needs_review": 0
+              },
+              {
+                "fid": "F14",
+                "seq": 14,
+                "kind": "mathtype",
+                "status": "OK",
+                "latex": "V=L ^ { 3 }",
+                "progid": "Equation.DSMT4",
+                "part": "embeddings/oleObject14.bin",
+                "preview": "media/image16.wmf",
+                "needs_review": 0
+              },
+              {
+                "fid": "F15",
+                "seq": 15,
+                "kind": "mathtype",
+                "status": "OK",
+                "latex": "L_{ a } \\,\\!:L_{ b } =1\\,\\!:2",
+                "progid": "Equation.DSMT4",
+                "part": "embeddings/oleObject15.bin",
+                "preview": "media/image17.wmf",
+                "needs_review": 0
+              },
+              {
+                "fid": "F16",
+                "seq": 16,
+                "kind": "mathtype",
+                "status": "OK",
+                "latex": "p=\\frac { F } { S }=\\frac { G } { S }=\\frac { mg } { S }=\\frac { \\rho Vg } { S }=\\rho Lg",
+                "progid": "Equation.DSMT4",
+                "part": "embeddings/oleObject16.bin",
+                "preview": "media/image18.wmf",
+                "needs_review": 0
+              },
+              {
+                "fid": "F17",
+                "seq": 17,
+                "kind": "mathtype",
+                "status": "OK",
+                "latex": "\\frac { p_{ a } } { p_{ b } }=\\frac { \\rho _{ a } L_{ a } g } { \\rho _{ b } L_{ b } g }=\\frac { 8\\times 1 } { 1\\times 2 }=\\frac { 4 } { 1 }",
+                "progid": "Equation.DSMT4",
+                "part": "embeddings/oleObject17.bin",
+                "preview": "media/image19.wmf",
+                "needs_review": 0
+              }
+            ],
+            "latex_list": [
+              "1cm ^ { 3 }",
+              "\\rho _{ {\\text{甲}} } =\\frac { m_{ {\\text{甲}} } } { V_{ {\\text{甲}} } }=\\frac { 8{ \\rm{ g } } } { 1cm ^ { 3 } }=8{ \\rm{ g } }/cm ^ { 3 }",
+              "4cm ^ { 3 }",
+              "\\rho _{ {\\text{乙}} } =\\frac { m_{ {\\text{乙}} } } { V_{ {\\text{乙}} } }=\\frac { 4{ \\rm{ g } } } { 4cm ^ { 3 } }=1{ \\rm{ g } }/cm ^ { 3 }",
+              "\\rho _{ a }",
+              "\\rho _{ b } =8",
+              "\\rho =\\frac { m } { V }",
+              "V=\\frac { m } { \\rho }",
+              "\\rho _{ a }",
+              "\\rho _{ b } =8",
+              "m_{ a }",
+              "m_{ b } =1",
+              "V_{ a } \\,\\!:V_{ b } =1\\,\\!:8",
+              "V=L ^ { 3 }",
+              "L_{ a } \\,\\!:L_{ b } =1\\,\\!:2",
+              "p=\\frac { F } { S }=\\frac { G } { S }=\\frac { mg } { S }=\\frac { \\rho Vg } { S }=\\rho Lg",
+              "\\frac { p_{ a } } { p_{ b } }=\\frac { \\rho _{ a } L_{ a } g } { \\rho _{ b } L_{ b } g }=\\frac { 8\\times 1 } { 1\\times 2 }=\\frac { 4 } { 1 }"
+            ],
+            "images": [
+              {
+                "media_path": "media/image4.png",
+                "sha256": "cbcbb38a17fe2bdb8b24bb1d05eb64df6f06d42d48e0cb2206b6d24f4f3255e3",
+                "offline_url": "media/q3754_img3117.png",
+                "natural_w": 374,
+                "natural_h": 355
+              }
+            ],
+            "image_paths": [
+              "media/image4.png"
+            ],
+            "answer": "D",
+            "analysis": "AB．正方体对地面的压力等于其重力，由于a、b质量相等，所以重力相等，对地面的压力也相等，则实心正方体a、b对地面的压力之比为1∶1。故AB错误；\nCD．由图可知，当甲的体积为⟦F1⟧时，质量为8g，所以甲的密度⟦F2⟧\n当乙的体积为⟦F3⟧时，质量为4g，所以乙的密度为⟦F4⟧\n所以⟦F5⟧∶⟦F6⟧∶1。由⟦F7⟧可得⟦F8⟧，由⟦F9⟧∶⟦F10⟧∶1，⟦F11⟧∶⟦F12⟧∶1，可得⟦F13⟧，由⟦F14⟧可得，a、b两正方体棱长之比⟦F15⟧。因为正方体对地面的压强⟦F16⟧\n所以，两正方体a、b对水平地面的压强之比⟦F17⟧\n故C错误，D正确。\n故选D。",
+            "answer_source": "inline",
+            "show_answer": true,
+            "show_analysis": true,
+            "source": {
+              "source_id": 98,
+              "file_name": "专题06 固体压强的计算（6大考点）（解析版）.docx",
+              "stage": "初中",
+              "subject": "物理",
+              "grade": "待补充",
+              "textbook": "待补充",
+              "chapter": "待补充",
+              "start_paragraph": 23,
+              "end_paragraph": 36
+            }
+          },
+          {
+            "item_id": 4,
+            "seq": 4,
+            "question_id": 3760,
+            "question_version": 1,
+            "number": "8",
+            "qtype": "选择题",
+            "difficulty": "未标注",
+            "score": 3.0,
+            "text": "8．如图所示，轻质细绳将物体A和B通过两个定滑轮（定滑轮可以改变力的方向，但不改变力的大小）分别连在一个轻质弹簧测力计的两端（不计摩擦），物体B悬在空中，物体A置于水平地面上，整个装置处于静止状态。其中，物体A和B分别是边长为20cm和30cm的正方体，物体A的重力为100N，物体B的重力为20N，则下列说法正确的是（    ）\nA．弹簧测力计的合力为80N\nB．弹簧测力计的示数为80N\nC．物体A对水平地面的压强为2000Pa\nD．若用30N的力竖直向下拉B，则A受到的合力为50N\n【答案】C\n【详解】A．弹簧测力计处于静止状态，属于平衡状态，所以它受到的合力为0N，故A错误；\nB．弹簧测力计的示数等于其一端受到的拉力大小。装置静止，物体B对弹簧测力计的拉力等于B的重力，即⟦F52⟧\n由于弹簧测力计处于静止状态，故受到A的拉力也等于20N，所以弹簧测力计的示数为20N，故B错误；\nC．物体A静止在水平地面上，受到竖直向下的重力、竖直向上的支持力和绳子竖直向上的拉力。因为整个装置处于静止状态，所以绳子对A的拉力等于弹簧测力计的示数，即⟦F53⟧，所以地面对A的支持力⟦F54⟧\n物体A对水平地面的压力与地面对A的支持力是一对相互作用力，大小相等，即⟦F55⟧\n物体A的底面积⟦F56⟧\n物体A对水平地面的压强⟦F57⟧，故C正确；\nD．若用30N的力竖直向下拉B，此时绳子对A的拉力⟦F58⟧\n所以物体A仍然静止在地面上，处于平衡状态，其受到的合力为0N，故D错误。\n故选C。",
+            "plain_text": "8．如图所示，轻质细绳将物体A和B通过两个定滑轮（定滑轮可以改变力的方向，但不改变力的大小）分别连在一个轻质弹簧测力计的两端（不计摩擦），物体B悬在空中，物体A置于水平地面上，整个装置处于静止状态。其中，物体A和B分别是边长为20cm和30cm的正方体，物体A的重力为100N，物体B的重力为20N，则下列说法正确的是（    ）\nA．弹簧测力计的合力为80N\nB．弹簧测力计的示数为80N\nC．物体A对水平地面的压强为2000Pa\nD．若用30N的力竖直向下拉B，则A受到的合力为50N\n【答案】C\n【详解】A．弹簧测力计处于静止状态，属于平衡状态，所以它受到的合力为0N，故A错误；\nB．弹簧测力计的示数等于其一端受到的拉力大小。装置静止，物体B对弹簧测力计的拉力等于B的重力，即\n由于弹簧测力计处于静止状态，故受到A的拉力也等于20N，所以弹簧测力计的示数为20N，故B错误；\nC．物体A静止在水平地面上，受到竖直向下的重力、竖直向上的支持力和绳子竖直向上的拉力。因为整个装置处于静止状态，所以绳子对A的拉力等于弹簧测力计的示数，即，所以地面对A的支持力\n物体A对水平地面的压力与地面对A的支持力是一对相互作用力，大小相等，即\n物体A的底面积\n物体A对水平地面的压强，故C正确；\nD．若用30N的力竖直向下拉B，此时绳子对A的拉力\n所以物体A仍然静止在地面上，处于平衡状态，其受到的合力为0N，故D错误。\n故选C。",
+            "formulas": [
+              {
+                "fid": "F52",
+                "seq": 1,
+                "kind": "mathtype",
+                "status": "OK",
+                "latex": "F=G_{ { \\rm{ B } } } =20{ \\rm{ N } }",
+                "progid": "Equation.DSMT4",
+                "part": "embeddings/oleObject52.bin",
+                "preview": "media/image58.wmf",
+                "needs_review": 0
+              },
+              {
+                "fid": "F53",
+                "seq": 2,
+                "kind": "mathtype",
+                "status": "OK",
+                "latex": "F_{ {\\text{拉}} } =20{ \\rm{ N } }",
+                "progid": "Equation.DSMT4",
+                "part": "embeddings/oleObject53.bin",
+                "preview": "media/image59.wmf",
+                "needs_review": 0
+              },
+              {
+                "fid": "F54",
+                "seq": 3,
+                "kind": "mathtype",
+                "status": "OK",
+                "latex": "F_{ {\\text{支}} } =G_{ { \\rm{ A } } } -F_{ {\\text{拉}} } =100{ \\rm{ N } }-20{ \\rm{ N } }=80{ \\rm{ N } }",
+                "progid": "Equation.DSMT4",
+                "part": "embeddings/oleObject54.bin",
+                "preview": "media/image60.wmf",
+                "needs_review": 0
+              },
+              {
+                "fid": "F55",
+                "seq": 4,
+                "kind": "mathtype",
+                "status": "OK",
+                "latex": "F_{ {\\text{压}} } =F_{ {\\text{支}} } =80{ \\rm{ N } }",
+                "progid": "Equation.DSMT4",
+                "part": "embeddings/oleObject55.bin",
+                "preview": "media/image61.wmf",
+                "needs_review": 0
+              },
+              {
+                "fid": "F56",
+                "seq": 5,
+                "kind": "mathtype",
+                "status": "OK",
+                "latex": "S_{ { \\rm{ A } } } =l_{ { \\rm{ A } } } ^{ 2 }=(20{ \\rm{ c } }{ \\rm{ m } }) ^ { 2 } =400{ \\rm{ c } }{ \\rm{ m } } ^ { { \\rm{ 2 } } } =0.04{ \\rm{ m } } ^ { { \\rm{ 2 } } }",
+                "progid": "Equation.DSMT4",
+                "part": "embeddings/oleObject56.bin",
+                "preview": "media/image62.wmf",
+                "needs_review": 0
+              },
+              {
+                "fid": "F57",
+                "seq": 6,
+                "kind": "mathtype",
+                "status": "OK",
+                "latex": "p=\\frac { F_{ {\\text{压}} } } { S_{ { \\rm{ A } } } }=\\frac { 80{ \\rm{ N } } } { 0.04{ \\rm{ m } } ^ { { \\rm{ 2 } } } }=2000{ \\rm{ P } }{ \\rm{ a } }",
+                "progid": "Equation.DSMT4",
+                "part": "embeddings/oleObject57.bin",
+                "preview": "media/image63.wmf",
+                "needs_review": 0
+              },
+              {
+                "fid": "F58",
+                "seq": 7,
+                "kind": "mathtype",
+                "status": "OK",
+                "latex": "F_{ {\\text{拉}}{ \\rm{ A } } } =G_{ { \\rm{ B } } } +F_{ {\\text{拉}}{ \\rm{ B } } } =20{ \\rm{ N } }+30{ \\rm{ N } }=50{ \\rm{ N } } < { \\rm{ 1 } }{ \\rm{ 0 } }{ \\rm{ 0 } }{ \\rm{ N } }",
+                "progid": "Equation.DSMT4",
+                "part": "embeddings/oleObject58.bin",
+                "preview": "media/image64.wmf",
+                "needs_review": 0
+              }
+            ],
+            "latex_list": [
+              "F=G_{ { \\rm{ B } } } =20{ \\rm{ N } }",
+              "F_{ {\\text{拉}} } =20{ \\rm{ N } }",
+              "F_{ {\\text{支}} } =G_{ { \\rm{ A } } } -F_{ {\\text{拉}} } =100{ \\rm{ N } }-20{ \\rm{ N } }=80{ \\rm{ N } }",
+              "F_{ {\\text{压}} } =F_{ {\\text{支}} } =80{ \\rm{ N } }",
+              "S_{ { \\rm{ A } } } =l_{ { \\rm{ A } } } ^{ 2 }=(20{ \\rm{ c } }{ \\rm{ m } }) ^ { 2 } =400{ \\rm{ c } }{ \\rm{ m } } ^ { { \\rm{ 2 } } } =0.04{ \\rm{ m } } ^ { { \\rm{ 2 } } }",
+              "p=\\frac { F_{ {\\text{压}} } } { S_{ { \\rm{ A } } } }=\\frac { 80{ \\rm{ N } } } { 0.04{ \\rm{ m } } ^ { { \\rm{ 2 } } } }=2000{ \\rm{ P } }{ \\rm{ a } }",
+              "F_{ {\\text{拉}}{ \\rm{ A } } } =G_{ { \\rm{ B } } } +F_{ {\\text{拉}}{ \\rm{ B } } } =20{ \\rm{ N } }+30{ \\rm{ N } }=50{ \\rm{ N } } < { \\rm{ 1 } }{ \\rm{ 0 } }{ \\rm{ 0 } }{ \\rm{ N } }"
+            ],
+            "images": [
+              {
+                "media_path": "media/image57.png",
+                "sha256": "7bf9189eec8138c579cce695aa8525a347b3f7b938fad7b616cf40aa2a52f55a",
+                "offline_url": "media/q3760_img3122.png",
+                "natural_w": 541,
+                "natural_h": 257
+              }
+            ],
+            "image_paths": [
+              "media/image57.png"
+            ],
+            "answer": "C",
+            "analysis": "A．弹簧测力计处于静止状态，属于平衡状态，所以它受到的合力为0N，故A错误；\nB．弹簧测力计的示数等于其一端受到的拉力大小。装置静止，物体B对弹簧测力计的拉力等于B的重力，即⟦F52⟧\n由于弹簧测力计处于静止状态，故受到A的拉力也等于20N，所以弹簧测力计的示数为20N，故B错误；\nC．物体A静止在水平地面上，受到竖直向下的重力、竖直向上的支持力和绳子竖直向上的拉力。因为整个装置处于静止状态，所以绳子对A的拉力等于弹簧测力计的示数，即⟦F53⟧，所以地面对A的支持力⟦F54⟧\n物体A对水平地面的压力与地面对A的支持力是一对相互作用力，大小相等，即⟦F55⟧\n物体A的底面积⟦F56⟧\n物体A对水平地面的压强⟦F57⟧，故C正确；\nD．若用30N的力竖直向下拉B，此时绳子对A的拉力⟦F58⟧\n所以物体A仍然静止在地面上，处于平衡状态，其受到的合力为0N，故D错误。\n故选C。",
+            "answer_source": "inline",
+            "show_answer": true,
+            "show_analysis": true,
+            "source": {
+              "source_id": 98,
+              "file_name": "专题06 固体压强的计算（6大考点）（解析版）.docx",
+              "stage": "初中",
+              "subject": "物理",
+              "grade": "待补充",
+              "textbook": "待补充",
+              "chapter": "待补充",
+              "start_paragraph": 80,
+              "end_paragraph": 96
+            }
+          },
+          {
+            "item_id": 5,
+            "seq": 5,
+            "question_id": 3761,
+            "question_version": 1,
+            "number": "9",
+            "qtype": "选择题",
+            "difficulty": "未标注",
+            "score": 3.0,
+            "text": "9．如图所示，形状、体积相同的实心长方体甲、乙置于水平地面，对地面的压力分别为⟦F59⟧、⟦F60⟧，将它们顺时针旋转90°，此时甲、乙对地面的压强分别为⟦F61⟧、⟦F62⟧，对地面压强的变化量分别为⟦F63⟧、⟦F64⟧，若⟦F65⟧，则（　　）\n\tA．⟦F66⟧，⟦F67⟧\tB．⟦F68⟧，⟦F69⟧\n\tC．⟦F70⟧，⟦F71⟧\tD．⟦F72⟧，⟦F73⟧\n【答案】A\n【详解】设两长方体竖直放置时与地面接触面积为a，平躺放置时与地面的接触面积为b，放置方式变化时，压强变化量为⟦F74⟧，因为⟦F75⟧，所以⟦F76⟧，又因为旋转后⟦F77⟧，根据⟦F78⟧可知⟦F79⟧，故A符合题意，BCD不符合题意。\n故选A。",
+            "plain_text": "9．如图所示，形状、体积相同的实心长方体甲、乙置于水平地面，对地面的压力分别为、，将它们顺时针旋转90°，此时甲、乙对地面的压强分别为、，对地面压强的变化量分别为、，若，则（　　）\n\tA．，\tB．，\n\tC．，\tD．，\n【答案】A\n【详解】设两长方体竖直放置时与地面接触面积为a，平躺放置时与地面的接触面积为b，放置方式变化时，压强变化量为，因为，所以，又因为旋转后，根据可知，故A符合题意，BCD不符合题意。\n故选A。",
+            "formulas": [
+              {
+                "fid": "F59",
+                "seq": 1,
+                "kind": "mathtype",
+                "status": "OK",
+                "latex": "F_{ {\\text{甲}} }",
+                "progid": "Equation.DSMT4",
+                "part": "embeddings/oleObject59.bin",
+                "preview": "media/image65.wmf",
+                "needs_review": 0
+              },
+              {
+                "fid": "F60",
+                "seq": 2,
+                "kind": "mathtype",
+                "status": "OK",
+                "latex": "F_{ {\\text{乙}} }",
+                "progid": "Equation.DSMT4",
+                "part": "embeddings/oleObject60.bin",
+                "preview": "media/image66.wmf",
+                "needs_review": 0
+              },
+              {
+                "fid": "F61",
+                "seq": 3,
+                "kind": "mathtype",
+                "status": "OK",
+                "latex": "p_{ {\\text{甲}} } ^ { \\text{�} }",
+                "progid": "Equation.DSMT4",
+                "part": "embeddings/oleObject61.bin",
+                "preview": "media/image67.wmf",
+                "needs_review": 0
+              },
+              {
+                "fid": "F62",
+                "seq": 4,
+                "kind": "mathtype",
+                "status": "OK",
+                "latex": "p_{ {\\text{乙}} } ^ { \\text{�} }",
+                "progid": "Equation.DSMT4",
+                "part": "embeddings/oleObject62.bin",
+                "preview": "media/image68.wmf",
+                "needs_review": 0
+              },
+              {
+                "fid": "F63",
+                "seq": 5,
+                "kind": "mathtype",
+                "status": "OK",
+                "latex": "\\Delta p_{ {\\text{甲}} }",
+                "progid": "Equation.DSMT4",
+                "part": "embeddings/oleObject63.bin",
+                "preview": "media/image69.wmf",
+                "needs_review": 0
+              },
+              {
+                "fid": "F64",
+                "seq": 6,
+                "kind": "mathtype",
+                "status": "OK",
+                "latex": "\\Delta p_{ {\\text{乙}} }",
+                "progid": "Equation.DSMT4",
+                "part": "embeddings/oleObject64.bin",
+                "preview": "media/image70.wmf",
+                "needs_review": 0
+              },
+              {
+                "fid": "F65",
+                "seq": 7,
+                "kind": "mathtype",
+                "status": "OK",
+                "latex": "\\Delta p_{ {\\text{甲}} } >\\Delta p_{ {\\text{乙}} }",
+                "progid": "Equation.DSMT4",
+                "part": "embeddings/oleObject65.bin",
+                "preview": "media/image71.wmf",
+                "needs_review": 0
+              },
+              {
+                "fid": "F66",
+                "seq": 8,
+                "kind": "mathtype",
+                "status": "OK",
+                "latex": "F_{ {\\text{甲}} } >F_{ {\\text{乙}} }",
+                "progid": "Equation.DSMT4",
+                "part": "embeddings/oleObject66.bin",
+                "preview": "media/image56.wmf",
+                "needs_review": 0
+              },
+              {
+                "fid": "F67",
+                "seq": 9,
+                "kind": "mathtype",
+                "status": "OK",
+                "latex": "p_{ {\\text{甲}} } ^ { \\prime } >p_{ {\\text{乙}} } ^ { \\prime }",
+                "progid": "Equation.DSMT4",
+                "part": "embeddings/oleObject67.bin",
+                "preview": "media/image73.wmf",
+                "needs_review": 0
+              },
+              {
+                "fid": "F68",
+                "seq": 10,
+                "kind": "mathtype",
+                "status": "OK",
+                "latex": "F_{ {\\text{甲}} } >F_{ {\\text{乙}} }",
+                "progid": "Equation.DSMT4",
+                "part": "embeddings/oleObject68.bin",
+                "preview": "media/image56.wmf",
+                "needs_review": 0
+              },
+              {
+                "fid": "F69",
+                "seq": 11,
+                "kind": "mathtype",
+                "status": "OK",
+                "latex": "p_{ {\\text{甲}} } ^ { \\text{�} < p_{ {\\text{乙}} } ^ { \\text{�} } }",
+                "progid": "Equation.DSMT4",
+                "part": "embeddings/oleObject69.bin",
+                "preview": "media/image74.wmf",
+                "needs_review": 0
+              },
+              {
+                "fid": "F70",
+                "seq": 12,
+                "kind": "mathtype",
+                "status": "OK",
+                "latex": "F_{ {\\text{甲}} } < F_{ {\\text{乙}} }",
+                "progid": "Equation.DSMT4",
+                "part": "embeddings/oleObject70.bin",
+                "preview": "media/image75.wmf",
+                "needs_review": 0
+              },
+              {
+                "fid": "F71",
+                "seq": 13,
+                "kind": "mathtype",
+                "status": "OK",
+                "latex": "p_{ {\\text{甲}} } ^ { \\prime } >p_{ {\\text{乙}} } ^ { \\prime }",
+                "progid": "Equation.DSMT4",
+                "part": "embeddings/oleObject71.bin",
+                "preview": "media/image73.wmf",
+                "needs_review": 0
+              },
+              {
+                "fid": "F72",
+                "seq": 14,
+                "kind": "mathtype",
+                "status": "OK",
+                "latex": "F_{ {\\text{甲}} } < F_{ {\\text{乙}} }",
+                "progid": "Equation.DSMT4",
+                "part": "embeddings/oleObject72.bin",
+                "preview": "media/image75.wmf",
+                "needs_review": 0
+              },
+              {
+                "fid": "F73",
+                "seq": 15,
+                "kind": "mathtype",
+                "status": "OK",
+                "latex": "p_{ {\\text{甲}} } ^ { \\text{�} < p_{ {\\text{乙}} } ^ { \\text{�} } }",
+                "progid": "Equation.DSMT4",
+                "part": "embeddings/oleObject73.bin",
+                "preview": "media/image74.wmf",
+                "needs_review": 0
+              },
+              {
+                "fid": "F74",
+                "seq": 16,
+                "kind": "mathtype",
+                "status": "OK",
+                "latex": "{ \\rm{ \\Delta } }p=p_{ {\\text{竖}} } -p_{ {\\text{平}} } =\\frac { F } { a }-\\frac { F } { b }=\\ \\frac { b-a } { ab }\\cdot F",
+                "progid": "Equation.DSMT4",
+                "part": "embeddings/oleObject74.bin",
+                "preview": "media/image76.wmf",
+                "needs_review": 0
+              },
+              {
+                "fid": "F75",
+                "seq": 17,
+                "kind": "mathtype",
+                "status": "OK",
+                "latex": "{ \\rm{ \\Delta } }p_{ {\\text{甲}} } >{ \\rm{ \\Delta } }p_{ {\\text{乙}} }",
+                "progid": "Equation.DSMT4",
+                "part": "embeddings/oleObject75.bin",
+                "preview": "media/image77.wmf",
+                "needs_review": 0
+              },
+              {
+                "fid": "F76",
+                "seq": 18,
+                "kind": "mathtype",
+                "status": "OK",
+                "latex": "F_{ {\\text{甲}} } >F_{ {\\text{乙}} }",
+                "progid": "Equation.DSMT4",
+                "part": "embeddings/oleObject76.bin",
+                "preview": "media/image56.wmf",
+                "needs_review": 0
+              },
+              {
+                "fid": "F77",
+                "seq": 19,
+                "kind": "mathtype",
+                "status": "OK",
+                "latex": "S_{ {\\text{甲}} } < S_{ {\\text{乙}} }",
+                "progid": "Equation.DSMT4",
+                "part": "embeddings/oleObject77.bin",
+                "preview": "media/image78.wmf",
+                "needs_review": 0
+              },
+              {
+                "fid": "F78",
+                "seq": 20,
+                "kind": "mathtype",
+                "status": "OK",
+                "latex": "p=\\frac { F } { S }",
+                "progid": "Equation.DSMT4",
+                "part": "embeddings/oleObject78.bin",
+                "preview": "media/image55.wmf",
+                "needs_review": 0
+              },
+              {
+                "fid": "F79",
+                "seq": 21,
+                "kind": "mathtype",
+                "status": "OK",
+                "latex": "p'_{ {\\text{甲}} } {\\text{}}'>p'_{ {\\text{乙}} } {\\text{}}'",
+                "progid": "Equation.DSMT4",
+                "part": "embeddings/oleObject79.bin",
+                "preview": "media/image79.wmf",
+                "needs_review": 0
+              }
+            ],
+            "latex_list": [
+              "F_{ {\\text{甲}} }",
+              "F_{ {\\text{乙}} }",
+              "p_{ {\\text{甲}} } ^ { \\text{�} }",
+              "p_{ {\\text{乙}} } ^ { \\text{�} }",
+              "\\Delta p_{ {\\text{甲}} }",
+              "\\Delta p_{ {\\text{乙}} }",
+              "\\Delta p_{ {\\text{甲}} } >\\Delta p_{ {\\text{乙}} }",
+              "F_{ {\\text{甲}} } >F_{ {\\text{乙}} }",
+              "p_{ {\\text{甲}} } ^ { \\prime } >p_{ {\\text{乙}} } ^ { \\prime }",
+              "F_{ {\\text{甲}} } >F_{ {\\text{乙}} }",
+              "p_{ {\\text{甲}} } ^ { \\text{�} < p_{ {\\text{乙}} } ^ { \\text{�} } }",
+              "F_{ {\\text{甲}} } < F_{ {\\text{乙}} }",
+              "p_{ {\\text{甲}} } ^ { \\prime } >p_{ {\\text{乙}} } ^ { \\prime }",
+              "F_{ {\\text{甲}} } < F_{ {\\text{乙}} }",
+              "p_{ {\\text{甲}} } ^ { \\text{�} < p_{ {\\text{乙}} } ^ { \\text{�} } }",
+              "{ \\rm{ \\Delta } }p=p_{ {\\text{竖}} } -p_{ {\\text{平}} } =\\frac { F } { a }-\\frac { F } { b }=\\ \\frac { b-a } { ab }\\cdot F",
+              "{ \\rm{ \\Delta } }p_{ {\\text{甲}} } >{ \\rm{ \\Delta } }p_{ {\\text{乙}} }",
+              "F_{ {\\text{甲}} } >F_{ {\\text{乙}} }",
+              "S_{ {\\text{甲}} } < S_{ {\\text{乙}} }",
+              "p=\\frac { F } { S }",
+              "p'_{ {\\text{甲}} } {\\text{}}'>p'_{ {\\text{乙}} } {\\text{}}'"
+            ],
+            "images": [
+              {
+                "media_path": "media/image72.png",
+                "sha256": "8f7aa68df9afe771e98cac78e3051536911f6273205a283657a94d548c9e6b48",
+                "offline_url": "media/q3761_img3123.png",
+                "natural_w": 361,
+                "natural_h": 96
+              }
+            ],
+            "image_paths": [
+              "media/image72.png"
+            ],
+            "answer": "A",
+            "analysis": "设两长方体竖直放置时与地面接触面积为a，平躺放置时与地面的接触面积为b，放置方式变化时，压强变化量为⟦F74⟧，因为⟦F75⟧，所以⟦F76⟧，又因为旋转后⟦F77⟧，根据⟦F78⟧可知⟦F79⟧，故A符合题意，BCD不符合题意。\n故选A。",
+            "answer_source": "inline",
+            "show_answer": true,
+            "show_analysis": true,
+            "source": {
+              "source_id": 98,
+              "file_name": "专题06 固体压强的计算（6大考点）（解析版）.docx",
+              "stage": "初中",
+              "subject": "物理",
+              "grade": "待补充",
+              "textbook": "待补充",
+              "chapter": "待补充",
+              "start_paragraph": 97,
+              "end_paragraph": 103
+            }
+          },
+          {
+            "item_id": 6,
+            "seq": 6,
+            "question_id": 3767,
+            "question_version": 1,
+            "number": "15",
+            "qtype": "选择题",
+            "difficulty": "未标注",
+            "score": 3.0,
+            "text": "15．如图所示，甲、乙两个实心长方体物体，同一顶点三条棱长均为24cm、12cm和12cm，以图示方式置于水平地面上，甲和乙均沿竖直方向截取二分之一的体积，并将截取部分叠放在各自剩余部分上方，若甲对地面的压强增大900Pa，乙对地面的压强增大600Pa，则甲乙两实心长方体的密度之比为（　　）\n\t\t\tA．⟦F128⟧\tB．⟦F129⟧\tC．⟦F130⟧\tD．⟦F131⟧\n【答案】C\n【详解】甲和乙均沿竖直方向截取二分之一的体积，并将截取部分叠放在各自剩余部分上方，剩余底面积为原来的⟦F132⟧，总重力不变，叠放后对地面的压力仍等于原长方体重力，物体对地面的压强变化量⟦F133⟧\n又有⟦F134⟧\n可得⟦F135⟧\n甲对地面的压强增大900Pa，可得⟦F136⟧①\n乙对地面的压强增大600Pa，可得⟦F137⟧②\n联立①②，可得甲乙两实心长方体的密度之比为⟦F138⟧，故选C。",
+            "plain_text": "15．如图所示，甲、乙两个实心长方体物体，同一顶点三条棱长均为24cm、12cm和12cm，以图示方式置于水平地面上，甲和乙均沿竖直方向截取二分之一的体积，并将截取部分叠放在各自剩余部分上方，若甲对地面的压强增大900Pa，乙对地面的压强增大600Pa，则甲乙两实心长方体的密度之比为（　　）\n\t\t\tA．\tB．\tC．\tD．\n【答案】C\n【详解】甲和乙均沿竖直方向截取二分之一的体积，并将截取部分叠放在各自剩余部分上方，剩余底面积为原来的，总重力不变，叠放后对地面的压力仍等于原长方体重力，物体对地面的压强变化量\n又有\n可得\n甲对地面的压强增大900Pa，可得①\n乙对地面的压强增大600Pa，可得②\n联立①②，可得甲乙两实心长方体的密度之比为，故选C。",
+            "formulas": [
+              {
+                "fid": "F128",
+                "seq": 1,
+                "kind": "mathtype",
+                "status": "OK",
+                "latex": "4\\,\\!:3",
+                "progid": "Equation.DSMT4",
+                "part": "embeddings/oleObject128.bin",
+                "preview": "media/image131.wmf",
+                "needs_review": 0
+              },
+              {
+                "fid": "F129",
+                "seq": 2,
+                "kind": "mathtype",
+                "status": "OK",
+                "latex": "16\\,\\!:9",
+                "progid": "Equation.DSMT4",
+                "part": "embeddings/oleObject129.bin",
+                "preview": "media/image132.wmf",
+                "needs_review": 0
+              },
+              {
+                "fid": "F130",
+                "seq": 3,
+                "kind": "mathtype",
+                "status": "OK",
+                "latex": "3\\,\\!:4",
+                "progid": "Equation.DSMT4",
+                "part": "embeddings/oleObject130.bin",
+                "preview": "media/image133.wmf",
+                "needs_review": 0
+              },
+              {
+                "fid": "F131",
+                "seq": 4,
+                "kind": "mathtype",
+                "status": "OK",
+                "latex": "9\\,\\!:16",
+                "progid": "Equation.DSMT4",
+                "part": "embeddings/oleObject131.bin",
+                "preview": "media/image134.wmf",
+                "needs_review": 0
+              },
+              {
+                "fid": "F132",
+                "seq": 5,
+                "kind": "mathtype",
+                "status": "OK",
+                "latex": "\\frac { 1 } { 2 }",
+                "progid": "Equation.DSMT4",
+                "part": "embeddings/oleObject132.bin",
+                "preview": "media/image135.wmf",
+                "needs_review": 0
+              },
+              {
+                "fid": "F133",
+                "seq": 6,
+                "kind": "mathtype",
+                "status": "OK",
+                "latex": "{ \\rm{ \\Delta } }p=p_{ {\\text{现}} } -p_{ {\\text{原}} } =\\frac { F } { \\frac { 1 } { 2 }S }-\\frac { F } { S }=\\frac { G } { \\frac { 1 } { 2 }S }-\\frac { G } { S }",
+                "progid": "Equation.DSMT4",
+                "part": "embeddings/oleObject133.bin",
+                "preview": "media/image136.wmf",
+                "needs_review": 0
+              },
+              {
+                "fid": "F134",
+                "seq": 7,
+                "kind": "mathtype",
+                "status": "OK",
+                "latex": "G=mg=\\rho Vg=\\rho shg",
+                "progid": "Equation.DSMT4",
+                "part": "embeddings/oleObject134.bin",
+                "preview": "media/image137.wmf",
+                "needs_review": 0
+              },
+              {
+                "fid": "F135",
+                "seq": 8,
+                "kind": "mathtype",
+                "status": "OK",
+                "latex": "{ \\rm{ \\Delta } }p=\\frac { G } { \\frac { 1 } { 2 }S }-\\frac { G } { S }=\\frac { \\rho Shg } { \\frac { 1 } { 2 }S }-\\frac { \\rho Shg } { S }=\\rho hg",
+                "progid": "Equation.DSMT4",
+                "part": "embeddings/oleObject135.bin",
+                "preview": "media/image138.wmf",
+                "needs_review": 0
+              },
+              {
+                "fid": "F136",
+                "seq": 9,
+                "kind": "mathtype",
+                "status": "OK",
+                "latex": "900{ \\rm{ P } }{ \\rm{ a } }{ \\rm{ = } }\\rho _{ {\\text{甲}} } h_{ {\\text{甲}} } g",
+                "progid": "Equation.DSMT4",
+                "part": "embeddings/oleObject136.bin",
+                "preview": "media/image139.wmf",
+                "needs_review": 0
+              },
+              {
+                "fid": "F137",
+                "seq": 10,
+                "kind": "mathtype",
+                "status": "OK",
+                "latex": "600{ \\rm{ P } }{ \\rm{ a } }{ \\rm{ = } }\\rho _{ {\\text{乙}} } h_{ {\\text{乙}} } g",
+                "progid": "Equation.DSMT4",
+                "part": "embeddings/oleObject137.bin",
+                "preview": "media/image140.wmf",
+                "needs_review": 0
+              },
+              {
+                "fid": "F138",
+                "seq": 11,
+                "kind": "mathtype",
+                "status": "OK",
+                "latex": "\\frac { \\rho _{ {\\text{甲}} } } { \\rho _{ {\\text{乙}} } }{ \\rm{ = } }\\frac { \\frac { 900{ \\rm{ P } }{ \\rm{ a } } } { h_{ {\\text{甲}} } g } } { \\frac { 600{ \\rm{ P } }{ \\rm{ a } } } { h_{ {\\text{乙}} } g } }=\\frac { 900{ \\rm{ P } }{ \\rm{ a } } } { h_{ {\\text{甲}} } g }\\times \\frac { h_{ {\\text{乙}} } g } { 600{ \\rm{ P } }{ \\rm{ a } } }=\\frac { 900{ \\rm{ P } }{ \\rm{ a } } } { 0.24{ \\rm{ m } }\\times g }\\times \\frac { 0.12{ \\rm{ m } }\\times g } { 600{ \\rm{ P } }{ \\rm{ a } } }=\\frac { 3 } { 4 }",
+                "progid": "Equation.DSMT4",
+                "part": "embeddings/oleObject138.bin",
+                "preview": "media/image141.wmf",
+                "needs_review": 0
+              }
+            ],
+            "latex_list": [
+              "4\\,\\!:3",
+              "16\\,\\!:9",
+              "3\\,\\!:4",
+              "9\\,\\!:16",
+              "\\frac { 1 } { 2 }",
+              "{ \\rm{ \\Delta } }p=p_{ {\\text{现}} } -p_{ {\\text{原}} } =\\frac { F } { \\frac { 1 } { 2 }S }-\\frac { F } { S }=\\frac { G } { \\frac { 1 } { 2 }S }-\\frac { G } { S }",
+              "G=mg=\\rho Vg=\\rho shg",
+              "{ \\rm{ \\Delta } }p=\\frac { G } { \\frac { 1 } { 2 }S }-\\frac { G } { S }=\\frac { \\rho Shg } { \\frac { 1 } { 2 }S }-\\frac { \\rho Shg } { S }=\\rho hg",
+              "900{ \\rm{ P } }{ \\rm{ a } }{ \\rm{ = } }\\rho _{ {\\text{甲}} } h_{ {\\text{甲}} } g",
+              "600{ \\rm{ P } }{ \\rm{ a } }{ \\rm{ = } }\\rho _{ {\\text{乙}} } h_{ {\\text{乙}} } g",
+              "\\frac { \\rho _{ {\\text{甲}} } } { \\rho _{ {\\text{乙}} } }{ \\rm{ = } }\\frac { \\frac { 900{ \\rm{ P } }{ \\rm{ a } } } { h_{ {\\text{甲}} } g } } { \\frac { 600{ \\rm{ P } }{ \\rm{ a } } } { h_{ {\\text{乙}} } g } }=\\frac { 900{ \\rm{ P } }{ \\rm{ a } } } { h_{ {\\text{甲}} } g }\\times \\frac { h_{ {\\text{乙}} } g } { 600{ \\rm{ P } }{ \\rm{ a } } }=\\frac { 900{ \\rm{ P } }{ \\rm{ a } } } { 0.24{ \\rm{ m } }\\times g }\\times \\frac { 0.12{ \\rm{ m } }\\times g } { 600{ \\rm{ P } }{ \\rm{ a } } }=\\frac { 3 } { 4 }"
+            ],
+            "images": [
+              {
+                "media_path": "media/image130.png",
+                "sha256": "b9189307fa5b2fd558ef0ee4acc0c7d78c2a402b587e9516d34da028406688c3",
+                "offline_url": "media/q3767_img3128.png",
+                "natural_w": 458,
+                "natural_h": 179
+              }
+            ],
+            "image_paths": [
+              "media/image130.png"
+            ],
+            "answer": "C",
+            "analysis": "甲和乙均沿竖直方向截取二分之一的体积，并将截取部分叠放在各自剩余部分上方，剩余底面积为原来的⟦F132⟧，总重力不变，叠放后对地面的压力仍等于原长方体重力，物体对地面的压强变化量⟦F133⟧\n又有⟦F134⟧\n可得⟦F135⟧\n甲对地面的压强增大900Pa，可得⟦F136⟧①\n乙对地面的压强增大600Pa，可得⟦F137⟧②\n联立①②，可得甲乙两实心长方体的密度之比为⟦F138⟧，故选C。",
+            "answer_source": "inline",
+            "show_answer": true,
+            "show_analysis": true,
+            "source": {
+              "source_id": 98,
+              "file_name": "专题06 固体压强的计算（6大考点）（解析版）.docx",
+              "stage": "初中",
+              "subject": "物理",
+              "grade": "待补充",
+              "textbook": "待补充",
+              "chapter": "待补充",
+              "start_paragraph": 139,
+              "end_paragraph": 148
+            }
+          }
+        ]
+      },
+      {
+        "section_id": 2,
+        "name": "二、计算题",
+        "seq": 2,
+        "description": null,
+        "item_count": 4,
+        "subtotal": 24.0,
+        "questions": [
+          {
+            "item_id": 7,
+            "seq": 7,
+            "question_id": 6386,
+            "question_version": 1,
+            "number": "1",
+            "qtype": "计算解答题",
+            "difficulty": "未标注",
+            "score": 6.0,
+            "text": "1．（24-25八年级下·四川内江·期中）小米公司第一款纯电轿车小米SU7于2024年3月28日正式发布，如图所示。该车质量约为2000kg，轮胎与地面接触总面积为8×10-2m2。求：\n(1)车的重力；(2)静止时车对地面的压强。",
+            "plain_text": "1．（24-25八年级下·四川内江·期中）小米公司第一款纯电轿车小米SU7于2024年3月28日正式发布，如图所示。该车质量约为2000kg，轮胎与地面接触总面积为8×10-2m2。求：\n(1)车的重力；(2)静止时车对地面的压强。",
+            "formulas": [],
+            "latex_list": [],
+            "images": [],
+            "image_paths": [],
+            "answer": null,
+            "analysis": null,
+            "answer_source": null,
+            "show_answer": true,
+            "show_analysis": true,
+            "source": {
+              "source_id": 171,
+              "file_name": "考点四（压强和浮力）计算题 专项练习-2025-2026学年苏科版物理八年级下学期.docx",
+              "stage": "初中",
+              "subject": "物理",
+              "grade": "八年级下册",
+              "textbook": "苏科版",
+              "chapter": "待补充",
+              "start_paragraph": 2,
+              "end_paragraph": 4
+            }
+          },
+          {
+            "item_id": 8,
+            "seq": 8,
+            "question_id": 6387,
+            "question_version": 1,
+            "number": "2",
+            "qtype": "计算解答题",
+            "difficulty": "未标注",
+            "score": 6.0,
+            "text": "2．（2025·江苏扬州·中考真题）某无人快递配送车轮胎与水平地面接触的总面积为⟦F1⟧，对地面的压强为⟦F2⟧，在大小为400N的牵引力作用下匀速行驶，g取10N/kg．求：\n(1)配送车所受阻力f的大小；(2)配送车与货物的总质量m。",
+            "plain_text": "2．（2025·江苏扬州·中考真题）某无人快递配送车轮胎与水平地面接触的总面积为，对地面的压强为，在大小为400N的牵引力作用下匀速行驶，g取10N/kg．求：\n(1)配送车所受阻力f的大小；(2)配送车与货物的总质量m。",
+            "formulas": [
+              {
+                "fid": "F1",
+                "seq": 1,
+                "kind": "mathtype",
+                "status": "OK",
+                "latex": "500{ \\rm{ c } }{ \\rm{ m } } ^ { 2 }",
+                "progid": "Equation.DSMT4",
+                "part": "embeddings/oleObject1.bin",
+                "preview": "media/image3.wmf",
+                "needs_review": 0
+              },
+              {
+                "fid": "F2",
+                "seq": 2,
+                "kind": "mathtype",
+                "status": "OK",
+                "latex": "1\\times 10 ^ { 5 } { \\rm{ P } }{ \\rm{ a } }",
+                "progid": "Equation.DSMT4",
+                "part": "embeddings/oleObject2.bin",
+                "preview": "media/image4.wmf",
+                "needs_review": 0
+              }
+            ],
+            "latex_list": [
+              "500{ \\rm{ c } }{ \\rm{ m } } ^ { 2 }",
+              "1\\times 10 ^ { 5 } { \\rm{ P } }{ \\rm{ a } }"
+            ],
+            "images": [
+              {
+                "media_path": "media/image5.png",
+                "sha256": "599ea23656ba2197f45bee280d3d3e66d0129caa14d6a1e9176ad8b73b0c6afb",
+                "offline_url": "media/q6387_img5603.png",
+                "natural_w": 544,
+                "natural_h": 375
+              }
+            ],
+            "image_paths": [
+              "media/image5.png"
+            ],
+            "answer": null,
+            "analysis": null,
+            "answer_source": null,
+            "show_answer": true,
+            "show_analysis": true,
+            "source": {
+              "source_id": 171,
+              "file_name": "考点四（压强和浮力）计算题 专项练习-2025-2026学年苏科版物理八年级下学期.docx",
+              "stage": "初中",
+              "subject": "物理",
+              "grade": "八年级下册",
+              "textbook": "苏科版",
+              "chapter": "待补充",
+              "start_paragraph": 5,
+              "end_paragraph": 8
+            }
+          },
+          {
+            "item_id": 9,
+            "seq": 9,
+            "question_id": 6388,
+            "question_version": 1,
+            "number": "3",
+            "qtype": "计算解答题",
+            "difficulty": "未标注",
+            "score": 6.0,
+            "text": "3．（24-25八年级下·北京通州·期中）某地有一处古代建筑群，其中一座房屋屹立千年，依旧稳固。已知该房屋屋顶面积为⟦F3⟧，当地的大气压强值为⟦F4⟧。求：屋顶的上表面承受的大气压力。",
+            "plain_text": "3．（24-25八年级下·北京通州·期中）某地有一处古代建筑群，其中一座房屋屹立千年，依旧稳固。已知该房屋屋顶面积为，当地的大气压强值为。求：屋顶的上表面承受的大气压力。",
+            "formulas": [
+              {
+                "fid": "F3",
+                "seq": 1,
+                "kind": "mathtype",
+                "status": "OK",
+                "latex": "80{ \\rm{ m } } ^ { 2 }",
+                "progid": "Equation.DSMT4",
+                "part": "embeddings/oleObject3.bin",
+                "preview": "media/image6.wmf",
+                "needs_review": 0
+              },
+              {
+                "fid": "F4",
+                "seq": 2,
+                "kind": "mathtype",
+                "status": "OK",
+                "latex": "1\\times 10 ^ { 5 } { \\rm{ P } }{ \\rm{ a } }",
+                "progid": "Equation.DSMT4",
+                "part": "embeddings/oleObject4.bin",
+                "preview": "media/image4.wmf",
+                "needs_review": 0
+              }
+            ],
+            "latex_list": [
+              "80{ \\rm{ m } } ^ { 2 }",
+              "1\\times 10 ^ { 5 } { \\rm{ P } }{ \\rm{ a } }"
+            ],
+            "images": [],
+            "image_paths": [],
+            "answer": null,
+            "analysis": null,
+            "answer_source": null,
+            "show_answer": true,
+            "show_analysis": true,
+            "source": {
+              "source_id": 171,
+              "file_name": "考点四（压强和浮力）计算题 专项练习-2025-2026学年苏科版物理八年级下学期.docx",
+              "stage": "初中",
+              "subject": "物理",
+              "grade": "八年级下册",
+              "textbook": "苏科版",
+              "chapter": "待补充",
+              "start_paragraph": 9,
+              "end_paragraph": 10
+            }
+          },
+          {
+            "item_id": 10,
+            "seq": 10,
+            "question_id": 6389,
+            "question_version": 1,
+            "number": "4",
+            "qtype": "计算解答题",
+            "difficulty": "未标注",
+            "score": 6.0,
+            "text": "4．（25-26八年级下·福建福州·月考）图为某驱逐舰，满载时排水量8000t。（海水密度约为⟦F5⟧，g取10N/kg）。\n(1)驱逐舰满载时受到的浮力是多少？\n(2)若驱逐舰某次排开水的体积是5000m3，则此时驱逐舰受到的浮力是多少？",
+            "plain_text": "4．（25-26八年级下·福建福州·月考）图为某驱逐舰，满载时排水量8000t。（海水密度约为，g取10N/kg）。\n(1)驱逐舰满载时受到的浮力是多少？\n(2)若驱逐舰某次排开水的体积是5000m3，则此时驱逐舰受到的浮力是多少？",
+            "formulas": [
+              {
+                "fid": "F5",
+                "seq": 1,
+                "kind": "mathtype",
+                "status": "OK",
+                "latex": "1.0\\times 10 ^ { 3 } { \\rm{ k } }{ \\rm{ g } }/{ \\rm{ m } } ^ { 3 }",
+                "progid": "Equation.DSMT4",
+                "part": "embeddings/oleObject5.bin",
+                "preview": "media/image7.wmf",
+                "needs_review": 0
+              }
+            ],
+            "latex_list": [
+              "1.0\\times 10 ^ { 3 } { \\rm{ k } }{ \\rm{ g } }/{ \\rm{ m } } ^ { 3 }"
+            ],
+            "images": [
+              {
+                "media_path": "media/image8.png",
+                "sha256": "571570a8f2bcaf0acfceb55255530f0d747ec019097dc6808c234098371ba83e",
+                "offline_url": "media/q6389_img5604.png",
+                "natural_w": 259,
+                "natural_h": 160
+              }
+            ],
+            "image_paths": [
+              "media/image8.png"
+            ],
+            "answer": null,
+            "analysis": null,
+            "answer_source": null,
+            "show_answer": true,
+            "show_analysis": true,
+            "source": {
+              "source_id": 171,
+              "file_name": "考点四（压强和浮力）计算题 专项练习-2025-2026学年苏科版物理八年级下学期.docx",
+              "stage": "初中",
+              "subject": "物理",
+              "grade": "八年级下册",
+              "textbook": "苏科版",
+              "chapter": "待补充",
+              "start_paragraph": 11,
+              "end_paragraph": 15
+            }
+          }
+        ]
+      }
+    ]
+  }
+}

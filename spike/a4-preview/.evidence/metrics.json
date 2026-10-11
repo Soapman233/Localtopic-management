@@ -1,0 +1,82 @@
+[
+  {
+    "config": "01_student_A4_full",
+    "pages": 6,
+    "ms": 0.20000000298023224,
+    "questions": 10,
+    "blocks": 14,
+    "overflow": 0,
+    "bench_ms": 0.02,
+    "bench50_ms": null
+  },
+  {
+    "config": "02_student_Letter_full",
+    "pages": 6,
+    "ms": 3.0999999940395355,
+    "questions": 10,
+    "blocks": 14,
+    "overflow": 0,
+    "bench_ms": 0.02,
+    "bench50_ms": null
+  },
+  {
+    "config": "03_answer_A4_full",
+    "pages": 8,
+    "ms": 0.09999999403953552,
+    "questions": 10,
+    "blocks": 14,
+    "overflow": 1,
+    "bench_ms": 0.02,
+    "bench50_ms": null
+  },
+  {
+    "config": "04_answer_Letter_full",
+    "pages": 8,
+    "ms": 0.09999999403953552,
+    "questions": 10,
+    "blocks": 14,
+    "overflow": 1,
+    "bench_ms": 0.0267,
+    "bench50_ms": null
+  },
+  {
+    "config": "05_student_A4_qf5_50q",
+    "pages": 23,
+    "ms": 0.29999999701976776,
+    "questions": 50,
+    "blocks": 54,
+    "overflow": 0,
+    "bench_ms": 0.0533,
+    "bench50_ms": 0.053333333631356554
+  },
+  {
+    "config": "06_detail_page1",
+    "pages": 6,
+    "ms": 0.10000000894069672,
+    "questions": 10,
+    "blocks": 14,
+    "overflow": 0,
+    "bench_ms": 0.0267,
+    "bench50_ms": null
+  },
+  {
+    "config": "07_routeA_css",
+    "pages": 6,
+    "ms": 0.09999999403953552,
+    "questions": 10,
+    "blocks": 14,
+    "overflow": 0,
+    "bench_ms": 0.0267,
+    "bench50_ms": null
+  },
+  {
+    "config": "09_interactive_panel",
+    "pages": 6,
+    "ms": 4.4000000059604645,
+    "questions": 10,
+    "blocks": 14,
+    "overflow": 0,
+    "bench_ms": 0.03,
+    "bench50_ms": null
+  }
+]

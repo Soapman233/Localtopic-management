@@ -1,0 +1,209 @@
+/* LivePreviewPanel 专属样式。
+ *
+ * 作用域全部限定在 `.lp-doc` / `.lp-page` 内，避免影响其它页面。
+ * 分页引擎依赖「测量层与页面层 DOM 完全一致」，故这里只做**几何无副作用**的样式
+ * （边框/阴影/绝对定位），不引入会改变块高度的属性。
+ */
+
+/* 纸张：白底 + 细边框 + 阴影，模拟 A4 观感。 */
+.lp-page {
+  position: relative;
+  background: #fff;
+  color: #000;
+  box-sizing: border-box;
+  overflow: visible;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.18);
+  border: 1px solid #e3e6ea;
+}
+
+/* 页脚（页码）：绝对定位到下页边距区域，居中。 */
+.lp-page .lp-footer {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 8px;
+  text-align: center;
+  color: #333;
+  font-family: '宋体', 'SimSun', serif;
+}
+
+/* 测量层：不可见，但**必须参与布局**（不能用 display:none），移出视口即可。
+ * 关键：它必须位于任何 `transform: scale()` 容器**之外**，否则
+ * `getBoundingClientRect()` 返回的是缩放后尺寸，会污染分页。 */
+.lp-measure {
+  color: #000;
+  position: absolute;
+  left: -100000px;
+  top: 0;
+  visibility: hidden;
+  pointer-events: none;
+  z-index: -1;
+}
+
+/* ★ 关键适配：生产组件 `FormulaText`（复用自 KatexFormula.tsx）自带
+ *   `lineHeight: 1.9`（面向普通阅读）。但分页要求**行高严格等于版式模型值**
+ *   （Word「1.5 倍行距」≈ 23.2pt → 换算 px）。若不复位，行盒会被撑到
+ *   1.9×字号 ≈ 30px，整卷少排约 1 页。
+ *   这里以更高优先级（后代选择器 0,2,0 > emotion 单类 0,1,0）把行高复位为
+ *   「继承」= 外层 `.lp-line` 的内联 `line-height`（= 模型行高）。
+ *   同时复位 KaTeX 自身 `.katex { line-height: 1.2 }`，确保「行高 = 模型值」。 */
+.lp-doc .lp-line-formula,
+.lp-doc .lp-line .katex,
+.lp-doc .lp-line .katex-inline {
+  line-height: inherit;
+}
+.lp-doc .lp-line-formula {
+  white-space: pre-wrap;
+}
+
+/* 图片缺失占位（如实提示，不伪造）。 */
+.lp-image-missing {
+  display: inline-block;
+  color: #b91c1c;
+  background: #fef2f2;
+  border: 1px dashed #b91c1c;
+  border-radius: 4px;
+  padding: 4px 8px;
+  font-size: 12px;
+}
+
+/* 页面调试徽标（仅 debug 模式）。 */
+.lp-debug-badge {
+  position: absolute;
+  top: 2px;
+  right: 4px;
+  z-index: 2;
+  font-size: 10px;
+  color: #b26a00;
+  background: #fff7e6;
+  border: 1px solid #ffd591;
+  border-radius: 3px;
+  padding: 0 4px;
+  font-family: Consolas, Menlo, monospace;
+}
+
+/* ------------------------------------------------------------------ */
+/* P3：排版视图内可编辑（拖拽手柄 + 题目工具栏）——全部**绝对定位**，   */
+/* 不参与文档流、不改变块高度，故不污染分页测量。                       */
+/* ------------------------------------------------------------------ */
+.lp-block--editable {
+  border-radius: 4px;
+  transition: box-shadow 0.12s;
+}
+.lp-block--editable:hover {
+  box-shadow: 0 0 0 1px #90caf9;
+}
+
+/* 拖拽手柄：每题左侧，悬停显现（拖动时始终显示）。
+ * P1-2：补 `:focus-within`，使键盘 Tab 聚焦到手柄/工具栏时同样显现（此前仅 hover 可达）。 */
+.lp-qhandle {
+  position: absolute;
+  left: -14px;
+  top: 0;
+  cursor: grab;
+  color: #b0bec5;
+  font-size: 13px;
+  line-height: 1;
+  user-select: none;
+  opacity: 0;
+  transition: opacity 0.12s;
+  touch-action: none;
+}
+.lp-block--editable:hover .lp-qhandle,
+.lp-block--editable:focus-within .lp-qhandle {
+  opacity: 1;
+}
+.lp-qhandle:active {
+  cursor: grabbing;
+}
+
+/* 题目工具栏：每题右上角，悬停显现。 */
+.lp-qtoolbar {
+  position: absolute;
+  right: -2px;
+  top: -3px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  opacity: 0;
+  transition: opacity 0.12s;
+}
+.lp-block--editable:hover .lp-qtoolbar,
+.lp-block--editable:focus-within .lp-qtoolbar {
+  opacity: 1;
+}
+
+/* P1-2：键盘焦点可见性（改分 chip / 删除按钮 / 拖拽手柄）。 */
+.lp-qhandle:focus-visible,
+.lp-score-chip:focus-visible,
+.lp-qdel:focus-visible {
+  outline: 2px solid #1976d2;
+  outline-offset: 1px;
+}
+
+/* 分值 chip（点击就地编辑）。 */
+.lp-score-chip {
+  font-size: 11px;
+  line-height: 16px;
+  border: 1px solid #90caf9;
+  background: #e3f2fd;
+  color: #1565c0;
+  border-radius: 10px;
+  padding: 0 6px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.lp-score-chip.lp-score-empty {
+  border-color: #ffb74d;
+  background: #fff3e0;
+  color: #e65100;
+}
+
+/* 就地分值输入框。 */
+.lp-score-input {
+  width: 54px;
+  font-size: 11px;
+  line-height: 16px;
+  border: 1px solid #1976d2;
+  border-radius: 4px;
+  padding: 0 4px;
+  outline: none;
+}
+.lp-score-input.lp-invalid {
+  border-color: #d32f2f;
+  background: #ffebee;
+  color: #b71c1c;
+}
+
+/* 删除按钮。 */
+.lp-qdel {
+  border: none;
+  background: transparent;
+  color: #c62828;
+  cursor: pointer;
+  font-size: 13px;
+  line-height: 1;
+  padding: 0 2px;
+}
+.lp-qdel:hover {
+  color: #8e0000;
+}
+
+
+.lp-doc .lp-line { white-space: pre-wrap; tab-size: 8; overflow-wrap: anywhere; }
+.lp-content-blocked { padding: 8px; border: 1px dashed #b91c1c; background: #fff1f2; color: #991b1b; font-size: 12px; line-height: 1.7; overflow-wrap: anywhere; }
+
+/* ------------------------------------------------------------------ */
+/* P1-6：深色模式下调整**非纸张 chrome** 的对比度。                     */
+/* 纸张 `.lp-page` 仍保持白底黑字（试卷预览语义），只改工具栏/提示等。  */
+/* ------------------------------------------------------------------ */
+.lp-dark .lp-content-blocked { border-color: #f87171; background: #2a1416; color: #fca5a5; }
+.lp-dark .lp-image-missing { border-color: #f87171; background: #2a1416; color: #fca5a5; }
+.lp-dark .lp-score-chip { border-color: #64b5f6; background: #0d2b45; color: #90caf9; }
+.lp-dark .lp-score-chip.lp-score-empty { border-color: #ffb74d; background: #3a2a10; color: #ffcc80; }
+.lp-dark .lp-score-input { background: #0d2b45; color: #e3f2fd; }
+.lp-dark .lp-score-input.lp-invalid { background: #3a1414; color: #ffcdd2; }
+.lp-dark .lp-qdel { color: #ef9a9a; }
+.lp-dark .lp-qdel:hover { color: #ffcdd2; }
+.lp-dark .lp-qhandle { color: #78909c; }
+.lp-dark .lp-debug-badge { color: #ffcc80; background: #3a2a10; border-color: #ffb74d; }

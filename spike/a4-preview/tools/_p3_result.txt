@@ -1,0 +1,139 @@
+
+=== 阶段 1：清单视图 · 逐个编辑动作 → 门禁重新锁定 ===
+  builderView = list
+  [PASS] 加题（加入）: previewFresh=false unlocked=false
+  [PASS] 设分: previewFresh=false unlocked=false
+  [PASS] 调序（下移）: previewFresh=false unlocked=false
+  [PASS] 大题新增: previewFresh=false unlocked=false
+  [PASS] 大题重命名: previewFresh=false unlocked=false
+  [PASS] 大题删除: previewFresh=false unlocked=false
+  [PASS] 删题: previewFresh=false unlocked=false
+
+=== 阶段 2：排版视图内编辑（改分 / 删除 + undo / 拖拽调序）===
+  layout items = 10 pages = 6 editable = true
+  [PASS] 排版视图改分: 6 分 → 7 分
+  [PASS] 排版视图改分(门禁): previewFresh=false unlocked=false
+  [PASS] 非法分值红框提示: true
+  [PASS] 删除+undo: 10 → 9 → 10, toast=true
+  [PASS] 排版视图删除(门禁): previewFresh=false unlocked=false
+  handles found = 10
+  [PASS] 拖拽调序: [1,3,2,4,5,6,125,9,10,124] → [1,3,2,4,5,6,9,125,10,124]
+  [PASS] 排版视图拖拽(门禁): previewFresh=false unlocked=false
+
+=== 阶段 3：视图切换记忆 ===
+  [PASS] 视图记忆: 初始=list 切换后=layout 刷新后=layout
+
+=== 阶段 4：检索条件写入 URL ===
+  [PASS] 检索URL: 含keyword=true 刷新后输入框=浮力
+
+=== 结果汇总 ===
+{
+  "加题（加入）": {
+    "previewFresh": false,
+    "unlocked": false,
+    "locked": true,
+    "clicked": true,
+    "unlockMs": 153
+  },
+  "设分": {
+    "previewFresh": false,
+    "unlocked": false,
+    "locked": true
+  },
+  "调序（下移）": {
+    "previewFresh": false,
+    "unlocked": false,
+    "locked": true
+  },
+  "大题新增": {
+    "previewFresh": false,
+    "unlocked": false,
+    "locked": true
+  },
+  "大题重命名": {
+    "previewFresh": false,
+    "unlocked": false,
+    "locked": true
+  },
+  "大题删除": {
+    "previewFresh": false,
+    "unlocked": false,
+    "locked": true
+  },
+  "删题": {
+    "previewFresh": false,
+    "unlocked": false,
+    "locked": true
+  },
+  "排版视图改分": {
+    "before": "6 分",
+    "after": "7 分",
+    "changed": true
+  },
+  "排版视图改分(门禁)": {
+    "previewFresh": false,
+    "unlocked": false,
+    "locked": true
+  },
+  "非法分值红框": {
+    "invalid": true
+  },
+  "排版视图删除+undo": {
+    "before": 10,
+    "afterDel": 9,
+    "afterUndo": 10,
+    "toastShown": true,
+    "ok": true
+  },
+  "排版视图删除(门禁)": {
+    "previewFresh": false,
+    "unlocked": false,
+    "locked": true
+  },
+  "排版视图拖拽调序": {
+    "orderBefore": [
+      1,
+      3,
+      2,
+      4,
+      5,
+      6,
+      125,
+      9,
+      10,
+      124
+    ],
+    "orderAfter": [
+      1,
+      3,
+      2,
+      4,
+      5,
+      6,
+      9,
+      125,
+      10,
+      124
+    ],
+    "changed": true
+  },
+  "排版视图拖拽(门禁)": {
+    "previewFresh": false,
+    "unlocked": false,
+    "locked": true
+  },
+  "视图记忆": {
+    "initial": "list",
+    "afterSwitch": "layout",
+    "afterReload": "layout",
+    "ok": true
+  },
+  "检索URL": {
+    "url1": "http://127.0.0.1:8720/#/search?keyword=%E6%B5%AE%E5%8A%9B",
+    "url2": "http://127.0.0.1:8720/#/search?keyword=%E6%B5%AE%E5%8A%9B",
+    "kwAfter": "浮力",
+    "kwInUrl": true,
+    "reloadKept": true,
+    "ok": true
+  }
+}

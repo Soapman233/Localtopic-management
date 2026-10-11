@@ -1,0 +1,296 @@
+/* 探针全局样式：近似 A4 页面 + 测量层 + KaTeX 微调。 */
+@import 'katex/dist/katex.min.css';
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  background: #eef1f5;
+  color: #1f2329;
+  font-family: -apple-system, 'Segoe UI', 'Microsoft YaHei', sans-serif;
+}
+
+#root {
+  min-height: 100vh;
+}
+
+/* 页面白纸 */
+.a4-page {
+  position: relative;
+  background: #fff;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.18);
+  margin: 0 auto 18px;
+  overflow: hidden;
+}
+
+.page-content {
+  /* 宽度由内联 style 指定（= 正文区宽），此处只保证与测量层一致 */
+  margin: 0;
+}
+
+/* 页脚（页码）：落在下页边距区域 */
+.page-footer {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 6px;
+  text-align: center;
+  color: #333;
+  font-family: '宋体', 'SimSun', serif;
+}
+
+/* 页面调试徽标（仅 debug 模式） */
+.page-debug-badge {
+  position: absolute;
+  top: 2px;
+  right: 4px;
+  font-size: 10px;
+  color: #b26a00;
+  background: #fff7e6;
+  border: 1px solid #ffd591;
+  border-radius: 3px;
+  padding: 0 4px;
+  z-index: 2;
+}
+
+/* 测量层：不可见但参与布局（不能用 display:none） */
+.measure-layer {
+  position: absolute;
+  left: -100000px;
+  top: 0;
+  visibility: hidden;
+  pointer-events: none;
+  z-index: -1;
+}
+
+/* 公式失败降级为红色源码 */
+.qb-katex-fallback {
+  color: #d4380d;
+  font-family: monospace;
+  font-size: 0.9em;
+}
+
+/* 题干占位符无对应公式 */
+.qb-placeholder-missing {
+  color: #d4380d;
+  border: 1px dashed #d4380d;
+  border-radius: 4px;
+  padding: 0 2px;
+  font-size: 0.85em;
+}
+
+/* 图片缺失占位 */
+.qb-image-missing {
+  display: inline-block;
+  color: #d4380d;
+  border: 1px dashed #d4380d;
+  border-radius: 4px;
+  padding: 8px 12px;
+  font-size: 12px;
+}
+
+/* 布局外壳 */
+.app {
+  display: flex;
+  align-items: flex-start;
+  gap: 0;
+}
+
+.panel {
+  width: 380px;
+  min-width: 380px;
+  height: 100vh;
+  overflow: auto;
+  background: #fff;
+  border-right: 1px solid #d9dee5;
+  padding: 14px 16px;
+  position: sticky;
+  top: 0;
+}
+
+.panel h1 {
+  font-size: 16px;
+  margin: 0 0 4px;
+}
+
+.panel .sub {
+  color: #6b7280;
+  font-size: 12px;
+  margin-bottom: 12px;
+  line-height: 1.6;
+}
+
+.field {
+  margin-bottom: 10px;
+}
+
+.field > label {
+  display: block;
+  font-size: 12px;
+  color: #4b5563;
+  margin-bottom: 4px;
+  font-weight: 600;
+}
+
+.seg {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.seg button {
+  font-size: 12px;
+  padding: 4px 10px;
+  border: 1px solid #c9d2dc;
+  background: #f8fafc;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.seg button.active {
+  background: #3370ff;
+  border-color: #3370ff;
+  color: #fff;
+}
+
+.btn {
+  font-size: 12px;
+  padding: 5px 10px;
+  border: 1px solid #c9d2dc;
+  background: #fff;
+  border-radius: 6px;
+  cursor: pointer;
+  margin: 0 6px 6px 0;
+}
+
+.btn:hover {
+  background: #f2f5f9;
+}
+
+.btn.primary {
+  background: #3370ff;
+  border-color: #3370ff;
+  color: #fff;
+}
+
+.metrics {
+  background: #0f172a;
+  color: #d7e3f4;
+  border-radius: 8px;
+  padding: 10px 12px;
+  font-family: 'Consolas', monospace;
+  font-size: 12px;
+  line-height: 1.7;
+  white-space: pre-wrap;
+  word-break: break-all;
+}
+
+.metrics b {
+  color: #7ee787;
+}
+
+.tag {
+  display: inline-block;
+  font-size: 11px;
+  padding: 1px 6px;
+  border-radius: 4px;
+  background: #eef2f7;
+  color: #475569;
+  margin-right: 4px;
+}
+
+.tag.ok {
+  background: #e7f7ed;
+  color: #137a3f;
+}
+
+.tag.warn {
+  background: #fff7e6;
+  color: #b26a00;
+}
+
+.qlist {
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  max-height: 320px;
+  overflow: auto;
+}
+
+.qrow {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 8px;
+  border-bottom: 1px solid #eef2f7;
+  font-size: 12px;
+}
+
+.qrow:last-child {
+  border-bottom: none;
+}
+
+.qrow .num {
+  width: 22px;
+  color: #64748b;
+}
+
+.qrow .txt {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.qrow button {
+  font-size: 11px;
+  padding: 1px 6px;
+  border: 1px solid #c9d2dc;
+  background: #fff;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.preview-area {
+  flex: 1;
+  padding: 18px;
+  height: 100vh;
+  overflow: auto;
+}
+
+.preview-toolbar {
+  position: sticky;
+  top: -18px;
+  z-index: 5;
+  background: #eef1f5f2;
+  padding: 8px 0 12px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 12px;
+  color: #475569;
+  backdrop-filter: blur(2px);
+}
+
+.loading {
+  padding: 40px;
+  color: #6b7280;
+}
+
+/* 取证模式（panel=0）：让文档随内容自然增高，便于整页截图 */
+body.evidence .app {
+  display: block;
+}
+
+body.evidence .preview-area {
+  height: auto;
+  overflow: visible;
+  padding: 12px;
+}
+
+body.evidence .preview-toolbar {
+  position: static;
+}
