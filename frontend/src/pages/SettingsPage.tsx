@@ -9,7 +9,6 @@ import {
   Alert,
   Box,
   Button,
-  CircularProgress,
   Divider,
   FormControlLabel,
   MenuItem,
@@ -24,6 +23,8 @@ import SaveIcon from '@mui/icons-material/Save'
 import { getSettings, updateSettings } from '../api/settings'
 import { TEMPLATES } from '../api/types'
 import type { SettingsData } from '../api/types'
+import { ErrorState } from '../components/ErrorState'
+import { LoadingState } from '../components/LoadingState'
 import { qk } from '../api/queryKeys'
 
 interface FormState {
@@ -82,8 +83,11 @@ export default function SettingsPage() {
     return (
       <Box>
         <Typography variant="h6" gutterBottom>系统设置</Typography>
-        <Alert severity="error">加载设置失败：{(settingsQ.error as Error).message}</Alert>
-        <Button onClick={() => settingsQ.refetch()}>重试</Button>
+        <ErrorState
+          error={settingsQ.error}
+          title="加载设置失败"
+          onRetry={() => settingsQ.refetch()}
+        />
       </Box>
     )
   }
@@ -93,7 +97,7 @@ export default function SettingsPage() {
         <Typography variant="h6" gutterBottom>
           系统设置
         </Typography>
-        <CircularProgress size={24} />
+        <LoadingState label="正在加载设置…" />
       </Box>
     )
   }

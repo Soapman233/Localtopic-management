@@ -53,6 +53,9 @@ import { PaperPanel, type PaperActions } from '../components/PaperPanel'
 import { PaperSwitcher } from '../components/PaperSwitcher'
 import { LivePreviewPanel } from '../components/LivePreviewPanel'
 import { ExportDrawer } from '../components/ExportDrawer'
+import { EmptyState } from '../components/EmptyState'
+import { ErrorState } from '../components/ErrorState'
+import { LoadingState } from '../components/LoadingState'
 import { useFacetsQuery, useSearchQuery } from '../hooks/useSearch'
 import {
   addQuestions,
@@ -394,16 +397,22 @@ export default function PaperBuilderPage() {
             需要批量调序 / 批量设分？切到「清单视图」更快。
           </Alert>
           {paperId == null ? (
-            <Alert severity="info">还没有试卷，点右上角「试卷列表」新建或选择一份试卷。</Alert>
+            <EmptyState
+              title="还没有试卷"
+              description="点右上角「试卷列表」新建或选择一份试卷。"
+              actionLabel="打开试卷列表"
+              onAction={() => setDrawerOpen(true)}
+            />
           ) : exportDataQ.isLoading ? (
-            <Stack direction="row" spacing={1} alignItems="center">
-              <CircularProgress size={18} />
-              <Typography variant="body2" color="text.secondary">加载结构预览…</Typography>
-            </Stack>
+            <LoadingState label="加载结构预览…" />
           ) : exportDataQ.isError ? (
-            <Alert severity="error">加载结构预览失败：{(exportDataQ.error as Error).message}</Alert>
+            <ErrorState
+              error={exportDataQ.error}
+              title="加载结构预览失败"
+              onRetry={() => exportDataQ.refetch()}
+            />
           ) : exportDataQ.data && exportDataQ.data.sections.length === 0 ? (
-            <Alert severity="info">试卷为空。从左侧题库点「加入」或拖拽题目到此处。</Alert>
+            <EmptyState title="试卷为空" description="从左侧题库点「加入」或拖拽题目到此处。" />
           ) : exportDataQ.data ? (
             <LivePreviewPanel
               paperId={paperId}
@@ -534,7 +543,9 @@ export default function PaperBuilderPage() {
                   </Typography>
                   {searchQ.isFetching && <CircularProgress size={14} />}
                 </Stack>
-                {searchQ.isError && <Alert severity="error">检索失败：{(searchQ.error as Error).message}</Alert>}
+                {searchQ.isError && (
+                  <ErrorState error={searchQ.error} title="检索失败" onRetry={() => searchQ.refetch()} />
+                )}
                 {items.map((item) => (
                   <QuestionCard
                     key={item.id}
@@ -590,9 +601,9 @@ export default function PaperBuilderPage() {
             </Button>
           </Stack>
           <Divider sx={{ my: 1 }} />
-          {papersQ.isLoading && <Typography variant="body2" color="text.secondary">加载中…</Typography>}
+          {papersQ.isLoading && <LoadingState dense label="加载中…" />}
           {papersQ.isError && (
-            <Alert severity="error">加载失败：{(papersQ.error as Error).message}</Alert>
+            <ErrorState dense error={papersQ.error} title="加载失败" onRetry={() => papersQ.refetch()} />
           )}
           <List dense>
             {(papersQ.data ?? []).map((p) => (
@@ -623,10 +634,8 @@ export default function PaperBuilderPage() {
               </ListItemButton>
             ))}
           </List>
-          {(papersQ.data ?? []).length === 0 && !papersQ.isLoading && (
-            <Typography variant="body2" color="text.secondary">
-              还没有试卷，请新建。
-            </Typography>
+          {(papersQ.data ?? []).length === 0 && !papersQ.isLoading && !papersQ.isError && (
+            <EmptyState dense title="还没有试卷" description="在上方输入标题新建一份试卷。" />
           )}
         </Box>
       </Drawer>

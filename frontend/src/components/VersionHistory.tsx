@@ -11,7 +11,6 @@ import {
   AccordionSummary,
   Box,
   Chip,
-  CircularProgress,
   Divider,
   List,
   ListItem,
@@ -23,6 +22,9 @@ import ExpandMoreIcon from '@mui/icons-material/ExpandMore'
 import { getVersion } from '../api/questions'
 import type { QuestionVersionRow } from '../api/types'
 import { FormulaText } from './KatexFormula'
+import { EmptyState } from './EmptyState'
+import { ErrorState } from './ErrorState'
+import { LoadingState } from './LoadingState'
 import { qk } from '../api/queryKeys'
 
 function fmtTime(iso?: string | null): string {
@@ -42,7 +44,7 @@ function VersionRow({
   expanded: boolean
   onToggle: () => void
 }) {
-  const { data, isLoading, isError, error } = useQuery({
+  const { data, isLoading, isError, error, refetch } = useQuery({
     queryKey: qk.questionVersion(questionId, row.version),
     queryFn: () => getVersion(questionId, row.version),
     enabled: expanded,
@@ -72,18 +74,14 @@ function VersionRow({
         </Stack>
       </AccordionSummary>
       <AccordionDetails>
-        {isLoading && (
-          <Stack direction="row" spacing={1} alignItems="center">
-            <CircularProgress size={16} />
-            <Typography variant="body2" color="text.secondary">
-              正在读取该版快照…
-            </Typography>
-          </Stack>
-        )}
+        {isLoading && <LoadingState dense size={16} label="正在读取该版快照…" />}
         {isError && (
-          <Typography variant="body2" color="error">
-            读取失败：{(error as Error)?.message ?? '未知错误'}
-          </Typography>
+          <ErrorState
+            dense
+            error={error ?? new Error('未知错误')}
+            title="读取失败"
+            onRetry={() => refetch()}
+          />
         )}
         {data && (
           <Box>
@@ -145,9 +143,7 @@ export function VersionHistory({ questionId, versions }: VersionHistoryProps) {
         系统会自动保留每次编辑前的旧版，**仅供查看，不提供一键回滚**。
       </Typography>
       {rows.length === 0 ? (
-        <Typography variant="body2" color="text.secondary">
-          暂无版本记录。
-        </Typography>
+        <EmptyState dense title="暂无版本记录" />
       ) : (
         <List disablePadding>
           {rows

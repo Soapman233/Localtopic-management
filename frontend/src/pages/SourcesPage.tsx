@@ -15,7 +15,6 @@ import {
   Box,
   Button,
   Chip,
-  CircularProgress,
   Dialog,
   DialogActions,
   DialogContent,
@@ -39,6 +38,9 @@ import { getSource, getSourceImpact, listSources, updateSourceMetadata } from '.
 import type { SourceDetail, SourceFileMeta, SourceRow } from '../api/types'
 import { ConfirmDialog } from '../components/ConfirmDialog'
 import { MissingBadge } from '../components/StatusBadges'
+import { EmptyState } from '../components/EmptyState'
+import { ErrorState } from '../components/ErrorState'
+import { LoadingState } from '../components/LoadingState'
 import { qk } from '../api/queryKeys'
 
 /** 判断文件级字段是否缺失（``NULL`` / 空串 / 哨兵值「待补充」）。 */
@@ -140,9 +142,14 @@ function SourceDetailDialog({
       <Dialog open={sourceId != null} onClose={onClose} fullWidth maxWidth="md">
         <DialogTitle>来源文件详情</DialogTitle>
         <DialogContent dividers>
-          {detailQ.isLoading && <CircularProgress size={20} />}
+          {detailQ.isLoading && <LoadingState dense label="正在加载来源文件详情…" />}
           {detailQ.isError && (
-            <Alert severity="error">加载失败：{(detailQ.error as Error).message}</Alert>
+            <ErrorState
+              error={detailQ.error}
+              title="加载失败"
+              onRetry={() => detailQ.refetch()}
+              retryLabel="重试"
+            />
           )}
           {detail && src && (
             <Box>
@@ -332,9 +339,13 @@ export default function SourcesPage() {
         </Stack>
       </Paper>
 
-      {sourcesQ.isLoading && <CircularProgress size={20} />}
+      {sourcesQ.isLoading && <LoadingState label="正在加载来源文件…" />}
       {sourcesQ.isError && (
-        <Alert severity="error">加载来源文件失败：{(sourcesQ.error as Error).message}</Alert>
+        <ErrorState
+          error={sourcesQ.error}
+          title="加载来源文件失败"
+          onRetry={() => sourcesQ.refetch()}
+        />
       )}
 
       {sourcesQ.data && (
@@ -387,7 +398,20 @@ export default function SourcesPage() {
               {rows.length === 0 && (
                 <TableRow>
                   <TableCell colSpan={7}>
-                    <Alert severity="info">没有匹配的来源文件。</Alert>
+                    <EmptyState
+                      dense
+                      title="没有匹配的来源文件"
+                      description={
+                        keyword.trim() || onlyMissing
+                          ? '试试清除筛选条件，或换个文件名关键词。'
+                          : '当前题库还没有来源文件。'
+                      }
+                      actionLabel={keyword.trim() || onlyMissing ? '清除筛选' : undefined}
+                      onAction={() => {
+                        setKeyword('')
+                        setOnlyMissing(false)
+                      }}
+                    />
                   </TableCell>
                 </TableRow>
               )}

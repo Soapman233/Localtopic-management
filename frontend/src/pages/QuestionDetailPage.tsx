@@ -11,7 +11,6 @@ import {
   Box,
   Button,
   Chip,
-  CircularProgress,
   Dialog,
   DialogActions,
   DialogContent,
@@ -38,6 +37,8 @@ import { FormulaText, KatexFormula } from '../components/KatexFormula'
 import { AnswerBadge, AnalysisBadge, DifficultyBadge, LabelStatusBadge, ReviewBadge } from '../components/StatusBadges'
 import { QuestionEditor } from '../components/QuestionEditor'
 import { VersionHistory } from '../components/VersionHistory'
+import { ErrorState } from '../components/ErrorState'
+import { LoadingState } from '../components/LoadingState'
 import { ErrorCode, errorCodeOf, errorDataOf } from '../api/errors'
 import { qk } from '../api/queryKeys'
 import { describeMentionScope } from '../lib/glossary'
@@ -114,11 +115,7 @@ export default function QuestionDetailPage() {
   })
 
   if (qQuery.isLoading) {
-    return (
-      <Stack alignItems="center" sx={{ mt: 6 }}>
-        <CircularProgress />
-      </Stack>
-    )
+    return <LoadingState label="正在加载题目…" />
   }
 
   if (qQuery.isError || !qQuery.data) {
@@ -127,9 +124,11 @@ export default function QuestionDetailPage() {
         <Button startIcon={<ArrowBackIcon />} onClick={() => navigate(-1)} sx={{ mb: 2 }}>
           返回
         </Button>
-        <Alert severity="error">
-          题目加载失败：{(qQuery.error as Error)?.message ?? '题目不存在'}。
-        </Alert>
+        <ErrorState
+          error={qQuery.error ?? new Error('题目不存在或已被删除。')}
+          title="题目加载失败"
+          onRetry={() => qQuery.refetch()}
+        />
       </Box>
     )
   }

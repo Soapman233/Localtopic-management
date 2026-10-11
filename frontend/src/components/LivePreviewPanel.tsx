@@ -24,7 +24,7 @@
  *    `✕` 删除（`onRemove`）；**不改题干文字**（点题号跳详情页由父级处理）。
  */
 import { useMemo, useState } from 'react'
-import { Alert, Box, Chip, CircularProgress, Stack, Tooltip, Typography, useTheme } from '@mui/material'
+import { Alert, Box, Chip, Stack, Tooltip, Typography, useTheme } from '@mui/material'
 import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable'
 import type { ExportPayload, ContentBlock } from '../api/types'
 import {
@@ -35,6 +35,7 @@ import {
   type ResolvedImage,
 } from './livePreview/blocks'
 import { computeLayout, type LayoutModel, type TemplateName } from './livePreview/spec'
+import { LoadingState } from './LoadingState'
 import { usePagination } from './livePreview/usePagination'
 import { PageView } from './livePreview/PageView'
 import {
@@ -329,14 +330,7 @@ export function LivePreviewPanel(props: LivePreviewPanelProps) {
         <Chip size="small" variant="outlined" label={data.layout_revision} />
         <Chip size="small" variant="outlined" label={data.answer_mode || '—'} />
         <Chip size="small" variant="outlined" label={`${totalQuestions} 题`} />
-        {!ready && (
-          <Stack direction="row" spacing={0.5} alignItems="center">
-            <CircularProgress size={14} />
-            <Typography variant="caption" color="text.secondary">
-              正在测量（等待字体与图片）…
-            </Typography>
-          </Stack>
-        )}
+        {!ready && <LoadingState dense size={14} label="正在测量（等待字体与图片）…" />}
         {ready && (
           <Typography variant="caption" color="text.secondary">
             测量 {ms.toFixed(2)}ms · 重排 v{version}

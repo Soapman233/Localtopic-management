@@ -26,6 +26,8 @@ import { FilterSidebar } from '../components/FilterSidebar'
 import { CoverageBanner } from '../components/CoverageBanner'
 import { GradeGapNotice } from '../components/GradeGapNotice'
 import { QuestionCard } from '../components/QuestionCard'
+import { EmptyState } from '../components/EmptyState'
+import { ErrorState } from '../components/ErrorState'
 import { useCoverageQuery, useFacetsQuery, useSearchQuery } from '../hooks/useSearch'
 import { addQuestions, createPaper, listPapers } from '../api/papers'
 import { setDifficulty } from '../api/questions'
@@ -123,9 +125,7 @@ function PickPaperDialog({
       <DialogContent>
         <Stack spacing={1} sx={{ mt: 1 }}>
           {papers.length === 0 && (
-            <Typography variant="body2" color="text.secondary">
-              还没有试卷，请新建一份。
-            </Typography>
+            <EmptyState dense title="还没有试卷" description="在下方输入标题新建一份试卷。" />
           )}
           {papers.map((p) => (
             <Button
@@ -264,6 +264,22 @@ export default function SearchPage() {
   // 答案/解析徽章；此判断仅作防御性兜底——若后端某次未下发，则不展示徽章（绝不猜成「无答案」）。
   const answerStatusAvailable = items.some((i) => i.has_answer !== undefined || i.answer != null)
 
+  /** 是否存在任何生效中的筛选（用于空态是否给出「清除筛选」行动）。 */
+  const hasActiveFilters = useMemo(
+    () =>
+      Object.entries(filters as Record<string, unknown>).some(([, v]) =>
+        Array.isArray(v) ? v.length > 0 : v !== undefined && v !== null && v !== '',
+      ),
+    [filters],
+  )
+
+  /** 清空关键词与全部筛选（空态行动 / 侧栏重置共用同一行为）。 */
+  const resetFilters = () => {
+    setFilters({})
+    setKeywordInput('')
+    setPage(1)
+  }
+
   return (
     <Box>
       <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 2 }} flexWrap="wrap" useFlexGap>
@@ -352,13 +368,23 @@ export default function SearchPage() {
           )}
 
           {searchQ.isError && (
-            <Alert severity="error" sx={{ mb: 2 }}>
-              检索失败：{(searchQ.error as Error).message}。请确认后端服务已启动。
-            </Alert>
+            <Box sx={{ mb: 2 }}>
+              <ErrorState
+                error={searchQ.error}
+                title="检索失败"
+                description="请确认后端服务已启动，或稍后重试。"
+                onRetry={() => searchQ.refetch()}
+              />
+            </Box>
           )}
 
           {!searchQ.isLoading && items.length === 0 && !searchQ.isError && (
-            <Alert severity="info">没有匹配的题目，试试调整关键词或筛选条件。</Alert>
+            <EmptyState
+              title="没有匹配的题目"
+              description="试试调整关键词，或清除筛选条件。"
+              actionLabel={hasActiveFilters ? '清除筛选' : undefined}
+              onAction={resetFilters}
+            />
           )}
 
           {/* P1-3：批量加题工具条（勾选多题一次加入） */}

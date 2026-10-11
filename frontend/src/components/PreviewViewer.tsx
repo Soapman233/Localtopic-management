@@ -8,6 +8,7 @@ import { Box, Button, Chip, IconButton, Paper, Stack, Tooltip, Typography } from
 import ZoomInIcon from '@mui/icons-material/ZoomIn'
 import ZoomOutIcon from '@mui/icons-material/ZoomOut'
 import RestartAltIcon from '@mui/icons-material/RestartAlt'
+import { EmptyState } from './EmptyState'
 import type { PreviewPage } from '../api/types'
 
 export interface PreviewViewerProps {
@@ -26,11 +27,7 @@ export function PreviewViewer({ pages, cached }: PreviewViewerProps) {
   }, [pages])
 
   if (pages.length === 0) {
-    return (
-      <Typography variant="body2" color="text.secondary">
-        暂无预览页。
-      </Typography>
-    )
+    return <EmptyState dense title="暂无预览页" description="生成像素预览后会在此展示分页结果。" />
   }
 
   return (

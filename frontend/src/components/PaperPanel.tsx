@@ -36,6 +36,9 @@ import type { Paper as PaperModel, PaperItem, PaperSection, ExportQuestion } fro
 import type { PaperPatchBody } from '../api/papers'
 import { ConfirmDialog } from './ConfirmDialog'
 import { SortableItemRow, isStale } from './PaperPanelItemRow'
+import { EmptyState } from './EmptyState'
+import { ErrorState } from './ErrorState'
+import { LoadingState } from './LoadingState'
 import { GLOSSARY, describeSnapshotStale } from '../lib/glossary'
 
 const TEMPLATES = ['考试', '测验', '作业']
@@ -127,13 +130,15 @@ export function PaperPanel({
           试卷
         </Typography>
         {loading ? (
-          <Typography variant="body2" color="text.secondary">
-            加载中…
-          </Typography>
+          <LoadingState dense label="加载中…" />
+        ) : error ? (
+          <ErrorState dense error={new Error(error)} title="加载失败" />
         ) : (
-          <Alert severity="info">
-            {error ? `加载失败：${error}` : '还没有试卷，点右上角「试卷列表」新建或选择一份试卷。'}
-          </Alert>
+          <EmptyState
+            dense
+            title="还没有试卷"
+            description="点右上角「试卷列表」新建或选择一份试卷。"
+          />
         )}
         <Button sx={{ mt: 2 }} variant="outlined" onClick={onOpenDrawer}>
           打开试卷列表

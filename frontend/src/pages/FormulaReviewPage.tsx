@@ -15,7 +15,6 @@ import {
   Box,
   Button,
   Chip,
-  CircularProgress,
   Divider,
   FormControlLabel,
   LinearProgress,
@@ -28,12 +27,16 @@ import {
   Typography,
 } from '@mui/material'
 import CheckIcon from '@mui/icons-material/Check'
+import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutline'
 import OpenInNewIcon from '@mui/icons-material/OpenInNew'
 import ReplayIcon from '@mui/icons-material/Replay'
 import { useNavigate } from 'react-router-dom'
 import { getReviewQueueSummary, listReview, resolveReview } from '../api/review'
 import type { ReviewItem } from '../api/types'
 import { KatexFormula } from '../components/KatexFormula'
+import { EmptyState } from '../components/EmptyState'
+import { ErrorState } from '../components/ErrorState'
+import { LoadingState } from '../components/LoadingState'
 import { qk } from '../api/queryKeys'
 
 const PAGE_SIZE = 50
@@ -190,12 +193,20 @@ export default function FormulaReviewPage() {
           </Alert>
         )}
 
-        {listQ.isLoading && <CircularProgress size={20} />}
-        {listQ.isError && <Alert severity="error">加载队列失败：{(listQ.error as Error).message}</Alert>}
-        {!listQ.isLoading && items.length === 0 && (
-          <Alert severity="success">
-            {showResolved ? '暂无已处理项。' : '该状态下没有待处理项，队列已清零。'}
-          </Alert>
+        {listQ.isLoading && <LoadingState label="正在加载复核队列…" />}
+        {listQ.isError && (
+          <ErrorState error={listQ.error} title="加载队列失败" onRetry={() => listQ.refetch()} />
+        )}
+        {!listQ.isLoading && !listQ.isError && items.length === 0 && (
+          <EmptyState
+            icon={<CheckCircleOutlineIcon sx={{ fontSize: 44 }} color="success" />}
+            title={showResolved ? '暂无已处理项' : '队列已清零'}
+            description={
+              showResolved
+                ? '还没有被标记为已处理的复核项。'
+                : '该状态下没有待处理项，公式队列已清零。'
+            }
+          />
         )}
 
         <Stack divider={<Divider flexItem />} spacing={0}>

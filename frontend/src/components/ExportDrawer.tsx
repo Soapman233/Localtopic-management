@@ -21,7 +21,6 @@ import {
   Button,
   Checkbox,
   Chip,
-  CircularProgress,
   Divider,
   Drawer,
   FormControlLabel,
@@ -40,11 +39,20 @@ import { ExportDiagnosticsPanel } from './livePreview/ExportDiagnostics'
 import { PreviewViewer } from './PreviewViewer'
 import { LivePreviewPanel } from './LivePreviewPanel'
 import { ExportResultPanel } from './ExportResultPanel'
+import { EmptyState } from './EmptyState'
+import { ErrorState } from './ErrorState'
+import { LoadingState } from './LoadingState'
+import { ProgressStages, stageFromElapsed } from './ProgressStages'
 import { envReason, useExportGate, type EnvFailure } from '../hooks/useExportGate'
 import { describeExportGate } from '../lib/glossary'
 
 const ANSWER_MODES = ['学生版', '答案解析版', '仅答案']
 const TEMPLATES = ['考试', '测验', '作业']
+
+/** 像素预览的长任务阶段（约 3–8 秒）。 */
+const PREVIEW_STAGES = ['正在渲染文档', '正在转换为 PDF', '正在生成预览图']
+/** 导出的长任务阶段（约 3–8 秒）。 */
+const EXPORT_STAGES = ['正在排版文档', '正在生成导出文件', '正在写入导出目录']
 
 export type { EnvFailure }
 
@@ -218,13 +226,14 @@ function ExportDrawerForPaper(props: ExportDrawerProps) {
         {/* 预览区（滚动） */}
         <Box sx={{ flex: 1, overflow: 'auto', minHeight: 0 }}>
           {previewing && (
-            <Stack direction="row" spacing={1} alignItems="center" sx={{ mb: 1 }}>
-              <CircularProgress size={18} />
-              <Typography variant="body2" color="text.secondary">
-                正在渲染像素预览，约 3–8 秒…（未改动内容时通常秒回）
-                {elapsed > 0 ? ` 已用 ${elapsed}s` : ''}
-              </Typography>
-            </Stack>
+            <Box sx={{ mb: 1 }}>
+              <ProgressStages
+                stages={PREVIEW_STAGES}
+                currentStage={stageFromElapsed(elapsed, PREVIEW_STAGES.length)}
+                elapsedSec={elapsed}
+                title="正在生成像素预览"
+              />
+            </Box>
           )}
 
           {/* 环境降级逃生：像素预览不可用时，以「结构预览确认」替代 */}
@@ -252,9 +261,14 @@ function ExportDrawerForPaper(props: ExportDrawerProps) {
                 <Chip size="small" color="warning" label={describeExportGate('degraded')} />
               )}
               <Box sx={{ mt: 1.5 }}>
-                {exportDataQ.isLoading && <CircularProgress size={18} />}
+                {exportDataQ.isLoading && <LoadingState dense label="正在加载结构预览数据…" />}
                 {exportDataQ.isError && (
-                  <Alert severity="error">结构预览数据加载失败：{(exportDataQ.error as Error).message}</Alert>
+                  <ErrorState
+                    dense
+                    error={exportDataQ.error}
+                    title="结构预览数据加载失败"
+                    onRetry={() => exportDataQ.refetch()}
+                  />
                 )}
                 {exportDataQ.data && (
                   <Box sx={{ border: '1px solid', borderColor: 'divider', borderRadius: 1, p: 1 }}>
@@ -266,9 +280,13 @@ function ExportDrawerForPaper(props: ExportDrawerProps) {
           )}
 
           {previewError && envFail === null && (
-            <Alert severity="error" sx={{ mb: 1.5 }}>
-              预览生成失败：{previewError}
-            </Alert>
+            <Box sx={{ mb: 1.5 }}>
+              <ErrorState
+                error={new Error(previewError)}
+                title="预览生成失败"
+                onRetry={() => runPreview()}
+              />
+            </Box>
           )}
 
           {/* 过期横幅：保留旧图 + 重新锁定（§Q4） */}
@@ -284,7 +302,16 @@ function ExportDrawerForPaper(props: ExportDrawerProps) {
           ) : (
             !previewing &&
             envFail === null && (
-              <Alert severity="info">内容检查通过后可生成像素预览；请先处理上方阻断项。</Alert>
+              <EmptyState
+                title="还没有像素预览"
+                description={
+                  contentAllowed
+                    ? '生成后在此展示 A4 分页预览。'
+                    : '请先处理上方阻断项，通过内容检查后可生成预览。'
+                }
+                actionLabel={contentAllowed ? '生成预览' : undefined}
+                onAction={contentAllowed ? () => runPreview() : undefined}
+              />
             )
           )}
         </Box>
@@ -309,22 +336,24 @@ function ExportDrawerForPaper(props: ExportDrawerProps) {
         </Stack>
 
         {exportMut.isError && (
-          <Alert severity="error" sx={{ mt: 1 }}>
-            导出请求失败：{(exportMut.error as Error).message}
-          </Alert>
+          <Box sx={{ mt: 1 }}>
+            <ErrorState
+              error={exportMut.error}
+              title="导出请求失败"
+              onRetry={() => exportMut.mutate()}
+            />
+          </Box>
         )}
         {exportJob.data?.status === 'running' && (
-          <Stack direction="row" spacing={1} alignItems="center" sx={{ mt: 1 }}>
-            <CircularProgress size={16} />
-            <Typography variant="body2" color="text.secondary">
-              正在导出…
-            </Typography>
-          </Stack>
+          <Box sx={{ mt: 1 }}>
+            {/* 导出作业未上报细粒度阶段，用中段阶段做粗粒度提示（3–8 秒）。 */}
+            <ProgressStages stages={EXPORT_STAGES} currentStage={1} title="正在导出" />
+          </Box>
         )}
         {exportJob.data?.status === 'error' && (
-          <Alert severity="error" sx={{ mt: 1 }}>
-            导出失败：{exportJob.data.error}
-          </Alert>
+          <Box sx={{ mt: 1 }}>
+            <ErrorState error={new Error(exportJob.data.error || '导出失败')} title="导出失败" />
+          </Box>
         )}
         {exportResult && (
           <Box sx={{ mt: 1 }}>

@@ -7,11 +7,9 @@
 import type { ReactNode } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import {
-  Alert,
   Box,
   Button,
   Chip,
-  CircularProgress,
   LinearProgress,
   Paper,
   Stack,
@@ -21,6 +19,9 @@ import { useNavigate } from 'react-router-dom'
 import { getStats } from '../api/stats'
 import type { CountRow, CoverageBucket, StatsData } from '../api/types'
 import { qk } from '../api/queryKeys'
+import { EmptyState } from '../components/EmptyState'
+import { ErrorState } from '../components/ErrorState'
+import { LoadingState } from '../components/LoadingState'
 
 /** 总览卡。 */
 function StatCard({
@@ -84,11 +85,7 @@ function DistributionList({ title, rows, onItemClick }: {
       <Typography variant="subtitle2" gutterBottom>
         {title}
       </Typography>
-      {rows.length === 0 && (
-        <Typography variant="body2" color="text.secondary">
-          暂无数据
-        </Typography>
-      )}
+      {rows.length === 0 && <EmptyState dense title="该维度暂无数据" />}
       <Stack spacing={0.75}>
         {rows.slice(0, 12).map((r, i) => {
           const key = r.key ?? '（空）'
@@ -130,7 +127,7 @@ export default function StatsPage() {
         <Typography variant="h6" gutterBottom>
           题库统计
         </Typography>
-        <CircularProgress size={24} />
+        <LoadingState label="正在加载统计…" />
       </Box>
     )
   }
@@ -140,7 +137,7 @@ export default function StatsPage() {
         <Typography variant="h6" gutterBottom>
           题库统计
         </Typography>
-        <Alert severity="error">加载统计失败：{(statsQ.error as Error).message}</Alert>
+        <ErrorState error={statsQ.error} title="加载统计失败" onRetry={() => statsQ.refetch()} />
       </Box>
     )
   }

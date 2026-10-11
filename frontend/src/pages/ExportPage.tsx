@@ -17,7 +17,6 @@ import {
   Button,
   Checkbox,
   Chip,
-  CircularProgress,
   Divider,
   FormControlLabel,
   MenuItem,
@@ -36,12 +35,21 @@ import { LivePreviewPanel } from '../components/LivePreviewPanel'
 import { ExportDiagnosticsPanel } from '../components/livePreview/ExportDiagnostics'
 import { PreviewViewer } from '../components/PreviewViewer'
 import { ExportResultPanel } from '../components/ExportResultPanel'
+import { EmptyState } from '../components/EmptyState'
+import { ErrorState } from '../components/ErrorState'
+import { LoadingState } from '../components/LoadingState'
+import { ProgressStages, stageFromElapsed } from '../components/ProgressStages'
 import { usePaperStore } from '../store/paperStore'
 import { useExportGate } from '../hooks/useExportGate'
 import { describeExportGate } from '../lib/glossary'
 
 const ANSWER_MODES = ['学生版', '答案解析版', '仅答案']
 const TEMPLATES = ['考试', '测验', '作业']
+
+/** 像素预览的长任务阶段（约 3–8 秒）。 */
+const PREVIEW_STAGES = ['正在渲染文档', '正在转换为 PDF', '正在生成预览图']
+/** 导出的长任务阶段（约 3–8 秒）。 */
+const EXPORT_STAGES = ['正在排版文档', '正在生成导出文件', '正在写入导出目录']
 
 /** P4 导出页。 */
 export default function ExportPage() {
@@ -73,6 +81,7 @@ function PaperExportPage({ paperId, onRevised }: { paperId: number; onRevised: (
     previewing,
     previewError,
     envFail,
+    elapsed,
     runPreview,
     exportMut,
     exportJob,
@@ -96,7 +105,10 @@ function PaperExportPage({ paperId, onRevised }: { paperId: number; onRevised: (
         <Typography variant="h6" gutterBottom>
           导出
         </Typography>
-        <Alert severity="info">请先在「组卷」页选择一份试卷，或从组卷页点击「导出」进入。</Alert>
+        <EmptyState
+          title="尚未选择试卷"
+          description="请先在「组卷」页选择一份试卷，或从组卷页点击「导出」进入。"
+        />
       </Box>
     )
   }
@@ -140,7 +152,13 @@ function PaperExportPage({ paperId, onRevised }: { paperId: number; onRevised: (
       )}
 
       {exportDataQ.isFetching && <Alert severity="info">正在检查当前锁定内容…</Alert>}
-      {exportDataQ.isError && <Alert severity="error" action={<Button onClick={refreshDiagnostics}>重试</Button>}>内容检查失败：{(exportDataQ.error as Error).message}</Alert>}
+      {exportDataQ.isError && (
+        <ErrorState
+          error={exportDataQ.error}
+          title="内容检查失败"
+          onRetry={refreshDiagnostics}
+        />
+      )}
       {exportDataQ.data && <ExportDiagnosticsPanel paperId={paperId} data={exportDataQ.data} onRevised={onRevised} />}
       {envFail !== null && contentAllowed && (
         <Alert severity="warning" sx={{ mb: 1 }}>
@@ -234,20 +252,35 @@ function PaperExportPage({ paperId, onRevised }: { paperId: number; onRevised: (
 
         {tab === 0 && (
           <Box>
-            {previewError && <Alert severity="error" sx={{ mb: 1 }}>预览失败：{previewError}</Alert>}
+            {previewError && (
+              <Box sx={{ mb: 1 }}>
+                <ErrorState
+                  error={new Error(previewError)}
+                  title="预览失败"
+                  onRetry={runPreview}
+                />
+              </Box>
+            )}
             {previewing && (
-              <Stack direction="row" spacing={1} alignItems="center" sx={{ mb: 1 }}>
-                <CircularProgress size={18} />
-                <Typography variant="body2" color="text.secondary">
-                  正在渲染预览（首次约 3–8 秒）…
-                </Typography>
-              </Stack>
+              <Box sx={{ mb: 1 }}>
+                <ProgressStages
+                  stages={PREVIEW_STAGES}
+                  currentStage={stageFromElapsed(elapsed, PREVIEW_STAGES.length)}
+                  elapsedSec={elapsed}
+                  title="正在生成像素预览"
+                />
+              </Box>
             )}
             {previewPages.length > 0 ? (
               <PreviewViewer pages={previewPages} cached={previewCached} />
             ) : (
               !previewing && (
-                <Alert severity="info">点击「生成预览」后在此展示 A4 分页预览（卷头/题号/分值/答案区）。</Alert>
+                <EmptyState
+                  title="还没有像素预览"
+                  description="生成后在此展示 A4 分页预览（卷头 / 题号 / 分值 / 答案区）。"
+                  actionLabel={contentAllowed ? '生成预览' : undefined}
+                  onAction={contentAllowed ? runPreview : undefined}
+                />
               )
             )}
           </Box>
@@ -255,8 +288,14 @@ function PaperExportPage({ paperId, onRevised }: { paperId: number; onRevised: (
 
         {tab === 1 && (
           <Box>
-            {exportDataQ.isLoading && <CircularProgress size={20} />}
-            {exportDataQ.isError && <Alert severity="error">加载导出数据失败：{(exportDataQ.error as Error).message}</Alert>}
+            {exportDataQ.isLoading && <LoadingState label="正在加载导出数据…" />}
+            {exportDataQ.isError && (
+              <ErrorState
+                error={exportDataQ.error}
+                title="加载导出数据失败"
+                onRetry={() => exportDataQ.refetch()}
+              />
+            )}
             {exportDataQ.data && (
               <Box>
                 <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
@@ -264,7 +303,9 @@ function PaperExportPage({ paperId, onRevised }: { paperId: number; onRevised: (
                   （题号按全卷连续重排；学生版不含答案区。）
                 </Typography>
                 <LivePreviewPanel paperId={paperId} data={exportDataQ.data} template={(template ?? '考试') as '考试' | '测验' | '作业'} />
-                {sections.length === 0 && <Alert severity="info">该试卷暂无题目。</Alert>}
+                {sections.length === 0 && (
+                  <EmptyState dense title="该试卷暂无题目" description="从「组卷」页加入题目后再导出。" />
+                )}
               </Box>
             )}
           </Box>
@@ -277,13 +318,19 @@ function PaperExportPage({ paperId, onRevised }: { paperId: number; onRevised: (
           <Typography variant="subtitle2" gutterBottom>
             导出结果
           </Typography>
-          {exportMut.isError && <Alert severity="error">导出请求失败：{(exportMut.error as Error).message}</Alert>}
-          {exportJob.data?.status === 'error' && <Alert severity="error">导出失败：{exportJob.data.error}</Alert>}
+          {exportMut.isError && (
+            <ErrorState
+              error={exportMut.error}
+              title="导出请求失败"
+              onRetry={() => exportMut.mutate()}
+            />
+          )}
+          {exportJob.data?.status === 'error' && (
+            <ErrorState error={new Error(exportJob.data.error || '导出失败')} title="导出失败" />
+          )}
           {exportJob.data?.status === 'running' && (
-            <Stack direction="row" spacing={1} alignItems="center">
-              <CircularProgress size={18} />
-              <Typography variant="body2" color="text.secondary">正在导出…</Typography>
-            </Stack>
+            // 导出作业未上报细粒度阶段，这里用中段阶段做粗粒度提示（3–8 秒）。
+            <ProgressStages stages={EXPORT_STAGES} currentStage={1} title="正在导出" />
           )}
           {exportResult && (
             <ExportResultPanel result={exportResult} />

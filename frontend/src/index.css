@@ -1,7 +1,4 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
-
+/* 全局基础样式：设计 token 统一在 src/theme.ts，组件样式走 MUI，本文件只保留少量全局规则。 */
 html,
 body,
 #root {

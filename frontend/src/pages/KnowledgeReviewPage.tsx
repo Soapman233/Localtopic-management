@@ -16,7 +16,6 @@ import {
   Box,
   Button,
   Chip,
-  CircularProgress,
   Divider,
   List,
   ListItemButton,
@@ -44,6 +43,9 @@ import type { DecisionBody } from '../api/labels'
 import type { LabelDecisionPreview, LabelImportResult } from '../api/types'
 import { ConfirmDialog } from '../components/ConfirmDialog'
 import { LabelStatusBadge } from '../components/StatusBadges'
+import { EmptyState } from '../components/EmptyState'
+import { ErrorState } from '../components/ErrorState'
+import { LoadingState } from '../components/LoadingState'
 import { qk } from '../api/queryKeys'
 
 const ITEM_PAGE_SIZE = 50
@@ -223,13 +225,18 @@ export default function KnowledgeReviewPage() {
           <Divider />
           <List dense sx={{ overflow: 'auto', flex: 1 }}>
             {summaryQ.isLoading && (
-              <Box sx={{ p: 2, textAlign: 'center' }}>
-                <CircularProgress size={20} />
+              <Box sx={{ p: 2 }}>
+                <LoadingState dense label="正在加载标签汇总…" />
               </Box>
             )}
             {summaryQ.isError && (
               <Box sx={{ p: 2 }}>
-                <Alert severity="error">加载标签汇总失败：{(summaryQ.error as Error).message}</Alert>
+                <ErrorState
+                  dense
+                  error={summaryQ.error}
+                  title="加载标签汇总失败"
+                  onRetry={() => summaryQ.refetch()}
+                />
               </Box>
             )}
             {labels.map((l) => (
@@ -258,7 +265,10 @@ export default function KnowledgeReviewPage() {
         {/* 右：逐条复核 */}
         <Box sx={{ flex: 1, minWidth: 0 }}>
           {!selected ? (
-            <Alert severity="info">请从左侧选择一个知识点标签，查看其逐条关联并确认 / 否决。</Alert>
+            <EmptyState
+              title="请选择一个知识点标签"
+              description="从左侧选择一个标签，查看其逐条关联并确认 / 否决。"
+            />
           ) : (
             <Paper variant="outlined" sx={{ p: 2 }}>
               <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 1 }} flexWrap="wrap" useFlexGap>
@@ -308,12 +318,16 @@ export default function KnowledgeReviewPage() {
                 ))}
               </Stack>
 
-              {itemsQ.isLoading && <CircularProgress size={20} />}
+              {itemsQ.isLoading && <LoadingState label="正在加载逐条清单…" />}
               {itemsQ.isError && (
-                <Alert severity="error">加载逐条清单失败：{(itemsQ.error as Error).message}</Alert>
+                <ErrorState
+                  error={itemsQ.error}
+                  title="加载逐条清单失败"
+                  onRetry={() => itemsQ.refetch()}
+                />
               )}
               {itemsQ.data && itemsQ.data.items.length === 0 && (
-                <Alert severity="info">该标签下没有「{itemStatus}」的关联。</Alert>
+                <EmptyState dense title={`该标签下没有「${itemStatus}」的关联`} />
               )}
 
               <Stack divider={<Divider flexItem />} spacing={0}>
