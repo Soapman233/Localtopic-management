@@ -72,6 +72,35 @@ def cmd_init(args) -> int:
     return 0
 
 
+def cmd_backup(args) -> int:
+    """整库备份（便携场景：换机 / 重装前先导出一份）。"""
+    from . import backup as _bk
+    rep = _bk.create_backup(args.db, args.to)
+    if not rep.get("ok"):
+        print(f"备份失败：{rep.get('error')}")
+        return 1
+    v = rep.get("verify") or {}
+    print(f"已备份：{rep['path']}")
+    print(f"  大小 {rep['bytes']:,} 字节  耗时 {rep['seconds']}s")
+    print(f"  校验 structure_ok={v.get('structure_ok')} "
+          f"integrity_ok={v.get('integrity_ok')} core_nonempty={v.get('core_nonempty')}")
+    return 0
+
+
+def cmd_restore(args) -> int:
+    """用备份文件恢复整库（**恢复前自动备份现有库**作为回滚点）。"""
+    from . import backup as _bk
+    rep = _bk.restore_backup(args.db, args.src, force=args.force)
+    if not rep.get("ok"):
+        print(f"恢复失败：{rep.get('error')}")
+        return 1
+    print(f"已从 {rep['restored_from']} 恢复")
+    if rep.get("pre_restore_backup"):
+        print(f"  恢复前快照：{rep['pre_restore_backup']}")
+    print(f"  当前库 {rep['bytes']:,} 字节")
+    return 0
+
+
 def cmd_import(args) -> int:
     conn = _db.connect(args.db)
     try:
@@ -723,6 +752,17 @@ def build_parser() -> argparse.ArgumentParser:
     p = sub.add_parser("init", help="建库（建表建索引）")
     _add_db_arg(p)
     p.set_defaults(func=cmd_init)
+
+    p = sub.add_parser("backup", help="整库备份（默认写入同级 backups/）")
+    p.add_argument("--to", default=None, help="备份目标路径（省略则自动命名）")
+    _add_db_arg(p)
+    p.set_defaults(func=cmd_backup)
+
+    p = sub.add_parser("restore", help="用备份恢复整库（恢复前自动备份现有库）")
+    p.add_argument("src", help="备份文件路径")
+    p.add_argument("--force", action="store_true", help="跳过候选校验（危险）")
+    _add_db_arg(p)
+    p.set_defaults(func=cmd_restore)
 
     p = sub.add_parser("import", help="导入阶段1 的 JSON（文件或目录）")
     p.add_argument("path", help="questions.json 文件或目录")

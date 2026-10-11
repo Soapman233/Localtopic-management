@@ -15,6 +15,7 @@
 
 from __future__ import annotations
 
+import hashlib
 import re
 from pathlib import Path
 
@@ -72,6 +73,7 @@ def api_import_docx(file: UploadFile = File(...)) -> dict:
 
     dest = svc.upload_dir() / _safe_name(original)
     size = 0
+    digest = hashlib.sha256()
     try:
         with dest.open("wb") as fh:
             while True:
@@ -83,6 +85,7 @@ def api_import_docx(file: UploadFile = File(...)) -> dict:
                     raise errors.bad_request(
                         errors.CODE_INVALID_UPLOAD,
                         f"文件过大，上限 {svc.MAX_UPLOAD_BYTES // 1048576} MB。")
+                digest.update(chunk)
                 fh.write(chunk)
     except errors.ApiError:
         dest.unlink(missing_ok=True)
@@ -96,7 +99,10 @@ def api_import_docx(file: UploadFile = File(...)) -> dict:
         dest.unlink(missing_ok=True)
         raise errors.bad_request(errors.CODE_MISSING_UPLOAD, "文件为空。")
 
-    return ok(svc.import_request(original, size, dest))
+    # ⚠️ **归档为源文件**：内容守卫在组卷/导出时会回读源 DOCX 核验题目来源，
+    # 缺失即报 source_unavailable blocker（实测会打断「导入→组卷→导出」主流程）。
+    archived = svc.store_source(dest, original, digest.hexdigest())
+    return ok(svc.import_request(original, size, archived))
 
 
 __all__ = ["router"]

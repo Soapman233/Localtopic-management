@@ -35,8 +35,16 @@ from pathlib import Path
 # --------------------------------------------------------------------------- #
 #: 项目根目录（``webui/`` 包的父目录）。
 ROOT = Path(__file__).resolve().parent.parent
+
+#: **数据根目录**——``outputs/`` 挂在这里。
+#:
+#: 源码运行时等于 :data:`ROOT`（数据就在仓库里，保持便携）。
+#: **打包（PyInstaller）后必须由启动器用 ``QB_DATA_ROOT`` 指向 exe 所在目录**——
+#: 否则 ``ROOT`` 会解析到 ``_MEIPASS`` 临时解包目录，数据写进去**退出即丢**。
+DATA_ROOT = Path(os.environ.get("QB_DATA_ROOT") or ROOT).resolve()
+
 #: ``outputs/`` 目录。
-OUTPUTS_DIR = ROOT / "outputs"
+OUTPUTS_DIR = DATA_ROOT / "outputs"
 #: Web 运行时产物目录（设置、预览缓存）。
 WEBUI_DIR = OUTPUTS_DIR / "webui"
 #: 默认题库数据库。
@@ -269,7 +277,7 @@ def environment_report() -> dict:
 
 
 __all__ = [
-    "ROOT", "OUTPUTS_DIR", "WEBUI_DIR", "DEFAULT_DB_PATH", "EXPORT_DIR",
+    "ROOT", "DATA_ROOT", "OUTPUTS_DIR", "WEBUI_DIR", "DEFAULT_DB_PATH", "EXPORT_DIR",
     "PREVIEW_CACHE_DIR", "SETTINGS_PATH", "STATIC_DIR", "DEFAULT_HOST", "DEFAULT_PORT",
     "EDITOR_SDK_DEFAULT_PORT", "EDITOR_SDK_PORT_SCAN", "TEMPLATES", "ANSWER_MODES",
     "DEFAULT_SETTINGS",

@@ -562,6 +562,38 @@ class TestJobsAndPreviewCache(ApiTestBase):
         self._assert_envelope(self.client.get("/api/preview/notakey/page_1.png"),
                               code=40405, status=404)
 
+    def test_preview_cache_without_engine_is_stale(self):
+        """🔴 回归：**旧缓存（无 export_engine 字段）必须判为过期**。
+
+        缓存产物是「某引擎渲染出来的 DOCX」，key/meta 不含引擎维度时，
+        切换 ``QB_EXPORT_ENGINE`` 会继续复用旧引擎产物且难以察觉（实测踩过）。
+        本测试固定「缺引擎信息即失效」这一行为。
+        """
+        pid = self._assert_envelope(self.client.post("/api/papers",
+                                                     json={"title": "旧缓存卷"}))["data"]["id"]
+        self._assert_envelope(self.client.post(f"/api/papers/{pid}/questions",
+                                               json={"question_ids": [1]}))
+        key = pv.cache_key(self.conn, pid, "学生版", "考试")
+        cdir = pv.cache_dir(key)
+        cdir.mkdir(parents=True, exist_ok=True)
+        (cdir / "paper.docx").write_bytes(b"PK\x03\x04 fake")
+        (cdir / "page_1.png").write_bytes(b"\x89PNG fake")
+        import hashlib
+        payload = b_paper.build_export_payload(self.conn, pid)
+        meta = {"key": key, "paper_id": pid, "page_count": 1,
+                "pages": [{"n": 1, "file": "page_1.png", "width": 1, "height": 1}],
+                "docx": str(cdir / "paper.docx"), "pdf": None, "warnings": []}
+        meta.update(pv.content_fields(payload), answer_mode="学生版", template="考试",
+                    docx_sha256=hashlib.sha256((cdir / "paper.docx").read_bytes()).hexdigest())
+        (cdir / "meta.json").write_text(json.dumps(meta, ensure_ascii=False), encoding="utf-8")
+        # 缺 export_engine -> 视为过期（40905）。
+        # ⚠️ 必须用 raise_server_exceptions=False：ExportEvidenceStale 由通用 Exception
+        # 处理器映射为 409，而默认的 TestClient 会在处理器之后把异常重新抛出。
+        from webui.app import app as _app
+        client = TestClient(_app, raise_server_exceptions=False)
+        self._assert_envelope(client.post(f"/api/papers/{pid}/preview", json={}),
+                              code=40905, status=409)
+
     def test_preview_cache_hit(self):
         # 建卷 + 加题。
         pid = self._assert_envelope(self.client.post("/api/papers",
@@ -576,7 +608,9 @@ class TestJobsAndPreviewCache(ApiTestBase):
         (cdir / "page_1.png").write_bytes(b"\x89PNG fake")
         meta = {"key": key, "paper_id": pid, "page_count": 1,
                 "pages": [{"n": 1, "file": "page_1.png", "width": 1654, "height": 2339}],
-                "docx": str(cdir / "paper.docx"), "pdf": None, "warnings": []}
+                "docx": str(cdir / "paper.docx"), "pdf": None, "warnings": [],
+                # 缓存 key 与 meta 均含引擎维度：伪造「当前引擎产出的缓存」
+                "export_engine": pv._export.resolve_export_engine()}
         import hashlib
         payload=b_paper.build_export_payload(self.conn,pid)
         meta.update(pv.content_fields(payload),answer_mode='学生版',template='考试',docx_sha256=hashlib.sha256((cdir/'paper.docx').read_bytes()).hexdigest())

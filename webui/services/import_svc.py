@@ -62,6 +62,37 @@ def upload_dir() -> Path:
     return d
 
 
+def sources_dir() -> Path:
+    """**源文件归档目录**（``outputs/sources/``）。
+
+    ⚠️ 源 DOCX **必须持久保留**：内容守卫（``bank.export_content``）在**组卷/导出时
+    会回读源 DOCX 核验题目来源**，缺失即报 ``source_unavailable`` blocker，
+    导致「加题 / 导出」被拦死。
+
+    本实现最初导入后就把上传文件删掉，实测直接打断了
+    「导入 → 组卷 → 导出」主流程（只有跑完整链路才能发现）。
+    """
+    d = config.OUTPUTS_DIR / "sources"
+    d.mkdir(parents=True, exist_ok=True)
+    return d
+
+
+def store_source(tmp_path: Path, original_name: str, sha256: str) -> Path:
+    """把上传文件**归档**为源文件，返回归档后的路径。
+
+    命名用**内容哈希**：同内容 → 同路径（幂等、不重复占空间），
+    不同内容 → 不同路径（**绝不互相覆盖**，否则先导入的题会失去源、被守卫拦下）。
+    """
+    stem = Path(original_name).stem[:60] or "source"
+    ext = Path(original_name).suffix.lower() or ".docx"
+    dest = sources_dir() / f"{stem}_{sha256[:12]}{ext}"
+    if dest.is_file() and dest.stat().st_size == tmp_path.stat().st_size:
+        tmp_path.unlink(missing_ok=True)      # 已存在同内容文件
+        return dest
+    shutil.move(str(tmp_path), str(dest))
+    return dest
+
+
 def work_dir() -> Path:
     """阶段1 预处理产物目录（导入完成后可清理）。"""
     d = config.WEBUI_DIR / "import_work"
@@ -153,7 +184,8 @@ def run_import_job(upload_path: str, original_name: str) -> dict:
         "skipped": int(imp.get("skipped") or 0),
         "junk": int(imp.get("junk") or 0),
     }
-    _cleanup(out_dir, src)
+    # 只清中间产物；**源 DOCX 保留**（内容守卫后续要回读核验）
+    _cleanup(out_dir)
     return result
 
 
@@ -163,21 +195,26 @@ def _stage1_import(conn, qjson: Path) -> dict:
     return importer.import_file(conn, qjson, verbose=False)
 
 
-def _cleanup(out_dir: Path, upload: Path) -> None:
-    """清理中间产物（失败不致命，仅忽略）。"""
-    for p in (out_dir,):
-        try:
-            shutil.rmtree(p, ignore_errors=True)
-        except Exception:  # noqa: BLE001
-            pass
+def _cleanup(out_dir: Path, upload: Path | None = None) -> None:
+    """清理**中间产物**（阶段1 JSON）。
+
+    ⚠️ **不得删除源 DOCX**——它已归档到 ``outputs/sources/``，且内容守卫后续要回读核验
+    （见 :func:`sources_dir`）。``upload`` 参数仅用于删除**未被归档**的残留临时文件。
+    """
     try:
-        upload.unlink()
+        shutil.rmtree(out_dir, ignore_errors=True)
     except Exception:  # noqa: BLE001
         pass
+    if upload is not None:
+        try:
+            upload.unlink(missing_ok=True)
+        except Exception:  # noqa: BLE001
+            pass
 
 
 __all__ = [
     "MAX_UPLOAD_BYTES", "ALLOWED_SUFFIXES", "IMPORT_TIMEOUT", "FEATURE_ENV",
-    "import_enabled", "upload_dir", "work_dir", "validate_upload",
+    "import_enabled", "upload_dir", "sources_dir", "store_source",
+    "work_dir", "validate_upload",
     "import_request", "run_import_job",
 ]

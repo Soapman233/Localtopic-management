@@ -21,6 +21,7 @@
 
 from __future__ import annotations
 
+import os
 import sys
 import threading
 import time
@@ -94,9 +95,14 @@ def main(argv: list[str] | None = None) -> int:
         _print("提示：线上版监听 0.0.0.0，请务必置于 nginx 之后并开启访问控制。")
 
     if not db_path.is_file():
-        _print("数据库不存在，无法启动。")
-        _print("请先在项目根目录执行：python -m bank.cli init 后再导入数据。")
-        return 1
+        # 便携客户端**首启必须能自动建库**——老师不会去命令行跑 bank.cli init。
+        # 设 QB_AUTO_INIT=0 可恢复「拒绝启动」的旧行为（开发时避免误指向空库）。
+        if os.environ.get("QB_AUTO_INIT", "1").strip().lower() in ("0", "false", "no", "off"):
+            _print("数据库不存在，无法启动。")
+            _print("请先在项目根目录执行：python -m bank.cli init 后再导入数据。")
+            return 1
+        _print("数据库不存在，正在创建一个空库（首次使用属正常）。")
+        _print("建好后请在「导入试卷」页导入你的第一份旧卷。")
 
     try:
         changed = migrate_database(db_path)

@@ -142,3 +142,8 @@ outputs/webui/preview_cache/
 
 # 导入验收临时产物
 spike/acceptance/_import_test/
+
+# PyInstaller 产物与验收临时目录
+build/
+dist/
+spike/acceptance/_*/
