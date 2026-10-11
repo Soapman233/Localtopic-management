@@ -118,3 +118,8 @@ spike/programmatic_import/work/
 # 探针生成的中间产物（可再生）
 spike/latex2omml_smoke/*.pdf
 spike/latex2omml_smoke/real_*.docx
+
+# DOCX 生成器探针产物（可再生）
+spike/docx_writer_smoke/*.pdf
+spike/docx_writer_smoke/*.docx
+spike/docx_writer_smoke/_media/
