@@ -352,6 +352,21 @@ SQLite 11 表 + FTS5；幂等导入；中文检索；题目版本；待复核队
 4. **中文注释与中文界面文案。**
 5. **统一响应** `{code, data, message}`；不得让异常裸奔成无信息的 500。
 
+### 6.4 版本控制约定（2026-10-11 起）
+
+1. **仓库**：`https://github.com/Soapman233/Localtopic-management`，主分支 `main`。
+2. **只提交源码 / 文档 / 测试 / 配置**；依赖（`node_modules`）、构建产物（`webui/static`）、
+   数据（`outputs/bank.db`、预处理 JSON、导出件）与本地 QA 目录（`.qa_*` / `.tmp_*`）
+   **一律不提交**，规则见 `.gitignore`。数据重建步骤见 `README.md`「数据与初始化」。
+3. **`启动题库.bat` 必须 CRLF**——已由 `.gitattributes` 强制（`*.bat text eol=crlf`），
+   不要用任何工具把它改成 LF。
+4. **提交信息用 Conventional Commits**：`feat:` / `fix:` / `docs:` / `chore:` / `refactor:` /
+   `test:` / `perf:`，正文写清「改了什么、为什么」。
+5. **发布打标签**：`git tag -a vX.Y.Z -m "..."`，并在 `CHANGELOG.md` 增加对应条目
+   （Keep a Changelog 格式）。
+6. **推送前必须**：跑通 `python -m unittest discover -s tests`、`cd frontend && npx tsc --noEmit`
+   与 `npm test`；确认 `outputs/bank.db` 的 sha256 未变。
+
 **已授权改动记录（不解除冻结）**：2026-10-10 T3 明确要求将 EF01 纳入 `bank/export.py::sanitize_latex`，本次在该授权范围接入展示清洗与未知字形警告；实测纯公式 DOCX 被 Word 拒绝后，另补页脚引用缺失的局部关系命名空间。新导出 72 条公式已通过 Word/WPS 改字符、保存、重开验证。验收报告 P4 确认该次修改合理；今后该文件仍按冻结约定处理，不能把此次授权扩大为任意重构。
 
 ---
