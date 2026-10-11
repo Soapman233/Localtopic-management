@@ -129,3 +129,13 @@ spike/docx_writer_smoke/engine_*.docx
 spike/docx_writer_smoke/eng_*.docx
 spike/docx_writer_smoke/e_*.docx
 spike/docx_writer_smoke/dbg.docx
+
+# 验收脚本产物
+spike/acceptance/_job.json
+spike/acceptance/api_*.docx
+spike/acceptance/api_native_*.docx
+spike/acceptance/bridge_*.docx
+spike/acceptance/native_ok.docx
+spike/acceptance/word_*.docx
+spike/acceptance/wps_*.docx
+outputs/webui/preview_cache/

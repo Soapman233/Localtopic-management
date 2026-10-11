@@ -193,14 +193,36 @@ def _cleanup_raw(raw: Path) -> None:
             time.sleep(0.5)
 
 
-def _generate_docx(plan: dict, key: str) -> tuple[dict, "_export.EditorBridge"]:
-    """生成 DOCX（含一次自动重试，缓解 editor_sdk 瞬时抖动）。
+def _generate_docx(plan: dict, key: str) -> tuple[dict, "_export.EditorBridge | None"]:
+    """生成 DOCX。
 
-    editor_sdk 为单实例外部服务，偶发「document is not opened」等瞬时错误。此处**重试一次**
-    以提升可靠性；两次都失败则抛出最后一次异常（由作业映射为 50001，**不静默**）。
+    引擎由 :func:`bank.export.resolve_export_engine` 决定（``QB_EXPORT_ENGINE``，
+    **默认 native**）：
+
+    * **native** —— 自研 :mod:`bank.docx_writer`，**不需要 editor_sdk**，
+      直接产出正确的 OOXML，**无需桥接后处理**；
+    * ``bridge`` —— 原 editor_sdk 链路（含一次自动重试，缓解单实例服务的瞬时抖动）；
+    * ``auto`` —— native 失败时回退 bridge 并如实记录。
+
+    返回值第二项在 native 路径下为 ``None``（调用方需容错）。
     """
     cdir = cache_dir(key)
     raw = cdir / "paper.__raw__.docx"
+    engine = _export.resolve_export_engine()
+
+    if engine in ("native", "auto"):
+        try:
+            from bank import docx_writer
+            written = docx_writer.write_plan(plan, docx_path(key))
+            _cleanup_raw(raw)
+            return written, None
+        except Exception as exc:  # noqa: BLE001 - auto 才回退，native 直接抛
+            if engine != "auto":
+                raise
+            plan.setdefault("warnings", []).append(
+                f"native 渲染失败（{type(exc).__name__}: {exc}），已回退 bridge")
+
+    # ---- bridge 路径 ----
     last_exc: Exception | None = None
     for attempt in (1, 2):
         bridge = _export.EditorBridge()
@@ -259,7 +281,10 @@ def render(paper_id: int, answer_mode: str | None, template: str | None,
 
     written, bridge = _generate_docx(plan, key)
 
-    warnings: list[str] = list(plan.get("warnings") or []) + list(bridge.warnings)
+    # native 路径无 bridge（返回 None）；字段统一容错，避免属性访问炸掉整个作业。
+    bridge_warnings = list(getattr(bridge, "warnings", []) or [])
+    bridge_errors = list(getattr(bridge, "errors", []) or [])
+    warnings: list[str] = list(plan.get("warnings") or []) + bridge_warnings
     pdf_res = _export.export_pdf(docx_path(key), pdf_path(key))
     pdf_file: Path | None = None
     pages: list[dict] = []
@@ -286,12 +311,12 @@ def render(paper_id: int, answer_mode: str | None, template: str | None,
         "pages": pages,
         "docx": str(docx_path(key)),
         "pdf": str(pdf_file) if pdf_file else None,
-        "formulas_written": written.get("formulas_written", 0),
-        "images_written": written.get("images_written", 0),
+        "formulas_written": written.get("formulas_written", written.get("formulas", 0)),
+        "images_written": written.get("images_written", written.get("images", 0)),
         "question_count": sum(len(s["questions"]) for s in plan.get("sections") or []),
         "section_count": len(plan.get("sections") or []),
         "warnings": warnings,
-        "bridge_errors": list(bridge.errors),
+        "bridge_errors": bridge_errors,
         "created_at": _now(),
         "elapsed_ms": int((time.time() - t0) * 1000),
         "cached": False,

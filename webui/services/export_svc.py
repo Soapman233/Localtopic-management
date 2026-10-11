@@ -141,7 +141,10 @@ def export_request(conn, paper_id: int, *, answer_mode: str | None = None,
         wanted = [f for f in wanted if f != "pdf"]
         warnings.append("未检测到 Microsoft Word / WPS：已降级为「仅导出 DOCX」。")
 
-    _ensure_editor_sdk()  # DOCX 生成依赖 editor_sdk；缺失即失败
+    # DOCX 生成默认走自研引擎（bank.docx_writer），**不需要 editor_sdk**；
+    # 仅当显式选择 bridge 引擎时才强制要求该服务。
+    if _export.resolve_export_engine() == "bridge":
+        _ensure_editor_sdk()
 
     key = _preview.payload_key(payload)
     target = out_dir or str(config.get_export_dir())
