@@ -114,6 +114,10 @@ class DocxWriter:
            keep_next: bool = False, keep_lines: bool = False,
            border_bottom: bool = False) -> str:
         ppr = ["<w:pPr>"]
+        # 段落含制表符时补**显式制表位**（1/4、1/2、3/4 版心宽），
+        # 否则会依赖 Word 默认停靠点（每 0.5 英寸），选项对齐会不准。
+        if "<w:tab/>" in runs:
+            ppr.append(self._tab_stops())
         if align:
             ppr.append(f'<w:jc w:val="{align}"/>')
         ppr.append(f'<w:spacing w:before="{_twip(before)}" w:after="{_twip(after)}"'
@@ -132,9 +136,28 @@ class DocxWriter:
         self.n_para += 1
         return "<w:p>" + "".join(ppr) + runs + "</w:p>"
 
+    def _avail_twip(self) -> int:
+        """版心可用宽度（twip）＝ A4 宽 − 左右页边距 − 装订线。"""
+        m = self.spec.get("margins") or {}
+        avail = (A4_W_TWIP
+                 - _twip(m.get("left", 73.7))
+                 - _twip(m.get("right", 56.7))
+                 - _twip(float(self.spec.get("gutter") or 0.0)))
+        return max(2000, avail)
+
+    def _tab_stops(self) -> str:
+        """显式制表位：版心 1/4、1/2、3/4 处各一个左停靠点。
+
+        原桥接实现（``_set_explicit_tab_stops``）同样按版心 1/4 设点；不设则退回
+        Word 默认停靠点（每 0.5 英寸），四选项题的对齐会不准。
+        """
+        a = self._avail_twip()
+        stops = "".join(f'<w:tab w:val="left" w:pos="{round(a * n / 4)}"/>' for n in (1, 2, 3))
+        return f"<w:tabs>{stops}</w:tabs>"
+
     def _rpr(self, *, size: float | None = None, font: str | None = None,
              bold: bool = False) -> str:
-        out = []
+        out: list[str] = []
         if font:
             out.append(f'<w:rFonts w:ascii="{_esc(font)}" w:eastAsia="{_esc(font)}"'
                        f' w:hAnsi="{_esc(font)}"/>')

@@ -116,6 +116,25 @@ class TestTabHandling(unittest.TestCase):
         self.assertIn("<w:tab/>", doc)
         self.assertNotIn("\ue000", doc, "哨兵残留会导致豆腐块")
 
+    def test_explicit_tab_stops_present(self):
+        """🔴 回归：含制表符的段落必须带**显式制表位**（版心 1/4、1/2、3/4）。
+
+        不设则退回 Word 默认停靠点（每 0.5 英寸），四选项题对齐会不准。
+        """
+        data, _ = render_plan(_plan())
+        with TemporaryDirectory() as td:
+            p = Path(td) / "a.docx"
+            p.write_bytes(data)
+            _, doc, _ = _read(p)
+        self.assertIn("<w:tabs>", doc, "缺少显式制表位")
+        self.assertGreaterEqual(doc.count('<w:tab w:val="left"'), 3)
+        # 制表位应落在版心宽度内
+        import re
+        positions = [int(x) for x in re.findall(r'<w:tab w:val="left" w:pos="(\d+)"', doc)]
+        self.assertTrue(positions, "未找到制表位")
+        self.assertTrue(all(0 < x < 11906 for x in positions),
+                        f"制表位越界：{positions}")
+
 
 class TestLayout(unittest.TestCase):
     def test_page_break_between_sections(self):
