@@ -9,6 +9,7 @@ import { describe, it, expect, vi } from 'vitest'
 import { screen } from '@testing-library/react'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { AuthProvider } from '../../src/app/auth/AuthProvider'
 import App from '../../src/App'
 import { renderWithTheme } from './testUtils'
 
@@ -18,6 +19,11 @@ vi.mock('../../src/api/client', () => ({
   api: { get: vi.fn(() => Promise.resolve({ degraded: false, messages: [] })) },
   ApiError: class ApiError extends Error {},
   buildQuery: () => '',
+  // 阶段 4：AuthProvider 依赖这些导出；测试替身需同步（否则 vitest 会报
+  // "No ... export is defined on the mock"）。返回 no-op，让被测组件按本地版语义渲染。
+  setAuthToken: vi.fn(),
+  getAuthToken: vi.fn(() => null),
+  setUnauthorizedHandler: vi.fn(),
 }))
 
 /** 在真实主题 + QueryClient + MemoryRouter 下渲染 App。 */
@@ -25,11 +31,14 @@ function renderApp(initialPath = '/builder') {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
   return renderWithTheme(
     <QueryClientProvider client={queryClient}>
+        {/* 阶段 4：App 内含 SessionControls/SessionNotice，需要 AuthProvider（与生产 main.tsx 同构）。 */}
+        <AuthProvider>
       <MemoryRouter initialEntries={[initialPath]}>
         <Routes>
           <Route path="*" element={<App />} />
         </Routes>
       </MemoryRouter>
+        </AuthProvider>
     </QueryClientProvider>,
   )
 }

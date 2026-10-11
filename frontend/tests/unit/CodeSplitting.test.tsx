@@ -15,6 +15,7 @@ import { describe, it, expect, vi } from 'vitest'
 import { act, screen } from '@testing-library/react'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { AuthProvider } from '../../src/app/auth/AuthProvider'
 import App from '../../src/App'
 // 用 Vite 的 `?raw` 把生产源码作为**文本**读进来做「配置不变量」断言
 // （无需 Node fs，也避免 tsconfig 未引入 node 类型的问题）。
@@ -42,12 +43,20 @@ describe('路由级代码分割：配置不变量', () => {
     expect(staticPageImports).toEqual([])
   })
 
-  it('9 个页面全部使用 React.lazy + 动态 import', () => {
-    const lazyImports = routerSrc.match(/lazy\(\(\)\s*=>\s*import\('\.\/pages\//g) ?? []
-    expect(lazyImports).toHaveLength(PAGE_FILES.length)
+  it('页面全部使用 React.lazy + 动态 import（不得存在同步 import）', () => {
     for (const page of PAGE_FILES) {
       expect(routerSrc).toContain(`lazy(() => import('./pages/${page}'))`)
     }
+    // 不变量：**不得**存在对 `./pages/` 的同步 import——那会让该页面回到首屏 chunk，
+    // 把代码分割的收益吃掉。
+    //
+    // ⚠️ 这里刻意**不断言懒加载的数量**：阶段 4 新增了 `LoginPage` 也走懒加载，
+    // 若把数量写死（原来是 9），每加一个页面就要改测试——而"数量"根本不是我们要守的性质。
+    expect(routerSrc).not.toMatch(/^import\s+\w+\s+from\s+'\.\/pages\//m)
+  })
+
+  it('登录页（阶段 4）同样走懒加载（本地版永不下载它）', () => {
+    expect(routerSrc).toContain("lazy(() => import('./pages/LoginPage'))")
   })
 
   it('默认落地页仍是 /builder（代码分割不得改变落地行为）', () => {
@@ -111,6 +120,11 @@ vi.mock('../../src/api/client', () => ({
   },
   ApiError: class ApiError extends Error {},
   buildQuery: () => '',
+  // 阶段 4：AuthProvider 依赖这些导出；测试替身需同步（否则 vitest 会报
+  // "No ... export is defined on the mock"）。返回 no-op，让被测组件按本地版语义渲染。
+  setAuthToken: vi.fn(),
+  getAuthToken: vi.fn(() => null),
+  setUnauthorizedHandler: vi.fn(),
 }))
 
 describe('懒加载页面：加载态与外壳保持', () => {
@@ -118,6 +132,8 @@ describe('懒加载页面：加载态与外壳保持', () => {
     const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
     return renderWithTheme(
       <QueryClientProvider client={queryClient}>
+        {/* 阶段 4：App 内含 SessionControls/SessionNotice，需要 AuthProvider（与生产 main.tsx 同构）。 */}
+        <AuthProvider>
         <MemoryRouter initialEntries={['/builder']}>
           <Routes>
             <Route path="/builder" element={<App />}>
@@ -125,6 +141,7 @@ describe('懒加载页面：加载态与外壳保持', () => {
             </Route>
           </Routes>
         </MemoryRouter>
+        </AuthProvider>
       </QueryClientProvider>,
     )
   }

@@ -38,6 +38,7 @@ import { qk } from './api/queryKeys'
 import ErrorBoundary from './components/ErrorBoundary'
 import LoadingState from './components/LoadingState'
 import { PaperSwitcher } from './components/PaperSwitcher'
+import { SessionControls, SessionNotice } from './components/SessionControls'
 import { createPaper, listPapers } from './api/papers'
 import { usePaperStore } from './store/paperStore'
 import { useSettingsStore } from './store/settingsStore'
@@ -300,6 +301,8 @@ export default function App() {
             onOpenList={() => setPaperListOpen(true)}
             compact={isNarrowNav}
           />
+          {/* 阶段 4：当前用户 + 登出（**本地版渲染为空**）。 */}
+          <SessionControls />
         </Toolbar>
       </AppBar>
 
@@ -424,6 +427,8 @@ export default function App() {
       >
         <Toolbar variant="dense" />
         <HealthBanner />
+        {/* 阶段 4：只读账号提示（**仅线上版只读角色可见**，本地版为空）。 */}
+        <SessionNotice />
         {/* 页面级错误边界：单页异常不再整站白屏；切换路由自动重置。 */}
         <ErrorBoundary resetKeys={[location.pathname]}>
           {/* P5-1 路由级代码分割的加载态边界。

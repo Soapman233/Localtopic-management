@@ -77,6 +77,7 @@ import { ExportDiagnosticsPanel, IssueDetails } from '../components/livePreview/
 import { getExportData } from '../api/export'
 import { recreatePaperCopy } from '../api/paperRestore'
 import { usePaperStore } from '../store/paperStore'
+import { usePermission } from '../hooks/usePermission'
 import { useUiStore } from '../store/uiStore'
 import { useSettingsStore } from '../store/settingsStore'
 import { useQuestionFilters } from '../hooks/useQuestionFilters'
@@ -226,6 +227,10 @@ export default function PaperBuilderPage() {
       ? (errorDataOf(e) as ExportDiagnostics)
       : null)
   })
+
+  // 阶段 4：只读账号禁用「删除试卷」（比"点了才被拒"更好的体验）。
+  // ⚠️ 前端禁用只是体验层，**真正的强制在后端**。
+  const canDeletePaper = usePermission('paper.delete')
 
   // 门禁状态（响应式订阅，供顶部提示 / 诊断）。
   const previewFresh = useUiStore((s) => (paperId != null ? s.previewFresh[paperId] ?? false : false))
@@ -653,6 +658,7 @@ export default function PaperBuilderPage() {
                 <Button
                   size="small"
                   color="error"
+                  disabled={!canDeletePaper}
                   onClick={(e) => {
                     e.stopPropagation()
                     // P0-1：先确认（显示将删除的题数），不再单击即 force 删除。

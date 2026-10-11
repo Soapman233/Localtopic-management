@@ -1,6 +1,10 @@
 import { lazy, type ReactElement } from 'react'
 import { Navigate, RouterProvider, createHashRouter } from 'react-router-dom'
 import App, { NAV_ITEMS } from './App'
+import RequireAuth from './app/auth/RequireAuth'
+
+/** 登录页（阶段 4）。同样走懒加载——本地版永远不会访问它。 */
+const LoginPage = lazy(() => import('./pages/LoginPage'))
 
 // 使用 HashRouter：FastAPI StaticFiles 静态托管无需服务端 history fallback。
 //
@@ -69,9 +73,18 @@ const legacyChildren = Object.entries(LEGACY_REDIRECTS).map(([from, to]) => ({
 }))
 
 const router = createHashRouter([
+  // 登录页**不套 RequireAuth**（否则未登录时跳登录页会无限重定向）。
+  // 本地版：`RequireAuth` 恒真透传，所以这个路由存在但不会被用到——
+  // 有人手动访问 `#/login` 也会被下面的 `RequireAuth` 逻辑放行到主界面。
+  { path: '/login', element: <LoginPage /> },
   {
     path: '/',
-    element: <App />,
+    // 阶段 4：线上版未登录 → 跳 `/login`；**本地版恒真透传**（见 RequireAuth 注释）。
+    element: (
+      <RequireAuth>
+        <App />
+      </RequireAuth>
+    ),
     children: [
       { index: true, element: <Navigate to={DEFAULT_LANDING_PATH} replace /> },
       { path: 'question/:id', element: <QuestionDetailPage /> },

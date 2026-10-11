@@ -22,10 +22,49 @@ export class ApiError extends Error {
 
 const BASE_URL = '' // 生产同源；dev 由 Vite 代理 /api
 
+// --------------------------------------------------------------------------- //
+// 会话令牌（阶段 4：两版适配）
+// --------------------------------------------------------------------------- //
+//
+// 背景：线上部署版启用用户体系后，除登录接口外的 `/api/*` 都需要凭据。
+// 若让每个 api 函数各自传 header，会散落到十几处、且极易漏（新增端点时最危险）。
+// 因此这里做**全局自动附加**：AuthProvider 登录时 `setAuthToken(token)`，
+// 之后所有请求自动带上 `Authorization: Bearer <token>`。
+//
+// **本地运行版**：从不设置令牌 → 不发送 Authorization 头 → 与历史行为**完全一致**
+// （既有 205 项前端测试不受影响）。
+
+let authToken: string | null = null
+
+/** 由 `AuthProvider` 在登录/登出时调用。**业务代码不要直接调用**。 */
+export function setAuthToken(token: string | null): void {
+  authToken = token
+}
+
+/** 当前令牌（仅供测试与调试读取）。 */
+export function getAuthToken(): string | null {
+  return authToken
+}
+
+/** 收到 401 时的回调（由 `AuthProvider` 注册）：清除本地会话并跳登录页。 */
+let onUnauthorized: (() => void) | null = null
+
+/** 由 `AuthProvider` 注册 401 处理。**业务代码不要直接调用**。 */
+export function setUnauthorizedHandler(fn: (() => void) | null): void {
+  onUnauthorized = fn
+}
+
 export interface RequestOptions {
   timeoutMs?: number
   signal?: AbortSignal
   headers?: Record<string, string>
+  /**
+   * 跳过「401 → 全局跳登录页」处理。
+   *
+   * 用于**登录接口自身**：登录时密码错会返回 401，此时我们本来就在登录页，
+   * 不该再触发一次跳转（否则会覆盖掉页面上的错误提示）。
+   */
+  skipAuthRedirect?: boolean
 }
 
 async function request<T>(
@@ -40,7 +79,12 @@ async function request<T>(
 
   const init: RequestInit = {
     method,
-    headers: { Accept: 'application/json', ...headers },
+    headers: {
+      Accept: 'application/json',
+      // 线上版：自动附加会话令牌；本地版从未设置令牌 → 不加该头（行为与历史一致）。
+      ...(authToken ? { Authorization: `Bearer ${authToken}` } : {}),
+      ...headers,
+    },
     signal: options.signal ?? controller.signal,
   }
   if (body !== undefined) {
@@ -63,6 +107,13 @@ async function request<T>(
     )
   } finally {
     window.clearTimeout(timer)
+  }
+
+  // 会话失效（401）→ 通知 AuthProvider 清除本地会话并跳登录页。
+  // ⚠️ 登录接口自身要传 `skipAuthRedirect: true`，否则"密码错"会连带触发一次跳转，
+  // 把页面上的错误提示冲掉。
+  if (resp.status === 401 && !options.skipAuthRedirect) {
+    onUnauthorized?.()
   }
 
   const text = await resp.text()

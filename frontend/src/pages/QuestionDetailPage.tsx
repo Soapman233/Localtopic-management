@@ -42,6 +42,7 @@ import { LoadingState } from '../components/LoadingState'
 import { ErrorCode, errorCodeOf, errorDataOf } from '../api/errors'
 import { qk } from '../api/queryKeys'
 import { describeMentionScope } from '../lib/glossary'
+import { usePermissionGuard } from '../hooks/usePermission'
 
 /** 单条公式展示块（点击可查看 latex 源码）。 */
 function FormulaRow({ formula }: { formula: Formula }) {
@@ -76,6 +77,9 @@ export default function QuestionDetailPage() {
     queryFn: () => getQuestion(questionId),
     enabled: Number.isFinite(questionId),
   })
+
+  // 阶段 4：只读账号保存时给出教师语言提示（服务端也会拒，这里先拦住以免白跑一趟）。
+  const guardEdit = usePermissionGuard('question.edit')
 
   const saveMutation = useMutation({
     mutationFn: (patch: QuestionPatchBody) => updateQuestion(questionId, patch),
@@ -174,7 +178,7 @@ export default function QuestionDetailPage() {
               setEditing(false)
               setConflict(null)
             }}
-            onSave={(patch) => saveMutation.mutate(patch)}
+            onSave={(patch) => guardEdit(() => saveMutation.mutate(patch))}
           />
         ) : (
           <>

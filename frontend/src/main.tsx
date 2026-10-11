@@ -11,6 +11,7 @@ import { getSettings } from './api/settings'
 import { qk } from './api/queryKeys'
 import { useSettingsStore } from './store/settingsStore'
 import { notify } from './lib/feedback'
+import { AuthProvider } from './app/auth/AuthProvider'
 import ErrorBoundary from './components/ErrorBoundary'
 import NotifierBridge from './components/NotifierBridge'
 import AppRouter from './router'
@@ -58,7 +59,11 @@ if (rootEl) {
       {/* 顶层错误边界：兜住应用外壳（主题 / 路由）自身的异常。 */}
       <ErrorBoundary>
         <QueryClientProvider client={queryClient}>
-          <ApplicationTheme />
+          {/* 鉴权（阶段 4）：必须在 QueryClientProvider **内**——它用 useQuery 读 `/api/auth/me`。
+              本地版后端返回 `auth_enabled:false`，此处的存在感为零（角色按 admin、路由透传）。 */}
+          <AuthProvider>
+            <ApplicationTheme />
+          </AuthProvider>
         </QueryClientProvider>
       </ErrorBoundary>
     </React.StrictMode>,
