@@ -112,6 +112,18 @@ class InvalidScore(ValidationError):
     code = 40004
 
 
+class MissingUpload(ValidationError):
+    """未提供上传文件 / 文件为空（40010）。"""
+
+    code = 40010
+
+
+class InvalidUpload(ValidationError):
+    """上传文件非法：格式不支持 / 超过大小上限 / 导入功能已关闭（40011）。"""
+
+    code = 40011
+
+
 class ContentConflict(ConflictError):
     """内容哈希重复（40901）。"""
 
@@ -144,6 +156,8 @@ CODE_INVALID_SETTINGS = 40006       # 非法设置
 CODE_INVALID_REVISION = 40007
 CODE_AUTH_DISABLED = 40008          # 当前未启用用户体系（无用户 / 非线上版）
 CODE_INVALID_ROLE = 40009           # 非法角色
+CODE_MISSING_UPLOAD = 40010         # 未提供上传文件 / 文件为空
+CODE_INVALID_UPLOAD = 40011         # 上传文件非法（格式 / 大小 / 功能关闭）
 
 #: 未授权（401）。
 CODE_UNAUTHORIZED_TOKEN = 40101     # 缺少 / 错误的共享访问令牌（历史行为）

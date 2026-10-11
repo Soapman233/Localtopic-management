@@ -139,3 +139,6 @@ spike/acceptance/native_ok.docx
 spike/acceptance/word_*.docx
 spike/acceptance/wps_*.docx
 outputs/webui/preview_cache/
+
+# 导入验收临时产物
+spike/acceptance/_import_test/

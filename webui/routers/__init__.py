@@ -17,8 +17,8 @@ from typing import List
 
 from fastapi import APIRouter
 
-from . import (auth, export, labels, papers, questions, review, search, settings,
-               sources, stats)
+from . import (auth, export, imports, labels, papers, questions, review, search,
+               settings, sources, stats)
 
 #: 待挂载的路由列表（顺序即注册顺序）。
 ROUTERS: List[APIRouter] = [
@@ -27,6 +27,7 @@ ROUTERS: List[APIRouter] = [
     questions.router,
     papers.router,
     export.router,
+    imports.router,
     labels.router,
     review.router,
     sources.router,

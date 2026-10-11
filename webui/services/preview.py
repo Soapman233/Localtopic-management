@@ -62,7 +62,18 @@ def cache_key(conn, paper_id: int, answer_mode: str | None = None,
 
 
 def payload_key(payload: dict) -> str:
-    return _content.digest({'content_digest':payload['content_digest'],'content_guard_revision':_content.CONTENT_GUARD_REVISION,'layout_revision':_content.LAYOUT_REVISION})
+    """预览/导出缓存 key。
+
+    ⚠️ **必须包含导出引擎**：缓存产物是「某引擎渲染出来的 DOCX」，
+    若 key 不含引擎，切换 ``QB_EXPORT_ENGINE`` 后会**继续复用旧引擎的产物**，
+    且从文件名/大小上看不出差别（实测踩过：清缓存后才复现真实行为）。
+    """
+    return _content.digest({
+        'content_digest': payload['content_digest'],
+        'content_guard_revision': _content.CONTENT_GUARD_REVISION,
+        'layout_revision': _content.LAYOUT_REVISION,
+        'export_engine': _export.resolve_export_engine(),
+    })
 
 
 def current_payload(paper_id, answer_mode, template, *, key=None, expected_content_digest=None):
@@ -81,10 +92,11 @@ def content_fields(payload):
 
 
 def validate_meta(key,meta):
-    """旧URL/缓存也回到当前内容守卫；老revision默认过期。"""
+    """旧URL/缓存也回到当前内容守卫；老revision 或**换了导出引擎**都视为过期。"""
     if (not meta.get('paper_id') or
             meta.get('content_guard_revision') != _content.CONTENT_GUARD_REVISION or
-            meta.get('layout_revision') != _content.LAYOUT_REVISION):
+            meta.get('layout_revision') != _content.LAYOUT_REVISION or
+            meta.get('export_engine') != _export.resolve_export_engine()):
         raise _content.ExportEvidenceStale(meta.get('diagnostics') or {})
     return current_payload(meta['paper_id'],meta.get('answer_mode'),meta.get('template'),
                            key=key,expected_content_digest=meta.get('content_digest'))
@@ -307,6 +319,8 @@ def render(paper_id: int, answer_mode: str | None, template: str | None,
         "title": plan.get("title"),
         "template": plan.get("template"),
         "answer_mode": plan.get("answer_mode"),
+        # 记录渲染所用引擎：换引擎即缓存过期（见 payload_key 说明）
+        "export_engine": _export.resolve_export_engine(),
         "page_count": len(pages),
         "pages": pages,
         "docx": str(docx_path(key)),
