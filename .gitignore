@@ -107,3 +107,6 @@ htmlcov/
 # build_asset_manifest.py / embed_metadata.py 等脚本），**需要跟踪**，
 # 故此处不做忽略（其 __pycache__ 已由上面的规则覆盖）。
 
+
+# 临时工作目录（PDF 装配中间产物，不入库）
+.tmp_md2pdf/
