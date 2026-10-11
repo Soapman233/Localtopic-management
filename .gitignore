@@ -147,3 +147,12 @@ spike/acceptance/_import_test/
 build/
 dist/
 spike/acceptance/_*/
+
+# 双击场景验收临时目录
+spike/acceptance/_detached_run/
+spike/acceptance/_p2/
+spike/acceptance/_repro/
+spike/acceptance/_srcrun/
+spike/acceptance/_fresh/
+spike/acceptance/_backup_test/
+spike/acceptance/_backup_api/

@@ -74,6 +74,14 @@
 - ⚠️ **`TestClient(app)` 默认 `raise_server_exceptions=True`**，会把经通用 `Exception` 处理器映射的异常**重新抛出**；要断言 4xx 必须用 `TestClient(app, raise_server_exceptions=False)`。
 - ⚠️ **"临时文件"的判断不能只看名字**：上传的 DOCX 是**长期依赖**（来源核验凭据）。这类问题**只有跑完整业务链路才会暴露**。
 - ⚠️ **判断"某链路是否已切换"不能只看产物表面特征**：桥接后处理会掩盖缺陷使两引擎产物趋同。可靠判据=**依赖缺失时是否仍能工作** + 产物部件构成。
+- 🔴 **验证条件必须与真实使用条件一致**（本项目实证）：打包版「从 shell 启动全绿」，
+  但**用户双击即崩**——`console=False` 的 exe 是 `WINDOWS_GUI` 子系统，**不分配控制台**，
+  `sys.stdout` 为 `None`，uvicorn 配日志 `sys.stdout.isatty()` 直接崩。
+  从 shell 启动会**继承有效句柄**，于是双击路径完全没被覆盖。
+  **「能启动」≠「用户那样启动也能启动」**；打包类改动**必须**跑 `spike/acceptance/verify_portable_detached.py`
+  （`DETACHED_PROCESS` + **不传任何 std 参数**）。
+  ⚠️ 构造该反例时**别传 `stdout=DEVNULL`**——那等于给了有效句柄，反证会假失败。
+  **"模拟条件"本身也要被验证**。
 
 ## 8. 版本拆分（editions）与鉴权
 - **一个内核 + 多个外壳**：`bank/` `pipeline/` `webui/` `frontend/` 共享，差异收敛到 `webui/edition.py`（`QB_EDITION`/`QB_HOST`/`QB_PORT`/`QB_AUTH_TOKEN`）。
