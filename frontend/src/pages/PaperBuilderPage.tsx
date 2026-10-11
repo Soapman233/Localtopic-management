@@ -599,7 +599,7 @@ export default function PaperBuilderPage() {
       {/* P1-1：窄屏下右栏折叠为右侧抽屉（默认关闭，避免挤占结果区） */}
       {narrow && (
         <Drawer anchor="right" open={rightOpen} onClose={() => setRightOpen(false)}
-          aria-labelledby="builder-panel-drawer-title">
+          PaperProps={{ role: 'dialog', 'aria-labelledby': 'builder-panel-drawer-title' }}>
           <Box sx={{ width: '92vw', maxWidth: 680, p: 1.5, height: '100%', display: 'flex', flexDirection: 'column' }}>
             <Stack direction="row" alignItems="center" sx={{ mb: 1 }}>
               <Typography id="builder-panel-drawer-title" variant="subtitle1" component="h2" sx={{ flex: 1 }}>试卷</Typography>
@@ -613,7 +613,7 @@ export default function PaperBuilderPage() {
       {/* 试卷管理抽屉（P0-10：新建 / 删除 + 撤销）。
           与全局「切换试卷」区分：这里多了**删除与撤销**，命名体现能力差异。 */}
       <Drawer anchor="left" open={drawerOpen} onClose={() => setDrawerOpen(false)}
-        aria-labelledby="paper-manage-drawer-title">
+        PaperProps={{ role: 'dialog', 'aria-labelledby': 'paper-manage-drawer-title' }}>
         <Box sx={{ width: 320, p: 2 }}>
           <Typography id="paper-manage-drawer-title" variant="subtitle1" component="h2" gutterBottom>
             试卷管理

@@ -128,7 +128,7 @@ function ExportDrawerForPaper(props: ExportDrawerProps) {
 
   return (
     <Drawer anchor="right" open={open} onClose={handleClose}
-      aria-labelledby="export-drawer-title">
+      PaperProps={{ role: 'dialog', 'aria-labelledby': 'export-drawer-title' }}>
       <Box sx={{ width: { xs: '92vw', sm: 720 }, p: 2.5, display: 'flex', flexDirection: 'column', height: '100%' }}>
         {/* 头部 */}
         <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 1 }}>

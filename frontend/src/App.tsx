@@ -308,9 +308,14 @@ export default function App() {
         open={isNarrowNav ? navOpen : true}
         onClose={() => setNavOpen(false)}
         ModalProps={{ keepMounted: true }}
-        // P5-3：MUI 的 Dialog 会经 DialogTitle 自动派生 aria-labelledby，**Drawer 不会**。
-        // 窄屏下本抽屉是模态（temporary），没有可访问名时读屏只会念「对话框」。
-        aria-label="侧边导航"
+        // P5-3：MUI 的 `Dialog` 会在 Paper 上设 `role="dialog"`（`Dialog.js:254`），
+        // 而 **`Drawer` 完全不设 role**（`Drawer.js` 里搜不到 role），模态根默认 `role="presentation"`
+        // → 读屏不会把它当对话框。故显式把 role 与可访问名放到 **Paper** 上（与 MUI Dialog 一致）。
+        // 注：`permanent` 变体不是模态，不加 role。
+        PaperProps={{
+          'aria-label': '侧边导航',
+          ...(isNarrowNav ? { role: 'dialog' } : {}),
+        }}
         sx={{
           width: DRAWER_WIDTH,
           flexShrink: 0,
@@ -357,7 +362,7 @@ export default function App() {
           命名刻意与组卷页的「试卷管理」（含删除 + 撤销）区分——两者能力不同，
           都叫「试卷列表」会让老师困惑「为什么这里的删不掉」。 */}
       <Drawer anchor="left" open={paperListOpen} onClose={() => setPaperListOpen(false)}
-        aria-labelledby="paper-switch-drawer-title">
+        PaperProps={{ role: 'dialog', 'aria-labelledby': 'paper-switch-drawer-title' }}>
         <Box sx={{ width: 320, p: 2 }}>
           <Typography id="paper-switch-drawer-title" variant="subtitle1" component="h2" gutterBottom>
             切换试卷
