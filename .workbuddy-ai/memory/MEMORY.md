@@ -184,3 +184,17 @@
 - ⚠️ **不要用 `sha256` 判断基线是否被换过**：实测同一代码两次采集字节不完全一致
   （builder 约 40px，mean≤0.0017）。**判定一律以像素阈值（mean_diff / pct_gt32）为准**。
 
+### 鉴权体系安全审计与收口（2026-10-11）
+> 报告：`deliverables/gstack/phase4-closeout-auth-2026-10-11.md`
+- 🔴 **已修的 3 个 P0**：① **fail-open**（`auth.db` 不可读 → 回落 `off` → 无凭据可读写全站；
+  修法：`auth_store_status()` 区分 ok/missing/error，`uninitialized`/`error` **fail-closed 返回 503**
+  `50301`/`50302`）；② `/api/auth/me` 未豁免导致**线上版无登录入口**；③ **请求风暴**（登出后 12s 内 7328 次，修后 1~3 次）。
+- ⚠️ **契约陷阱**：`/api/auth/me` **豁免 + 恒返回 200**（令牌失效时也 200、只是 `user:null`）
+  → **不能用它判断会话有效性**，一律以**受保护端点的 401** 为准。
+- ⚠️ **耦合**：`interactions.mjs` 的写路径安全闸门依赖 `GET /api/health` 的 `data.db`；
+  线上版不回显该字段 → 闸门**安全 SKIP**。
+- ⚠️ **删依赖必须同步 lockfile**：只改 `package.json` 不跑 `npm install` → **`npm ci` 会失败**。
+- ⚠️ **`tokens.neutral` 不是零消费方**（`ThemeContrast.test.ts` 在用）；
+  difficulty token **接线有害**（鲜艳值作浅底文字 2.28/2.15/3.76:1，且 `contrast-pairs.json` 无该组合 → 门禁抓不到）。
+- 测试基数：后端 **436**、前端 **251**（26 node:test + 225 vitest）。
+
