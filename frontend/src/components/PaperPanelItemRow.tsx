@@ -29,6 +29,7 @@ import { CSS } from '@dnd-kit/utilities'
 import type { PaperItem, ExportQuestion } from '../api/types'
 import { IssueDetails } from './livePreview/ExportDiagnostics'
 import { AnswerBadge } from './StatusBadges'
+import { describeLockedSnapshot, isDebugMode } from '../lib/glossary'
 
 /** 判断条目快照是否落后于题库当前版本。
  *
@@ -115,12 +116,15 @@ export function SortableItemRow({
           />
           {!item.has_answer && <AnswerBadge hasAnswer={false} />}
           {isStale(item) && (
-            <Tooltip title="题库中该题已更新，本卷仍使用加入时的版本（快照锁定）">
+            <Tooltip title={describeLockedSnapshot()}>
               <Chip size="small" color="warning" label="题库已更新" />
             </Tooltip>
           )}
         </Stack>
-        <Typography variant="caption" color="text.secondary">item {item.id} · qid {item.question_id} · 锁定 v{item.question_version}</Typography>
+        {/* P0-1：item / qid / 锁定版本号是原始字段，默认不向老师展示；debug 下保留供维护者定位。 */}
+        {isDebugMode() && (
+          <Typography variant="caption" color="text.secondary">item {item.id} · qid {item.question_id} · 锁定 v{item.question_version}</Typography>
+        )}
         {contentQuestion?.issues.length ? <Box component="details"><summary>本项问题（{contentQuestion.issues.length}）</summary>{contentQuestion.issues.map((issue, i) => <IssueDetails key={i} issue={issue} />)}</Box> : null}
       </Box>
       <IconButton size="small" onClick={(e) => setAnchor(e.currentTarget)} aria-label="条目菜单">

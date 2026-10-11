@@ -8,6 +8,7 @@
  */
 import { Button, Chip, Stack, Tooltip } from '@mui/material'
 import type { ChipProps } from '@mui/material'
+import { describeMentionScope } from '../lib/glossary'
 
 export interface BadgeProps {
   label: string
@@ -115,7 +116,7 @@ export function LabelStatusBadge({ status }: { status?: string | null }) {
       label="待复核？"
       color="warning"
       variant="outlined"
-      title="该标签为系统「提及」识别结果，尚未人工复核"
+      title="系统自动识别，尚未人工复核"
     />
   )
 }
@@ -138,7 +139,7 @@ export function StrictKpBadge({ confirmed, pending }: { confirmed: number; pendi
       label={`已确认 ${confirmed.toLocaleString('zh-CN')} / 待复核 ${pending.toLocaleString('zh-CN')}`}
       color="default"
       variant="outlined"
-      title="知识点为「提及」口径：系统识别题干中出现过的知识词，不代表本题在考查它"
+      title={describeMentionScope()}
     />
   )
 }

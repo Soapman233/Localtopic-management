@@ -41,6 +41,7 @@ import { PreviewViewer } from './PreviewViewer'
 import { LivePreviewPanel } from './LivePreviewPanel'
 import { ExportResultPanel } from './ExportResultPanel'
 import { envReason, useExportGate, type EnvFailure } from '../hooks/useExportGate'
+import { describeExportGate } from '../lib/glossary'
 
 const ANSWER_MODES = ['学生版', '答案解析版', '仅答案']
 const TEMPLATES = ['考试', '测验', '作业']
@@ -123,12 +124,12 @@ function ExportDrawerForPaper(props: ExportDrawerProps) {
         <Stack direction="row" spacing={1} alignItems="center" flexWrap="wrap" useFlexGap sx={{ mb: 1.5 }}>
           {unlocked ? (
             degradedOk ? (
-              <Chip size="small" color="warning" variant="outlined" label="降级解锁（结构预览已确认）" />
+              <Chip size="small" color="warning" variant="outlined" label={describeExportGate('degraded')} />
             ) : (
-              <Chip size="small" color="success" variant="outlined" label="门禁已解锁（像素预览为当前内容）" />
+              <Chip size="small" color="success" variant="outlined" label={describeExportGate('ready')} />
             )
           ) : (
-            <Chip size="small" color="default" variant="outlined" label="导出已锁定（需先预览当前内容）" />
+            <Chip size="small" color="default" variant="outlined" label={describeExportGate('locked')} />
           )}
           {previewCached && <Chip size="small" color="success" variant="outlined" label="命中缓存" />}
           <Typography variant="caption" color="text.secondary">
@@ -230,7 +231,7 @@ function ExportDrawerForPaper(props: ExportDrawerProps) {
           {envFail !== null && (
             <Alert severity="warning" icon={<WarningAmberIcon />} sx={{ mb: 1.5 }}>
               <Typography variant="subtitle2">
-                当前环境不支持像素预览，已降级为「结构预览确认」
+                当前电脑无法生成像素预览，已改用结构预览确认
               </Typography>
               <Typography variant="body2" sx={{ mb: 1 }}>
                 原因：{envReason(envFail)}。
@@ -248,7 +249,7 @@ function ExportDrawerForPaper(props: ExportDrawerProps) {
                   我已确认下方结构预览 → 允许导出
                 </Button>
               ) : (
-                <Chip size="small" color="warning" label="已确认结构预览（降级解锁）" />
+                <Chip size="small" color="warning" label={describeExportGate('degraded')} />
               )}
               <Box sx={{ mt: 1.5 }}>
                 {exportDataQ.isLoading && <CircularProgress size={18} />}

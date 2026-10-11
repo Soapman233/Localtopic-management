@@ -20,7 +20,7 @@ import {
   Typography,
 } from '@mui/material'
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore'
-import type { CoverageBucket, FacetsData } from '../api/types'
+import type { CoverageBucket, FacetDimension, FacetsData } from '../api/types'
 import type { SearchParams } from '../api/search'
 
 /** 维度定义：key 与后端 facets 维度名一致。 */
@@ -55,6 +55,20 @@ function coverageOf(facets: FacetsData | null | undefined, key: string): Coverag
   if (!facets?.coverage) return undefined
   const c = facets.coverage as unknown as Record<string, CoverageBucket | undefined>
   return c[key]
+}
+
+/**
+ * 该维度在库中**是否有可用取值**（P0-5）。
+ *
+ * 背景：难度字段全库 **100% 未标注**（源数据无难度），但筛选栏仍提供「难度」维度 →
+ * 老师点了筛不出任何结果，会误判成「系统坏了 / 题库没题」，而不是「数据没标」。
+ *
+ * 判定：`items` 为空即无可用取值（只剩「待补充」桶）。
+ * **未知（尚未加载，bucket 为 undefined）时不判定为不可用**，避免加载期间闪现「暂不可用」。
+ */
+function dimensionUsable(bucket?: FacetDimension): boolean {
+  if (!bucket) return true
+  return bucket.items.length > 0
 }
 
 /** 覆盖率徽标：按后端动态统计显示当前维度覆盖率，不硬编码历史题量。 */
@@ -172,7 +186,7 @@ export function FilterSidebar({
       <Accordion defaultExpanded disableGutters elevation={0}
         sx={{ '&:before': { display: 'none' }, border: '1px solid', borderColor: 'divider', borderRadius: 1, mb: 1 }}>
         <AccordionSummary expandIcon={<ExpandMoreIcon />}>
-          <Typography variant="body2" fontWeight={600}>知识点（提及）</Typography>
+          <Typography variant="body2" fontWeight={600}>知识点（搜索线索）</Typography>
         </AccordionSummary>
         <AccordionDetails sx={{ pt: 0 }}>
           <Typography variant="caption" color="text.secondary" display="block" sx={{ mb: 1 }}>
@@ -204,8 +218,10 @@ export function FilterSidebar({
         const selected = (filters as Record<string, unknown>)[dim.key] as string | undefined
         const missingSelected = dim.missingKey ? Boolean(filters[dim.missingKey]) : false
         const cov = coverageOf(facets, dim.key)
+        const usable = dimensionUsable(bucket)
         return (
-          <Accordion key={dim.key} defaultExpanded disableGutters elevation={0}
+          <Accordion key={dim.key} data-testid={`filter-dim-${dim.key}`}
+            defaultExpanded={usable} disableGutters elevation={0}
             sx={{ '&:before': { display: 'none' }, border: '1px solid', borderColor: 'divider', borderRadius: 1, mb: 1 }}>
             <AccordionSummary expandIcon={<ExpandMoreIcon />}>
               <Stack direction="row" spacing={0.5} alignItems="center" sx={{ minWidth: 0 }}>
@@ -213,58 +229,88 @@ export function FilterSidebar({
                   {dim.label}
                 </Typography>
                 <CoverageChip bucket={cov} label={dim.label} />
+                {!usable && (
+                  <Chip size="small" variant="outlined" label="暂不可用"
+                    sx={{ height: 20, fontSize: 11 }} />
+                )}
               </Stack>
             </AccordionSummary>
             <AccordionDetails sx={{ pt: 0 }}>
-              {['grade', 'textbook', 'chapter'].includes(dim.key) && cov && cov.n < cov.total && (
-                <Typography variant="caption" color="warning.main" display="block" sx={{ mb: 1 }}>
-                  {dim.label}覆盖率 {cov.pct}%；按具体{dim.label}筛选会漏掉
-                  {(cov.total - cov.n).toLocaleString('zh-CN')} 道未标注题。
-                  可选「全部」配合关键词查找，或选「待补充」。
-                </Typography>
-              )}
-              {loading && <Skeleton variant="rounded" height={28} />}
-              {!loading && (
-                <Stack direction="row" spacing={0.5} flexWrap="wrap" useFlexGap>
-                  <Chip
-                    size="small"
-                    label="全部"
-                    color={!selected && !missingSelected ? 'primary' : 'default'}
-                    variant={!selected && !missingSelected ? 'filled' : 'outlined'}
-                    onClick={() => onChange({ [dim.key]: undefined, ...(dim.missingKey ? { [dim.missingKey]: undefined } : {}) } as Partial<SearchParams>)}
-                  />
-                  {(bucket?.items ?? []).slice(0, 30).map((it) => (
-                    <Chip
-                      key={it.key}
-                      size="small"
-                      label={`${it.key} (${it.count.toLocaleString('zh-CN')})`}
-                      color={selected === it.key ? 'primary' : 'default'}
-                      variant={selected === it.key ? 'filled' : 'outlined'}
-                      onClick={() =>
-                        onChange({
-                          [dim.key]: selected === it.key ? undefined : it.key,
-                          ...(dim.missingKey ? { [dim.missingKey]: undefined } : {}),
-                        } as Partial<SearchParams>)
-                      }
-                    />
-                  ))}
-                  {dim.missingKey && (bucket?.missing ?? 0) > 0 && (
-                    <Tooltip title="筛出该维度缺失元数据的题，便于逐题补充">
+              {!usable ? (
+                // P0-5：无标注数据的维度 → 明确说明原因并给出出路，而不是给一排筛不出结果的按钮。
+                <Alert severity="info" sx={{ py: 0.25 }}>
+                  题库中「{dim.label}」尚无标注数据（覆盖率 {cov?.pct ?? 0}%），
+                  按它筛选不会有结果。请改用关键词检索
+                  {(selected || missingSelected) ? '，或清除下面已选的条件' : ''}。
+                  {(selected || missingSelected) && (
+                    <Box sx={{ mt: 0.5 }}>
                       <Chip
                         size="small"
-                        label={`待补充 (${(bucket?.missing ?? 0).toLocaleString('zh-CN')})`}
-                        color={missingSelected ? 'warning' : 'default'}
-                        variant={missingSelected ? 'filled' : 'outlined'}
+                        variant="outlined"
+                        label="清除该筛选"
                         onClick={() =>
                           onChange({
                             [dim.key]: undefined,
-                            [dim.missingKey as string]: missingSelected ? undefined : true,
+                            ...(dim.missingKey ? { [dim.missingKey]: undefined } : {}),
                           } as Partial<SearchParams>)
                         }
                       />
-                    </Tooltip>
+                    </Box>
                   )}
-                </Stack>
+                </Alert>
+              ) : (
+                <>
+                  {['grade', 'textbook', 'chapter'].includes(dim.key) && cov && cov.n < cov.total && (
+                    <Typography variant="caption" color="warning.main" display="block" sx={{ mb: 1 }}>
+                      {dim.label}覆盖率 {cov.pct}%；按具体{dim.label}筛选会漏掉
+                      {(cov.total - cov.n).toLocaleString('zh-CN')} 道未标注题。
+                      可选「全部」配合关键词查找，或选「待补充」。
+                    </Typography>
+                  )}
+                  {loading && <Skeleton variant="rounded" height={28} />}
+                  {!loading && (
+                    <Stack direction="row" spacing={0.5} flexWrap="wrap" useFlexGap>
+                      <Chip
+                        size="small"
+                        label="全部"
+                        color={!selected && !missingSelected ? 'primary' : 'default'}
+                        variant={!selected && !missingSelected ? 'filled' : 'outlined'}
+                        onClick={() => onChange({ [dim.key]: undefined, ...(dim.missingKey ? { [dim.missingKey]: undefined } : {}) } as Partial<SearchParams>)}
+                      />
+                      {(bucket?.items ?? []).slice(0, 30).map((it) => (
+                        <Chip
+                          key={it.key}
+                          size="small"
+                          label={`${it.key} (${it.count.toLocaleString('zh-CN')})`}
+                          color={selected === it.key ? 'primary' : 'default'}
+                          variant={selected === it.key ? 'filled' : 'outlined'}
+                          onClick={() =>
+                            onChange({
+                              [dim.key]: selected === it.key ? undefined : it.key,
+                              ...(dim.missingKey ? { [dim.missingKey]: undefined } : {}),
+                            } as Partial<SearchParams>)
+                          }
+                        />
+                      ))}
+                      {dim.missingKey && (bucket?.missing ?? 0) > 0 && (
+                        <Tooltip title="筛出该维度缺失元数据的题，便于逐题补充">
+                          <Chip
+                            size="small"
+                            label={`待补充 (${(bucket?.missing ?? 0).toLocaleString('zh-CN')})`}
+                            color={missingSelected ? 'warning' : 'default'}
+                            variant={missingSelected ? 'filled' : 'outlined'}
+                            onClick={() =>
+                              onChange({
+                                [dim.key]: undefined,
+                                [dim.missingKey as string]: missingSelected ? undefined : true,
+                              } as Partial<SearchParams>)
+                            }
+                          />
+                        </Tooltip>
+                      )}
+                    </Stack>
+                  )}
+                </>
               )}
             </AccordionDetails>
           </Accordion>

@@ -173,7 +173,7 @@ export default function StatsPage() {
           value={s.review_open.toLocaleString('zh-CN')}
           hint={`已处理 ${s.review_resolved.toLocaleString('zh-CN')}`}
           action={
-            <Button size="small" sx={{ mt: 0.5 }} onClick={() => navigate('/formula-review')}>
+            <Button size="small" sx={{ mt: 0.5 }} onClick={() => navigate('/manage/formula-review')}>
               去处理 →
             </Button>
           }
@@ -191,7 +191,7 @@ export default function StatsPage() {
           <CoverageRow label="章节" bucket={env.chapter} />
           <CoverageRow label="题型" bucket={env.qtype} />
           <CoverageRow label="难度（100% 未标注）" bucket={env.difficulty} />
-          <CoverageRow label="知识点（提及口径）" bucket={env.knowledge} />
+          <CoverageRow label="知识点（搜索线索）" bucket={env.knowledge} />
           <CoverageRow
             label="答案"
             bucket={{ n: ans.with_answer, total: ans.total, pct: ans.total ? Math.round((100 * ans.with_answer) / ans.total) : 0 }}
@@ -234,7 +234,7 @@ export default function StatsPage() {
             <Chip size="small" color="success" variant="outlined" label={`已确认 ${(s.label_status['已确认'] ?? 0).toLocaleString('zh-CN')}`} />
             <Chip size="small" label={`已否决 ${(s.label_status['已否决'] ?? 0).toLocaleString('zh-CN')}`} />
           </Stack>
-          <Button size="small" sx={{ mt: 1 }} onClick={() => navigate('/knowledge')}>
+          <Button size="small" sx={{ mt: 1 }} onClick={() => navigate('/manage/knowledge')}>
             去知识点复核 →
           </Button>
         </Paper>

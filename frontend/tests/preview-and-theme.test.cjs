@@ -201,16 +201,27 @@ test('结构预览仅消费有序块，保留同资源跨分支的独立实例�
   assert.equal(toLines('甲\t乙')[0], '甲\t乙')
 })
 
-test('blocked问题卡不泄漏原正文或图片，仍定位item和来源坐标', () => {
+// P0-1：blocked 卡默认只给老师看「第几题 + 内容待核对 + 来源文件」，
+// item / qid / scan index 等原始坐标藏到 debug 开关后；两种模式都不得泄漏原正文或图片。
+test('blocked问题卡默认不泄漏技术坐标，debug下仍可定位item和来源坐标', () => {
   const model = computeLayout('作业', 'A4')
-  const issue = { summary: '答案片段', message: '来源答案区', source: { file_name: '来源.docx', start_scan_index: 5, end_scan_index: 6, body_paragraph_number: 8 }, suggested_action: '移除候选' }
+  const issue = { kind: 'answer_region_item', severity: 'warning', paper_id: 1, item_id: 113, seq: 5, question_id: 5542, question_version: 3, summary: '答案片段', message: '来源答案区', blocked_modes: [], source: { file_name: '来源.docx', start_scan_index: 5, end_scan_index: 6, body_paragraph_number: 8 }, suggested_action: '移除候选' }
   const q = buildBlocks({ paper: {}, sections: [{ name: '一', questions: [{ item_id: 113, question_id: 5542, seq: 5, score: null, content_status: 'blocked', content_blocks: [], text: '绝不展示', images: [{ url: '/secret.png' }], issues: [issue] }] }] }, model, new Map()).find(b => b.kind === 'question')
+  // 默认（非 debug）：老师界面不得出现原始技术字段，也不泄漏原正文/图片。
   const html = renderToStaticMarkup(React.createElement(BlockView, { block: q, model }))
-  assert.match(html, /item 113/)
-  assert.match(html, /qid 5542/)
-  assert.match(html, /scan index（0起）/)
-  assert.match(html, /body直属段号（1起）/)
+  assert.doesNotMatch(html, /item 113|qid 5542|scan index（0起）|body直属段号（1起）|instance_id/)
+  assert.match(html, /来源\.docx/)
+  assert.match(html, /内容待核对/)
   assert.doesNotMatch(html, /绝不展示|secret.png/)
+  // debug（localStorage qb_debug=1）：维护者仍能定位 item 与来源坐标。
+  global.localStorage.setItem('qb_debug', '1')
+  const dbg = renderToStaticMarkup(React.createElement(BlockView, { block: q, model }))
+  global.localStorage.removeItem('qb_debug')
+  assert.match(dbg, /item 113/)
+  assert.match(dbg, /qid 5542/)
+  assert.match(dbg, /scan index（0起）/)
+  assert.match(dbg, /body直属段号（1起）/)
+  assert.doesNotMatch(dbg, /绝不展示|secret.png/)
 })
 
 test('可信源extent的小图不被最小图宽放大，比例保持', () => {

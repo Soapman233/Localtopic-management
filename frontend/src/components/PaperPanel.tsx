@@ -36,6 +36,7 @@ import type { Paper as PaperModel, PaperItem, PaperSection, ExportQuestion } fro
 import type { PaperPatchBody } from '../api/papers'
 import { ConfirmDialog } from './ConfirmDialog'
 import { SortableItemRow, isStale } from './PaperPanelItemRow'
+import { GLOSSARY, describeSnapshotStale } from '../lib/glossary'
 
 const TEMPLATES = ['考试', '测验', '作业']
 const ANSWER_MODES = ['学生版', '答案解析版', '仅答案']
@@ -237,11 +238,11 @@ export function PaperPanel({
               startIcon={<RefreshIcon />}
               onClick={() => actions.refreshSnapshots()}
             >
-              刷新
+              {GLOSSARY.lockedSnapshotAction}
             </Button>
           }
         >
-          {staleCount} 题在题库中已更新，本卷仍用加入时的版本（快照锁定）。
+          {describeSnapshotStale(staleCount)}
         </Alert>
       )}
 

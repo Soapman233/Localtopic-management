@@ -57,4 +57,17 @@ describe('CoverageBanner', () => {
     fireEvent.click(screen.getByLabelText('关闭提示'))
     expect(onDismiss).toHaveBeenCalledTimes(1)
   })
+
+  it('覆盖率为 0 的维度显示「未标注」而不是「0%」（P0-5）', () => {
+    renderWithTheme(<CoverageBanner coverage={makeCoverage()} dismissed={false} onDismiss={vi.fn()} />)
+    // 样本里 textbook / chapter 的 n=0 → 应显示「未标注（7,945 题）」
+    expect(screen.getAllByText(/未标注（7,945 题）/).length).toBeGreaterThan(0)
+    // 且不应再出现会被误读成"统计坏了"的 0%
+    expect(screen.queryByText('0%（0/7,945）')).not.toBeInTheDocument()
+  })
+
+  it('明说「难度」全库未标注、暂不能按难度筛选', () => {
+    renderWithTheme(<CoverageBanner coverage={makeCoverage()} dismissed={false} onDismiss={vi.fn()} />)
+    expect(screen.getByText(/暂不能按难度筛选/)).toBeInTheDocument()
+  })
 })

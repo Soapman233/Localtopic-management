@@ -25,6 +25,7 @@ import { DIFFICULTIES, type Question } from '../api/types'
 import type { QuestionPatchBody } from '../api/questions'
 import { FormulaEditor } from './FormulaEditor'
 import { KatexFormula } from './KatexFormula'
+import { describeMentionScope } from '../lib/glossary'
 
 const QTYPES = ['选择题', '填空题', '计算题', '实验探究题', '作图题', '简答题', '判断题']
 
@@ -203,7 +204,11 @@ export function QuestionEditor({
       </Alert>
 
       <Typography variant="subtitle2" gutterBottom>
-        知识点（提及口径，可编辑标签集合）
+        知识点（可编辑标签集合）
+      </Typography>
+      {/* P0-1：把内部「提及口径」翻译成老师能懂的边界说明——标签只是搜索线索，不等于考点。 */}
+      <Typography variant="caption" color="text.secondary" display="block" sx={{ mb: 1 }}>
+        {describeMentionScope()}。
       </Typography>
       <Stack direction="row" spacing={1} flexWrap="wrap" sx={{ mb: 1 }} useFlexGap>
         {labels.map((name) => (

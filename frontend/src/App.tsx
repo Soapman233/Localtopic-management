@@ -12,6 +12,7 @@ import {
   ListItemButton,
   ListItemIcon,
   ListItemText,
+  ListSubheader,
   Toolbar,
   Typography,
   useMediaQuery,
@@ -42,17 +43,80 @@ export interface NavItem {
   icon: ReactNode
 }
 
-/** 9 个页面的导航定义（全部已接入真实实现，见 router.tsx）。 */
-export const NAV_ITEMS: NavItem[] = [
-  { path: 'search', label: '检索题库', description: '关键词 + 筛选栏找题（P1）', icon: <SearchIcon /> },
-  { path: 'builder', label: '组卷', description: '左题库右试卷双栏组卷（P3）', icon: <EditNoteIcon /> },
-  { path: 'export', label: '导出', description: '先预览再导出 DOCX/PDF（P4）', icon: <FileDownloadIcon /> },
-  { path: 'knowledge', label: '知识点复核', description: '按标签确认/否决（P5）', icon: <ChecklistIcon /> },
-  { path: 'formula-review', label: '待复核公式', description: '非 OK 公式队列（P6）', icon: <FunctionsIcon /> },
-  { path: 'sources', label: '来源文件', description: '来源文件管理（P7）', icon: <FolderIcon /> },
-  { path: 'stats', label: '题库统计', description: '总览与分布（P8）', icon: <BarChartIcon /> },
-  { path: 'settings', label: '系统设置', description: 'DB 路径 / 导出目录 / 偏好（P9）', icon: <SettingsIcon /> },
+/** 导航分组：一个分组标题（渲染为 `ListSubheader`）+ 若干导航项。 */
+export interface NavGroup {
+  label: string
+  items: NavItem[]
+}
+
+/**
+ * 侧栏导航分组（P0-4 / P1-6 信息架构重构）。
+ *
+ * 原来是一个 8 项扁平等权的 `NAV_ITEMS`，老师分不清"日常要用的"和"偶尔维护的"。
+ * 现按**使用频率**拆成两组：
+ * - 「日常备课」：老师每天都要用的高频页（组卷 / 找题 / 导出）；
+ * - 「数据治理」：偶尔维护的低频页（知识点复核 / 公式复核 / 来源文件 / 统计）。
+ *
+ * 「系统设置」不属任何分组，固定在侧栏底部单独呈现（见 `SETTINGS_ITEM`）。
+ */
+export const NAV_GROUPS: NavGroup[] = [
+  {
+    label: '日常备课',
+    items: [
+      // 组卷工作台是老师最高频的动作，也是默认落地页（router.tsx 的 index/* 都指向 /builder）。
+      { path: 'builder', label: '组卷工作台', description: '边找题边组卷，左题库右试卷', icon: <EditNoteIcon /> },
+      { path: 'search', label: '找题', description: '关键词 + 筛选，批量找题', icon: <SearchIcon /> },
+      { path: 'export', label: '导出中心', description: '先预览，再导出 DOCX / PDF', icon: <FileDownloadIcon /> },
+    ],
+  },
+  {
+    label: '数据治理',
+    items: [
+      { path: 'manage/knowledge', label: '知识点复核', description: '按标签确认或否决知识点', icon: <ChecklistIcon /> },
+      { path: 'manage/formula-review', label: '公式复核', description: '处理待复核的公式', icon: <FunctionsIcon /> },
+      { path: 'manage/sources', label: '来源文件', description: '管理题目来源文件', icon: <FolderIcon /> },
+      { path: 'manage/stats', label: '题库统计', description: '查看题库总量与分布', icon: <BarChartIcon /> },
+    ],
+  },
 ]
+
+/** 系统设置：不归入任何分组，固定显示在侧栏底部。 */
+export const SETTINGS_ITEM: NavItem = {
+  path: 'settings',
+  label: '系统设置',
+  description: '数据库路径、导出目录与偏好',
+  icon: <SettingsIcon />,
+}
+
+/**
+ * 扁平导航项（**向后兼容导出**）。
+ *
+ * `router.tsx` 依赖它构建路由子表，测试也用它做"路径唯一 / 无漏项"等不变量校验。
+ * 顺序 = 各分组项顺序 + 末尾的系统设置。
+ */
+export const NAV_ITEMS: NavItem[] = [...NAV_GROUPS.flatMap((g) => g.items), SETTINGS_ITEM]
+
+/**
+ * 单个侧栏导航按钮。
+ *
+ * 抽成独立组件是因为它内部要用 `useLocation` 判断选中态（`selected`），
+ * 不能在 `App` 的 `render` 里以普通函数形式调用 Hooks。
+ */
+function NavListButton({ item, onNavigate }: { item: NavItem; onNavigate: (path: string) => void }) {
+  const location = useLocation()
+  // 用前缀匹配：治理页位于 /manage/* 子路径下，访问子路由时父项也应保持高亮。
+  const selected = location.pathname.startsWith(`/${item.path}`)
+  return (
+    <ListItemButton selected={selected} onClick={() => onNavigate(item.path)}>
+      <ListItemIcon sx={{ minWidth: 40 }}>{item.icon}</ListItemIcon>
+      <ListItemText
+        primary={item.label}
+        secondary={item.description}
+        secondaryTypographyProps={{ variant: 'caption', noWrap: true }}
+      />
+    </ListItemButton>
+  )
+}
 
 function HealthBanner() {
   const { data, isError } = useQuery({
@@ -91,6 +155,12 @@ export default function App() {
   const isNarrowNav = useMediaQuery(theme.breakpoints.down('md'))
   const [navOpen, setNavOpen] = useState(false)
 
+  /** 统一导航动作：跳转 +（窄屏时）收起临时抽屉。 */
+  const handleNavigate = (path: string) => {
+    navigate(`/${path}`)
+    if (isNarrowNav) setNavOpen(false)
+  }
+
   return (
     <Box sx={{ display: 'flex', minHeight: '100vh' }}>
       <AppBar
@@ -111,7 +181,7 @@ export default function App() {
             </IconButton>
           )}
           <Typography variant="h6" noWrap component="div">
-            题库 Web 界面 · 初中物理
+            初中物理 · 题库与组卷
           </Typography>
         </Toolbar>
       </AppBar>
@@ -128,29 +198,36 @@ export default function App() {
         }}
       >
         <Toolbar variant="dense" />
-        <Box sx={{ overflow: 'auto' }}>
-          <List>
-            {NAV_ITEMS.map((item) => {
-              const selected = location.pathname.startsWith(`/${item.path}`)
-              return (
-                <ListItemButton
-                  key={item.path}
-                  selected={selected}
-                  onClick={() => {
-                    navigate(`/${item.path}`)
-                    if (isNarrowNav) setNavOpen(false)
+        {/* 分组导航：分组名用 ListSubheader 呈现（非交互元素，不进 Tab 序列）；
+            系统设置用 mt:auto 顶到底部，与日常/治理两组视觉分离。 */}
+        <Box sx={{ overflow: 'auto', flexGrow: 1, display: 'flex', flexDirection: 'column' }}>
+          {NAV_GROUPS.map((group) => (
+            <List
+              key={group.label}
+              subheader={
+                <ListSubheader
+                  component="div"
+                  disableSticky
+                  sx={{
+                    bgcolor: 'transparent',
+                    color: 'text.secondary',
+                    fontSize: 12,
+                    fontWeight: 600,
+                    lineHeight: 2,
+                    mt: 1,
                   }}
                 >
-                  <ListItemIcon sx={{ minWidth: 40 }}>{item.icon}</ListItemIcon>
-                  {/* P1-6：渲染 NAV_ITEMS.description（此前定义却未使用），作为导航副标题。 */}
-                  <ListItemText
-                    primary={item.label}
-                    secondary={item.description}
-                    secondaryTypographyProps={{ variant: 'caption', noWrap: true }}
-                  />
-                </ListItemButton>
-              )
-            })}
+                  {group.label}
+                </ListSubheader>
+              }
+            >
+              {group.items.map((item) => (
+                <NavListButton key={item.path} item={item} onNavigate={handleNavigate} />
+              ))}
+            </List>
+          ))}
+          <List sx={{ mt: 'auto' }}>
+            <NavListButton item={SETTINGS_ITEM} onNavigate={handleNavigate} />
           </List>
         </Box>
       </Drawer>

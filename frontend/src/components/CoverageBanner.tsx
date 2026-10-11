@@ -15,6 +15,14 @@ function fmtPct(bucket?: CoverageBucket | null): string {
   return `${bucket.pct ?? 0}%（${n}/${total}）`
 }
 
+/**
+ * 覆盖率**为 0** 的维度（如难度）应显示为「未标注」而不是「0%」——
+ * 「0%」看起来像"统计坏了"，「未标注」才说明"数据本身没标，需要人工补"（P0-5）。
+ */
+function isUnannotated(bucket?: CoverageBucket | null): boolean {
+  return Boolean(bucket) && (bucket?.n ?? 0) === 0
+}
+
 export interface CoverageBannerProps {
   coverage?: CoverageSummary | null
   dismissed: boolean
@@ -48,6 +56,7 @@ export function CoverageBanner({ coverage, dismissed, onDismiss }: CoverageBanne
       <Typography variant="body2" sx={{ mb: 0.5 }}>
         年级、教材、章节尚未标全，按这些维度筛选会漏掉未标注的题。
         可清除相应筛选后用关键词查找，或选择「待补充」查看缺失项。
+        「难度」需教研组人工标注，当前全库均未标注，暂不能按难度筛选。
       </Typography>
       <Stack direction="row" flexWrap="wrap" columnGap={2} rowGap={0.5}>
         {items.map((it) => (
@@ -55,9 +64,16 @@ export function CoverageBanner({ coverage, dismissed, onDismiss }: CoverageBanne
             <Typography variant="body2" component="span" color="text.secondary">
               {it.label}{' '}
             </Typography>
-            <Typography variant="body2" component="span" fontWeight={600}>
-              {fmtPct(it.bucket)}
-            </Typography>
+            {isUnannotated(it.bucket) ? (
+              // P0-5：0% 不等于"统计坏了"，要直说是"未标注"。
+              <Typography variant="body2" component="span" fontWeight={600} color="warning.main">
+                未标注（{it.bucket?.total?.toLocaleString('zh-CN') ?? '0'} 题）
+              </Typography>
+            ) : (
+              <Typography variant="body2" component="span" fontWeight={600}>
+                {fmtPct(it.bucket)}
+              </Typography>
+            )}
           </Box>
         ))}
         <Box>

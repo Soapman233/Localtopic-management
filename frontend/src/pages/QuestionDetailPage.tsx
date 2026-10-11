@@ -40,6 +40,7 @@ import { QuestionEditor } from '../components/QuestionEditor'
 import { VersionHistory } from '../components/VersionHistory'
 import { ErrorCode, errorCodeOf, errorDataOf } from '../api/errors'
 import { qk } from '../api/queryKeys'
+import { describeMentionScope } from '../lib/glossary'
 
 /** 单条公式展示块（点击可查看 latex 源码）。 */
 function FormulaRow({ formula }: { formula: Formula }) {
@@ -237,7 +238,10 @@ export default function QuestionDetailPage() {
             </Stack>
 
             <Typography variant="subtitle2" color="text.secondary" gutterBottom>
-              知识点标签（提及口径，三态）
+              知识点标签（三态）
+            </Typography>
+            <Typography variant="caption" color="text.secondary" display="block" sx={{ mb: 1 }}>
+              {describeMentionScope()}。
             </Typography>
             <Stack direction="row" spacing={0.5} flexWrap="wrap" useFlexGap sx={{ mb: 2 }}>
               {(q.labels ?? []).length === 0 && (

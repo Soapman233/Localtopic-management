@@ -29,6 +29,7 @@ import {
   type TemplateSpec,
 } from './spec'
 import { FormulaText } from '../KatexFormula'
+import { describeIssueSource, describeIssueTechnical, describeTechnicalInfo, isDebugMode } from '../../lib/glossary'
 
 // --------------------------------------------------------------------------- //
 // 图片解析结果（由调用方注入）
@@ -351,11 +352,17 @@ export function BlockView({ block, model }: BlockViewProps): ReactNode {
   return (
     <div className="lp-question" style={{ fontFamily: '"宋体", "SimSun", serif', fontSize: model.bodyFontPx }}>
       {block.blocked ? <div className="lp-content-blocked" data-item-id={block.itemId}>
-        <strong>第 {block.qNumber} 项 · item {block.itemId} · qid {block.qId}：内容待核对，无法正式出卷</strong>
+        {/* P0-1：老师只看「第几题 + 内容待核对」；item / qid / scan index 等原始字段走 debug。 */}
+        <strong>第 {block.qNumber} 题：内容待核对，暂无法导出</strong>
         {(block.issues ?? []).map((issue, i) => <div key={i}>
-          锁定 v{issue.question_version} · {issue.summary}：{issue.message}<br />
-          来源 {issue.source.file_name ?? '—'}；scan index（0起）{issue.source.start_scan_index ?? '—'}–{issue.source.end_scan_index ?? '—'}；body直属段号（1起）{issue.source.body_paragraph_number ?? '—'}<br />
-          建议：{issue.suggested_action}
+          {issue.severity === 'blocker' ? '【阻断】' : '【提示】'}{issue.summary}：{issue.message}<br />
+          {describeIssueSource(issue.source)}；建议：{issue.suggested_action}
+          {isDebugMode() && <details>
+            <summary style={{ cursor: 'pointer' }}>{describeTechnicalInfo()}</summary>
+            <div style={{ fontFamily: 'monospace', whiteSpace: 'pre-wrap', overflowWrap: 'anywhere' }}>
+              {describeIssueTechnical(issue)}
+            </div>
+          </details>}
         </div>)}
       </div> : (block.content ?? []).map((part, i, all) => {
         const branchTitle = part.branch !== 'stem' && (i === 0 || all[i - 1].branch !== part.branch)

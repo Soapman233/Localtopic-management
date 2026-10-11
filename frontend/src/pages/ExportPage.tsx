@@ -38,6 +38,7 @@ import { PreviewViewer } from '../components/PreviewViewer'
 import { ExportResultPanel } from '../components/ExportResultPanel'
 import { usePaperStore } from '../store/paperStore'
 import { useExportGate } from '../hooks/useExportGate'
+import { describeExportGate } from '../lib/glossary'
 
 const ANSWER_MODES = ['学生版', '答案解析版', '仅答案']
 const TEMPLATES = ['考试', '测验', '作业']
@@ -116,12 +117,12 @@ function PaperExportPage({ paperId, onRevised }: { paperId: number; onRevised: (
         </Typography>
         {unlocked ? (
           degradedOk ? (
-            <Chip size="small" color="warning" variant="outlined" label="降级解锁（结构预览已确认）" />
+            <Chip size="small" color="warning" variant="outlined" label={describeExportGate('degraded')} />
           ) : (
-            <Chip size="small" color="success" variant="outlined" label="门禁已解锁（像素预览为当前内容）" />
+            <Chip size="small" color="success" variant="outlined" label={describeExportGate('ready')} />
           )
         ) : (
-          <Chip size="small" variant="outlined" label="导出已锁定（需先生成像素预览）" />
+          <Chip size="small" variant="outlined" label={describeExportGate('locked')} />
         )}
       </Stack>
       <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1 }}>
