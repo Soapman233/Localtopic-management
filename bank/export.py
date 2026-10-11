@@ -492,6 +492,10 @@ _RM_SUPERSCRIPT_RE = re.compile(
 #: **注意**：``\begin{array}`` 环境内的 ``&`` 有真实对齐语义，本规则不处理
 #: （该环境本身不受桥接支持，属已知限制，导出会如实降级并告警）。
 _STRAY_AMP_RE = re.compile(r"\s*&\s*")
+#: ``\sqrt[]{X}`` —— MTEF 产出的**空可选参数**根号，桥接无法渲染（实测
+#: ``b=\sqrt[]{\frac{10N}{4000Pa}}`` 报 ``ToCommands returned empty``）。
+#: 归一为 ``\sqrt{X}``（去掉空 ``[]``）。
+_SQRT_EMPTY_OPT_RE = re.compile(r"\\sqrt\s*\[\s*\]")
 #: ``\mathrm{`` / ``\rm{`` 的起始（后面必须紧跟花括号）。
 _RM_START_RE = re.compile(r"\\(?:mathrm|rm)\s*(?=\{)")
 
@@ -561,6 +565,8 @@ def repair_latex(latex: str | None) -> str | None:
     # 规则四：剔除游离对齐符（数组环境内的 ``&`` 有真实语义，不动）。
     if "\\begin{" not in latex:
         latex = _STRAY_AMP_RE.sub("", latex)
+    # 规则五：去掉根号的空可选参数 ``\sqrt[]`` → ``\sqrt``。
+    latex = _SQRT_EMPTY_OPT_RE.sub(r"\\sqrt", latex)
     protected: list[str] = []
 
     def _protect(m):

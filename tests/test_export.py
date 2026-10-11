@@ -216,6 +216,15 @@ class TestRepairLatex(unittest.TestCase):
         src = "{\\rm{{\\text{浮}}"
         self.assertEqual(export.unwrap_nested_rm(src), src)
 
+    def test_sqrt_empty_optional_arg_removed(self):
+        """``\\sqrt[]``（空可选参数）桥接无法渲染 → 去掉 ``[]``。"""
+        self.assertEqual(export.repair_latex("b=\\sqrt[] {\\frac {1} {2}}"),
+                         "b=\\sqrt {\\frac {1} {2}}")
+
+    def test_sqrt_with_real_index_kept(self):
+        """``\\sqrt[3]{x}`` 的可选参数有真实语义，不得去掉。"""
+        self.assertEqual(export.repair_latex("\\sqrt[3]{x}"), "\\sqrt[3]{x}")
+
 
 class TestPlaceholders(unittest.TestCase):
     """占位符解析与降级。"""
