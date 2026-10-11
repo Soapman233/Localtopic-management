@@ -8,7 +8,36 @@
 
 ## [Unreleased]
 
-### 新增
+### 新增（前端重构 · 阶段 0「护栏先行」）
+
+**目标：不改视觉与功能，先建后续重构的安全网。**
+
+- **vitest 组件测试基座**（此前最大风险：旧测试全是「源码字符串断言」，重构一改结构即失效）：
+  `frontend/vitest.config.ts` + `tests/unit/setup.ts`（补齐 jsdom 缺失的 `matchMedia` /
+  `ResizeObserver` / `IntersectionObserver` / `document.fonts`）+ `tests/unit/testUtils.tsx`。
+  `npm test` 现同时跑 `node:test`（26 项）与 vitest；**vitest 49 项**。
+- **页面级错误边界**（`components/ErrorBoundary.tsx`）：此前全站**无** ErrorBoundary，
+  单页渲染异常即**整站白屏**。现顶层 + 页面级双层包裹，切换路由自动重置，兜底界面为中文教师语言，
+  技术细节默认折叠。
+- **统一反馈底座**（`lib/feedback.ts` + `components/NotifierBridge.tsx`）：接入 notistack，
+  提供组件内 `useNotify()` 与组件外全局 `notify`；已接入两个真实消费方——
+  检索页加入失败提示、以及 `MutationCache.onError` 对**无本地 onError 的 mutation** 的全局兜底。
+- **契约收敛**：`api/errors.ts`（错误码常量 + `describeApiError` / `isContentGuardError` /
+  `errorDataOf` 等语义函数）与 `api/queryKeys.ts`（`qk` 工厂）。
+  **11 个文件的内联 queryKey 全部迁移**，残留 0；4 处错误码硬编码判断改为语义函数。
+- **`webui/config.py` 支持 `QB_DB_PATH` / `QB_EXPORT_DIR`** 环境变量覆盖
+  （此前 `editions/online/.env.example` 已承诺但未实现，线上版配置不自洽）。
+
+### 修复
+
+- **notistack 容器懒渲染**：容器仅在出现提示时进入 DOM——据此写「容器是否存在」的断言会误判。
+
+### 变更
+
+- 前端测试口径：**26 → 75 项**（26 `node:test` + 49 `vitest`）。
+- 根目录 `启动题库.bat` 迁移至 `editions/local/启动题库.bat`（分类管理）。
+
+### 新增（版本拆分）
 
 - **两个版本（editions）与目录分类**：项目按运行形态拆分为
   **本地运行版**（`editions/local/`，仅 `127.0.0.1`，无鉴权）与
@@ -23,10 +52,6 @@
 - 前端开发素材库（为重构做准备）：`vitest` + `@testing-library/react` + `jsdom`（测试基座）、
   `notistack`（全局 toast）、`react-error-boundary`（错误边界）、`zod`（运行时校验）。
 - 补 **14 项**版本/鉴权回归测试（`tests/test_edition.py`）。
-
-### 变更
-
-- 根目录 `启动题库.bat` 迁移至 `editions/local/启动题库.bat`（分类管理）。
 
 ### 文档
 

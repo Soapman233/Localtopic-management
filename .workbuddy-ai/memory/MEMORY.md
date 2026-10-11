@@ -71,3 +71,18 @@
   （26 项为源码字符串断言，重构即失效，须先建 vitest 组件测试）；5 项 P0 可用性问题。
   重构分 6 阶段（护栏先行 → 术语/IA → 设计系统 → 主流程 → 两版适配 → 性能/a11y），**不推倒技术栈**。
 
+### 前端重构 · 阶段 0「护栏先行」（2026-10-11 完成）
+- **测试基座**：`frontend/vitest.config.ts` + `tests/unit/`（jsdom + Testing Library）。
+  `npm test` = `node --test`(26) + `vitest run`(49) = **75 项**。
+  ⚠️ **`vitest` 必须 2.x**（5.x 要 vite≥6，与本项目 vite 5 冲突 ERESOLVE）；
+  ⚠️ `vitest.config.ts` 的 `include` **必须限定** `tests/unit/**`，否则会收集 `tests/*.test.cjs`（node:test 语法）而报错；
+  ⚠️ jsdom 缺 `matchMedia`/`ResizeObserver`/`IntersectionObserver`/`document.fonts`，setup 里必须补桩。
+- **错误边界**：`components/ErrorBoundary.tsx`（react-error-boundary v6），顶层（main.tsx）+ 页面级（App.tsx 包 `Outlet`，`resetKeys=[location.pathname]`）。
+- **反馈底座**：`lib/feedback.ts`（`useNotify()` + 全局 `notify`）+ `components/NotifierBridge.tsx`；
+  消费方：SearchPage 加入失败、`MutationCache.onError`（仅无本地 onError 的 mutation）。
+  ⚠️ **notistack 容器懒渲染**：无提示时 `.notistack-SnackbarContainer` 不在 DOM，别用它做断言。
+- **契约**：`api/errors.ts` + `api/queryKeys.ts`；**11 个文件内联 queryKey 全量迁移，残留 0**。
+- **`webui/config.py` 支持 `QB_DB_PATH` / `QB_EXPORT_DIR`**（此前 `.env.example` 承诺但未实现）。
+- 验证：后端 387 / 前端 75 / tsc 0 / build 成功 / 浏览器冒烟 7/7 / toast 端到端 5/5（零写入）/ 反证成立。
+- 文档：`deliverables/前端重构阶段0-护栏先行-2026-10-11.md`。
+

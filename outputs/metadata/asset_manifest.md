@@ -1,6 +1,6 @@
 # 交付资产元数据清单
 
-- 生成时间：2026-10-11T15:15:05.088347+08:00
+- 生成时间：2026-10-11T15:40:36.931694+08:00
 - 资产数量：168
 - 版本策略：**阶段制，暂用 0.x（首次交付 0.1.0）**
 - `author`：统一 `待补充`（用户明确要求）
@@ -11,7 +11,7 @@
 | outputs-handoff-R-复核公式分类-md | `outputs/handoff/R-复核公式分类.md` | R复核公式分类交接 | 交付报告 | 交付报告 | 0.1.0 | 15714 | 2026-10-10T15:05:41.936071+08:00 | 2026-10-10T15:06:56.081346+08:00 | 公式、交接 |
 | outputs-handoff-A-复核公式契约冻结-md | `outputs/handoff/A-复核公式契约冻结.md` | A复核公式契约冻结交接 | 交付报告 | 交付报告 | 0.1.0 | 9890 | 2026-10-10T15:07:33.759580+08:00 | 2026-10-10T16:14:35.748781+08:00 | 公式、交接 |
 | outputs-handoff-T-复核公式验证-md | `outputs/handoff/T-复核公式验证.md` | T复核公式独立验证交接 | 交付报告 | 交付报告 | 0.1.0 | 15440 | 2026-10-10T16:58:59.604810+08:00 | 2026-10-10T16:58:59.604810+08:00 | 公式、交接 |
-| frontend-src-pages-FormulaReviewPage-tsx | `frontend/src/pages/FormulaReviewPage.tsx` | 复核公式队列页 | Web界面 | Web界面 | 0.1.0 | 11669 | 2026-10-07T12:40:15.177934+08:00 | 2026-10-10T16:24:36.263561+08:00 | 复核、界面 |
+| frontend-src-pages-FormulaReviewPage-tsx | `frontend/src/pages/FormulaReviewPage.tsx` | 复核公式队列页 | Web界面 | Web界面 | 0.1.0 | 11991 | 2026-10-07T12:40:15.177934+08:00 | 2026-10-11T15:29:59.775251+08:00 | 复核、界面 |
 | tests-test-mtef-strict-records-py | `tests/test_mtef_strict_records.py` | 严格v5记录兼容测试 | 测试 | 测试 | 0.1.0 | 3517 | 2026-10-10T16:20:21.441657+08:00 | 2026-10-10T16:20:21.442663+08:00 | 公式、验证 |
 | outputs-handoff-D-复核公式修复-md | `outputs/handoff/D-复核公式修复.md` | D复核公式修复交接 | 交付报告 | 交付报告 | 0.1.0 | 12756 | 2026-10-10T16:35:19.168970+08:00 | 2026-10-10T17:01:38.856548+08:00 | 公式、交接 |
 | outputs-formula-rdt-20261010-README-md | `outputs/formula-rdt-20261010/README.md` | 复核公式分类与修复索引 | 交付报告 | 交付报告 | 0.1.0 | 4861 | 2026-10-10T16:35:19.012677+08:00 | 2026-10-10T17:03:28.854785+08:00 | 公式、验证 |
@@ -50,7 +50,7 @@
 | bank-edit-py | `bank/edit.py` | 题目编辑与留版 | Web界面/阶段2-题库 | Web界面 | 0.1.0 | 26633 | 2026-10-07T11:20:52.380855+08:00 | 2026-10-07T11:27:02.349855+08:00 | 在线编辑、留版、版本快照、content_hash 冲突、FTS、难度标注 |
 | bank-review-py | `bank/review.py` | 待复核公式队列 | Web界面/阶段2-题库 | Web界面 | 0.1.0 | 2605 | 2026-10-07T11:20:52.380855+08:00 | 2026-10-07T11:20:52.380855+08:00 | 待复核、review_queue、公式、标记已处理 |
 | webui-init-py | `webui/__init__.py` | webui 包入口 | Web界面 | Web界面 | 0.1.0 | 1606 | 2026-10-07T11:18:38.098820+08:00 | 2026-10-07T11:18:38.098820+08:00 | Web界面、FastAPI、包入口 |
-| webui-config-py | `webui/config.py` | webui 配置与环境自检 | Web界面 | Web界面 | 0.1.0 | 10998 | 2026-10-07T11:18:38.098820+08:00 | 2026-10-09T11:05:14.824809+08:00 | 配置、设置、环境自检、editor_sdk、Office、降级 |
+| webui-config-py | `webui/config.py` | webui 配置与环境自检 | Web界面 | Web界面 | 0.1.0 | 11378 | 2026-10-07T11:18:38.098820+08:00 | 2026-10-11T15:36:47.087573+08:00 | 配置、设置、环境自检、editor_sdk、Office、降级 |
 | webui-db-py | `webui/db.py` | webui 连接工厂 | Web界面 | Web界面 | 0.1.0 | 3529 | 2026-10-07T11:18:38.098820+08:00 | 2026-10-07T11:18:38.101822+08:00 | 连接工厂、写锁、busy_timeout、SQLite |
 | webui-errors-py | `webui/errors.py` | webui 统一错误处理 | Web界面 | Web界面 | 0.1.0 | 11110 | 2026-10-07T11:18:38.098820+08:00 | 2026-10-10T21:51:51.112910+08:00 | 错误处理、统一响应、异常处理器、错误码 |
 | webui-schemas-py | `webui/schemas.py` | webui 请求/响应模型 | Web界面 | Web界面 | 0.1.0 | 8245 | 2026-10-07T11:18:38.098820+08:00 | 2026-10-10T21:51:51.798892+08:00 | Pydantic、请求模型、响应模型、契约 |
@@ -79,7 +79,7 @@
 | webui-services-stats-svc-py | `webui/services/stats_svc.py` | webui 统计服务 | Web界面 | Web界面 | 0.1.0 | 1250 | 2026-10-07T11:34:53.693890+08:00 | 2026-10-07T11:34:53.693890+08:00 | 统计服务、覆盖率、分布 |
 | webui-services-settings-svc-py | `webui/services/settings_svc.py` | webui 系统设置服务 | Web界面 | Web界面 | 0.1.0 | 1035 | 2026-10-07T11:34:57.010226+08:00 | 2026-10-07T11:34:57.010226+08:00 | 设置服务、settings.json |
 | editions-local-启动题库-bat | `editions/local/启动题库.bat` | 题库一键启动脚本（本地运行版） | Web界面 | Web界面 | 0.1.0 | 1422 | 2026-10-11T15:07:31.471918+08:00 | 2026-10-11T15:08:55.232261+08:00 | 一键启动、批处理、双击、BANK_PY、本地运行版、editions |
-| webui-edition-py | `webui/edition.py` | 版本（edition）配置 | Web界面 | Web界面 | 0.1.0 | 4398 | 2026-10-11T15:06:33.753265+08:00 | 2026-10-11T15:06:33.753265+08:00 | 版本、edition、本地版、线上版、环境变量、鉴权开关 |
+| webui-edition-py | `webui/edition.py` | 版本（edition）配置 | Web界面 | Web界面 | 0.1.0 | 4943 | 2026-10-11T15:06:33.753265+08:00 | 2026-10-11T15:06:33.753265+08:00 | 版本、edition、本地版、线上版、环境变量、鉴权开关 |
 | editions-README-md | `editions/README.md` | 版本分类总览 | Web界面 | Web界面 | 0.1.0 | 4207 | 2026-10-11T15:07:31.469918+08:00 | 2026-10-11T15:07:31.470918+08:00 | 版本分类、editions、本地版、线上版、对照 |
 | editions-local-README-md | `editions/local/README.md` | 本地运行版使用说明 | Web界面 | Web界面 | 0.1.0 | 3229 | 2026-10-11T15:07:31.469918+08:00 | 2026-10-11T15:07:31.470918+08:00 | 本地版、使用说明、一键启动、排障 |
 | editions-online-README-md | `editions/online/README.md` | 线上部署版部署指南 | Web界面 | Web界面 | 0.1.0 | 6373 | 2026-10-11T15:07:58.032974+08:00 | 2026-10-11T15:07:58.032974+08:00 | 线上版、部署、nginx、Basic Auth、Docker、并发限制 |
@@ -146,7 +146,7 @@
 | outputs-acceptance-followup-20261010-D-多人部署三档方案-md | `outputs/acceptance-followup-20261010/D-多人部署三档方案.md` | 多人部署三档方案 | 交付报告 | 交付报告 | 0.1.0 | 12229 | 2026-10-10T13:06:34.649730+08:00 | 2026-10-10T13:12:35.602953+08:00 | 验收、验证 |
 | tests-test-grade-gap-py | `tests/test_grade_gap.py` | 年级筛选漏题提示测试 | 测试 | 测试 | 0.1.0 | 4493 | 2026-10-10T12:53:22.131235+08:00 | 2026-10-10T13:12:35.579955+08:00 | 验收、验证 |
 | frontend-src-components-GradeGapNotice-tsx | `frontend/src/components/GradeGapNotice.tsx` | 年级筛选漏题提示 | Web界面 | Web界面 | 0.1.0 | 1418 | 2026-10-10T12:51:41.749301+08:00 | 2026-10-10T13:00:18.089292+08:00 | 验收、验证 |
-| frontend-src-pages-SearchPage-tsx | `frontend/src/pages/SearchPage.tsx` | 题库检索页 | Web界面 | Web界面 | 0.1.0 | 15609 | 2026-10-07T11:32:28.764636+08:00 | 2026-10-11T10:36:38.399086+08:00 | 验收、验证 |
+| frontend-src-pages-SearchPage-tsx | `frontend/src/pages/SearchPage.tsx` | 题库检索页 | Web界面 | Web界面 | 0.1.0 | 15914 | 2026-10-07T11:32:28.764636+08:00 | 2026-10-11T15:32:27.596925+08:00 | 验收、验证 |
 | frontend-src-api-types-ts | `frontend/src/api/types.ts` | 前端 API 类型 | Web界面 | Web界面 | 0.1.0 | 599 | 2026-10-07T11:19:16.186150+08:00 | 2026-10-11T10:39:05.746906+08:00 | 验收、验证 |
 | outputs-acceptance-followup-20261010-A-逐来源年级诊断-csv | `outputs/acceptance-followup-20261010/A-逐来源年级诊断.csv` | 逐来源年级诊断 | 数据产物 | 数据产物 | 0.1.0 | 32815 | 2026-10-10T12:50:34.612524+08:00 | 2026-10-10T12:53:30.943436+08:00 | 验收、验证 |
 | outputs-acceptance-followup-20261010-A-年级诊断-json | `outputs/acceptance-followup-20261010/A-年级诊断.json` | 年级解析比例与覆盖率 | 数据产物 | 数据产物 | 0.1.0 | 1643 | 2026-10-10T12:50:34.613522+08:00 | 2026-10-10T12:53:30.944429+08:00 | 验收、验证 |
@@ -157,7 +157,7 @@
 | outputs-acceptance-followup-20261010-A-点击后结果-jpg | `outputs/acceptance-followup-20261010/A-点击后结果.jpg` | 点击查看后浏览器截图 | 数据产物 | 数据产物 | 0.1.0 | 170586 | 2026-10-10T13:01:24.792998+08:00 | 2026-10-10T13:01:24.792998+08:00 | 验收、验证 |
 | outputs-acceptance-followup-20261010-A-零结果仍可查看-jpg | `outputs/acceptance-followup-20261010/A-零结果仍可查看.jpg` | 零结果仍可查看缺失题截图 | 数据产物 | 数据产物 | 0.1.0 | 87279 | 2026-10-10T13:09:58.419391+08:00 | 2026-10-10T13:10:25.939464+08:00 | 验收、验证 |
 | outputs-acceptance-followup-20261010-final-audit-json | `outputs/acceptance-followup-20261010/final-audit.json` | 本轮收尾数据安全审计 | 数据产物 | 数据产物 | 0.1.0 | 422 | 2026-10-10T13:09:40.807753+08:00 | 2026-10-10T13:12:35.957098+08:00 | 验收、验证 |
-| frontend-src-hooks-useExportGate-ts | `frontend/src/hooks/useExportGate.ts` | 导出预览门禁共享 hook | Web界面 | Web界面 | 0.1.0 | 17325 | 2026-10-11T10:31:39.859127+08:00 | 2026-10-11T10:40:40.151506+08:00 | 门禁、预览、导出、重构、Web界面 |
+| frontend-src-hooks-useExportGate-ts | `frontend/src/hooks/useExportGate.ts` | 导出预览门禁共享 hook | Web界面 | Web界面 | 0.1.0 | 17304 | 2026-10-11T10:31:39.859127+08:00 | 2026-10-11T15:28:20.128205+08:00 | 门禁、预览、导出、重构、Web界面 |
 | frontend-src-hooks-exportGateShared-ts | `frontend/src/hooks/exportGateShared.ts` | 导出门禁纯函数 | Web界面 | Web界面 | 0.1.0 | 2229 | 2026-10-11T10:40:34.439775+08:00 | 2026-10-11T10:40:34.439775+08:00 | 门禁、环境降级、editor_sdk、Web界面 |
 | frontend-src-components-ExportResultPanel-tsx | `frontend/src/components/ExportResultPanel.tsx` | 导出结果面板 | Web界面 | Web界面 | 0.1.0 | 2483 | 2026-10-11T10:38:10.773354+08:00 | 2026-10-11T10:38:10.773354+08:00 | 导出、结果、Web界面 |
 | frontend-src-components-PaperPanelItemRow-tsx | `frontend/src/components/PaperPanelItemRow.tsx` | 试卷题目行组件 | Web界面 | Web界面 | 0.1.0 | 6454 | 2026-10-11T10:39:23.846790+08:00 | 2026-10-11T10:39:23.846790+08:00 | 组卷、排序、Web界面 |
@@ -169,13 +169,13 @@
 | frontend-src-store-settingsStore-ts | `frontend/src/store/settingsStore.ts` | 设置镜像 store | Web界面 | Web界面 | 0.1.0 | 1748 | 2026-10-11T10:33:44.174073+08:00 | 2026-10-11T10:33:44.174073+08:00 | 设置、KaTeX、Web界面 |
 | frontend-tests-frontend-fixes-test-cjs | `frontend/tests/frontend-fixes.test.cjs` | 前端修复回归测试 | 测试 | Web界面 | 0.1.0 | 12128 | 2026-10-11T10:41:33.016214+08:00 | 2026-10-11T10:44:23.893483+08:00 | 测试、前端、回归 |
 | frontend-scripts-prune-stale-assets-mjs | `frontend/scripts/prune-stale-assets.mjs` | 构建产物清理脚本 | 工具脚本 | Web界面 | 0.1.0 | 2378 | 2026-10-11T10:48:30.790470+08:00 | 2026-10-11T10:48:30.790470+08:00 | 构建、清理、工具 |
-| outputs-handoff-D-导出P0最终交接-md | `outputs/handoff/D-导出P0最终交接.md` | 导出 P0 最终交接（D） | 交付报告 | 交付报告 | 0.1.0 | 6727 | 2026-10-11T10:36:13.086617+08:00 | 2026-10-11T10:36:13.086617+08:00 | 导出、交接、控制字符、TAB、修订 |
-| outputs-handoff-D-前端修复与重构-md | `outputs/handoff/D-前端修复与重构.md` | 前端修复与重构交接（D） | 交付报告 | 交付报告 | 0.1.0 | 9709 | 2026-10-11T10:46:26.150680+08:00 | 2026-10-11T10:46:26.150680+08:00 | 前端、交接、重构、易用性 |
-| outputs-handoff-T-本轮独立验收-md | `outputs/handoff/T-本轮独立验收.md` | 本轮独立验收（T） | 交付报告 | 交付报告 | 0.1.0 | 9844 | 2026-10-11T10:54:35.545335+08:00 | 2026-10-11T10:54:35.546364+08:00 | 验收、独立、反证 |
-| outputs-export-upgrade-20261010-README-md | `outputs/export-upgrade-20261010/README.md` | 导出 P0 阶段收口索引 | 交付报告 | 交付报告 | 0.1.0 | 4219 | 2026-10-11T10:38:35.832263+08:00 | 2026-10-11T10:38:35.832263+08:00 | 导出、索引、阶段 |
-| webui-static-index-html | `webui/static/index.html` | 前端生产入口 | 数据产物 | Web界面 | 0.1.0 | 423 | 2026-10-07T11:35:17.501401+08:00 | 2026-10-11T15:13:53.663963+08:00 | 前端、构建 |
-| webui-static-assets-index-BB-392v-js | `webui/static/assets/index-BB__392v.js` | 前端生产资源 index-BB__392v.js | 数据产物 | Web界面 | 0.1.0 | 1074382 | 2026-10-11T10:46:49.554305+08:00 | 2026-10-11T15:13:53.655926+08:00 | 前端、构建 |
-| webui-static-assets-index-BOQOZ8LG-css | `webui/static/assets/index-BOQOZ8LG.css` | 前端生产资源 index-BOQOZ8LG.css | 数据产物 | Web界面 | 0.1.0 | 35987 | 2026-10-11T10:45:14.263730+08:00 | 2026-10-11T15:13:53.645473+08:00 | 前端、构建 |
+| outputs-handoff-D-导出P0最终交接-md | `outputs/handoff/D-导出P0最终交接.md` | 导出 P0 最终交接（D） | 交付报告 | 交付报告 | 0.1.0 | 7307 | 2026-10-11T10:36:13.086617+08:00 | 2026-10-11T10:36:13.086617+08:00 | 导出、交接、控制字符、TAB、修订 |
+| outputs-handoff-D-前端修复与重构-md | `outputs/handoff/D-前端修复与重构.md` | 前端修复与重构交接（D） | 交付报告 | 交付报告 | 0.1.0 | 10214 | 2026-10-11T10:46:26.150680+08:00 | 2026-10-11T10:46:26.150680+08:00 | 前端、交接、重构、易用性 |
+| outputs-handoff-T-本轮独立验收-md | `outputs/handoff/T-本轮独立验收.md` | 本轮独立验收（T） | 交付报告 | 交付报告 | 0.1.0 | 10289 | 2026-10-11T10:54:35.545335+08:00 | 2026-10-11T10:54:35.546364+08:00 | 验收、独立、反证 |
+| outputs-export-upgrade-20261010-README-md | `outputs/export-upgrade-20261010/README.md` | 导出 P0 阶段收口索引 | 交付报告 | 交付报告 | 0.1.0 | 4638 | 2026-10-11T10:38:35.832263+08:00 | 2026-10-11T10:38:35.832263+08:00 | 导出、索引、阶段 |
+| webui-static-index-html | `webui/static/index.html` | 前端生产入口 | 数据产物 | Web界面 | 0.1.0 | 423 | 2026-10-07T11:35:17.501401+08:00 | 2026-10-11T15:35:31.855049+08:00 | 前端、构建 |
+| webui-static-assets-index-BOQOZ8LG-css | `webui/static/assets/index-BOQOZ8LG.css` | 前端生产资源 index-BOQOZ8LG.css | 数据产物 | Web界面 | 0.1.0 | 35987 | 2026-10-11T10:45:14.263730+08:00 | 2026-10-11T15:35:31.856048+08:00 | 前端、构建 |
+| webui-static-assets-index-BXPF-KLW-js | `webui/static/assets/index-BXPF_KLW.js` | 前端生产资源 index-BXPF_KLW.js | 数据产物 | Web界面 | 0.1.0 | 1105970 | 2026-10-11T15:35:31.851042+08:00 | 2026-10-11T15:35:31.861049+08:00 | 前端、构建 |
 
 ## 逐条说明
 
@@ -216,8 +216,8 @@
 - **keywords**：复核、界面
 - **category**：Web界面　**stage**：Web界面
 - **author**：待补充　**version**：0.1.0
-- **created**：2026-10-07T12:40:15.177934+08:00　**modified**：2026-10-10T16:24:36.263561+08:00
-- **size_bytes**：11669
+- **created**：2026-10-07T12:40:15.177934+08:00　**modified**：2026-10-11T15:29:59.775251+08:00
+- **size_bytes**：11991
 
 ### 严格v5记录兼容测试 (`tests/test_mtef_strict_records.py`)
 
@@ -606,8 +606,8 @@
 - **keywords**：配置、设置、环境自检、editor_sdk、Office、降级
 - **category**：Web界面　**stage**：Web界面
 - **author**：待补充　**version**：0.1.0
-- **created**：2026-10-07T11:18:38.098820+08:00　**modified**：2026-10-09T11:05:14.824809+08:00
-- **size_bytes**：10998
+- **created**：2026-10-07T11:18:38.098820+08:00　**modified**：2026-10-11T15:36:47.087573+08:00
+- **size_bytes**：11378
 
 ### webui 连接工厂 (`webui/db.py`)
 
@@ -897,7 +897,7 @@
 - **category**：Web界面　**stage**：Web界面
 - **author**：待补充　**version**：0.1.0
 - **created**：2026-10-11T15:06:33.753265+08:00　**modified**：2026-10-11T15:06:33.753265+08:00
-- **size_bytes**：4398
+- **size_bytes**：4943
 
 ### 版本分类总览 (`editions/README.md`)
 
@@ -1566,8 +1566,8 @@
 - **keywords**：验收、验证
 - **category**：Web界面　**stage**：Web界面
 - **author**：待补充　**version**：0.1.0
-- **created**：2026-10-07T11:32:28.764636+08:00　**modified**：2026-10-11T10:36:38.399086+08:00
-- **size_bytes**：15609
+- **created**：2026-10-07T11:32:28.764636+08:00　**modified**：2026-10-11T15:32:27.596925+08:00
+- **size_bytes**：15914
 
 ### 前端 API 类型 (`frontend/src/api/types.ts`)
 
@@ -1676,8 +1676,8 @@
 - **keywords**：门禁、预览、导出、重构、Web界面
 - **category**：Web界面　**stage**：Web界面
 - **author**：待补充　**version**：0.1.0
-- **created**：2026-10-11T10:31:39.859127+08:00　**modified**：2026-10-11T10:40:40.151506+08:00
-- **size_bytes**：17325
+- **created**：2026-10-11T10:31:39.859127+08:00　**modified**：2026-10-11T15:28:20.128205+08:00
+- **size_bytes**：17304
 
 ### 导出门禁纯函数 (`frontend/src/hooks/exportGateShared.ts`)
 
@@ -1797,7 +1797,7 @@
 - **category**：交付报告　**stage**：交付报告
 - **author**：待补充　**version**：0.1.0
 - **created**：2026-10-11T10:36:13.086617+08:00　**modified**：2026-10-11T10:36:13.086617+08:00
-- **size_bytes**：6727
+- **size_bytes**：7307
 
 ### 前端修复与重构交接（D） (`outputs/handoff/D-前端修复与重构.md`)
 
@@ -1807,7 +1807,7 @@
 - **category**：交付报告　**stage**：交付报告
 - **author**：待补充　**version**：0.1.0
 - **created**：2026-10-11T10:46:26.150680+08:00　**modified**：2026-10-11T10:46:26.150680+08:00
-- **size_bytes**：9709
+- **size_bytes**：10214
 
 ### 本轮独立验收（T） (`outputs/handoff/T-本轮独立验收.md`)
 
@@ -1817,7 +1817,7 @@
 - **category**：交付报告　**stage**：交付报告
 - **author**：待补充　**version**：0.1.0
 - **created**：2026-10-11T10:54:35.545335+08:00　**modified**：2026-10-11T10:54:35.546364+08:00
-- **size_bytes**：9844
+- **size_bytes**：10289
 
 ### 导出 P0 阶段收口索引 (`outputs/export-upgrade-20261010/README.md`)
 
@@ -1827,7 +1827,7 @@
 - **category**：交付报告　**stage**：交付报告
 - **author**：待补充　**version**：0.1.0
 - **created**：2026-10-11T10:38:35.832263+08:00　**modified**：2026-10-11T10:38:35.832263+08:00
-- **size_bytes**：4219
+- **size_bytes**：4638
 
 ### 前端生产入口 (`webui/static/index.html`)
 
@@ -1836,18 +1836,8 @@
 - **keywords**：前端、构建
 - **category**：数据产物　**stage**：Web界面
 - **author**：待补充　**version**：0.1.0
-- **created**：2026-10-07T11:35:17.501401+08:00　**modified**：2026-10-11T15:13:53.663963+08:00
+- **created**：2026-10-07T11:35:17.501401+08:00　**modified**：2026-10-11T15:35:31.855049+08:00
 - **size_bytes**：423
-
-### 前端生产资源 index-BB__392v.js (`webui/static/assets/index-BB__392v.js`)
-
-- **id**：`webui-static-assets-index-BB-392v-js`
-- **description**：当前入口直接引用的构建资源，尺寸和时间取实际文件。
-- **keywords**：前端、构建
-- **category**：数据产物　**stage**：Web界面
-- **author**：待补充　**version**：0.1.0
-- **created**：2026-10-11T10:46:49.554305+08:00　**modified**：2026-10-11T15:13:53.655926+08:00
-- **size_bytes**：1074382
 
 ### 前端生产资源 index-BOQOZ8LG.css (`webui/static/assets/index-BOQOZ8LG.css`)
 
@@ -1856,6 +1846,16 @@
 - **keywords**：前端、构建
 - **category**：数据产物　**stage**：Web界面
 - **author**：待补充　**version**：0.1.0
-- **created**：2026-10-11T10:45:14.263730+08:00　**modified**：2026-10-11T15:13:53.645473+08:00
+- **created**：2026-10-11T10:45:14.263730+08:00　**modified**：2026-10-11T15:35:31.856048+08:00
 - **size_bytes**：35987
+
+### 前端生产资源 index-BXPF_KLW.js (`webui/static/assets/index-BXPF_KLW.js`)
+
+- **id**：`webui-static-assets-index-BXPF-KLW-js`
+- **description**：当前入口直接引用的构建资源，尺寸和时间取实际文件。
+- **keywords**：前端、构建
+- **category**：数据产物　**stage**：Web界面
+- **author**：待补充　**version**：0.1.0
+- **created**：2026-10-11T15:35:31.851042+08:00　**modified**：2026-10-11T15:35:31.861049+08:00
+- **size_bytes**：1105970
 

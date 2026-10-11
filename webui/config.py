@@ -25,6 +25,7 @@
 from __future__ import annotations
 
 import json
+import os
 import re
 import socket
 from pathlib import Path
@@ -153,12 +154,24 @@ def update_settings(patch: dict) -> dict:
 
 
 def get_db_path() -> Path:
-    """当前生效的数据库路径（设置优先，回落到默认路径）。"""
+    """当前生效的数据库路径。
+
+    优先级：环境变量 ``QB_DB_PATH``（线上/容器部署常用）→ 设置文件 → 默认路径。
+    """
+    override = os.environ.get("QB_DB_PATH", "").strip()
+    if override:
+        return Path(override)
     return Path(load_settings().get("db_path") or DEFAULT_DB_PATH)
 
 
 def get_export_dir() -> Path:
-    """当前生效的导出目录。"""
+    """当前生效的导出目录。
+
+    优先级：环境变量 ``QB_EXPORT_DIR`` → 设置文件 → 默认目录。
+    """
+    override = os.environ.get("QB_EXPORT_DIR", "").strip()
+    if override:
+        return Path(override)
     return Path(load_settings().get("export_dir") or EXPORT_DIR)
 
 
@@ -172,8 +185,6 @@ def detect_editor_sdk(*, timeout: float = 1.0) -> dict:
     否则从 :data:`EDITOR_SDK_DEFAULT_PORT` 起依次探测 :data:`EDITOR_SDK_PORT_SCAN` 个端口。
     仅做 TCP 连通性探测（快速、无副作用）。
     """
-    import os
-
     configured = os.environ.get("editor_sdk_port", "").strip()
     if configured.isdigit():
         ports = [int(configured)]
