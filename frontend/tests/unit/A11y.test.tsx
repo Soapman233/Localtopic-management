@@ -1,10 +1,11 @@
 /**
  * 阶段 5 无障碍语义守护（P5-3）。
  *
- * 覆盖三类**可被 jsdom 稳定断言**的语义：
+ * 覆盖四类**可被 jsdom 稳定断言**的语义：
  * 1. `documentTitleForPath`：路由 → 文档标题的纯函数映射（含未知路由兜底）；
  * 2. App 外壳：skip-link（「跳到主内容」）/ `<main>` 地标 / `<nav>` 地标 / 当前页 `aria-current`；
- * 3. 页面标题层级：每个页面渲染后**恰好一个 h1**（以设置页为例）。
+ * 3. 页面标题层级：每个页面渲染后**恰好一个 h1**（以设置页为例）；
+ * 4. Drawer 可访问名：`aria-labelledby` 指向可见标题（MUI Drawer 不自动派生，故需守护）。
  *
  * ⚠️ 边界：jsdom **不能**验证「焦点是否真的可见」「Tab 顺序」「读屏是否播报」，
  * 这些由 `.tmp_verify/phase3_keyboard_e2e.mjs`（真实浏览器）与人工核验覆盖。
@@ -147,11 +148,14 @@ describe('组件内「伪标题」已消除（P5-3）', () => {
 })
 
 describe('Drawer 可访问名（P5-3）', () => {
-  it('「切换试卷」抽屉打开后有可访问名「切换试卷」（Drawer 不会像 Dialog 自动派生）', () => {
+  it('「切换试卷」抽屉打开后，可见标题被 aria-labelledby 引用（Drawer 不自动派生）', () => {
     renderApp('/builder')
     // 桌面宽度下触发控件是文字按钮「试卷列表」（窄屏才是同名 IconButton）。
     fireEvent.click(screen.getByRole('button', { name: '试卷列表' }))
-    // 抽屉打开后应能以名称定位到 role=dialog（名称来自 aria-labelledby → 可见标题）。
-    expect(screen.getByRole('dialog', { name: '切换试卷' })).toBeInTheDocument()
+    // 抽屉标题是真实 h2，且带被 aria-labelledby 引用的 id。
+    const title = screen.getByRole('heading', { level: 2, name: '切换试卷' })
+    expect(title).toHaveAttribute('id', 'paper-switch-drawer-title')
+    // 必须存在某个元素通过 aria-labelledby 指向它（否则读屏只会念「对话框」）。
+    expect(document.querySelector('[aria-labelledby="paper-switch-drawer-title"]')).not.toBeNull()
   })
 })

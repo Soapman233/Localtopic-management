@@ -129,7 +129,7 @@ python -m bank.cli export verify out.docx    # 验证公式双端可编辑性（
 
 # 前端
 cd frontend && npx tsc --noEmit              # 类型检查
-cd frontend && npm test                      # 前端回归（26 node:test + 178 vitest）
+cd frontend && npm test                      # 前端回归（26 node:test + 179 vitest）
 cd frontend && npm run build                 # 生产构建
 ```
 
@@ -219,7 +219,7 @@ python -m bank.cli normalize --db outputs/bank.db
 # 后端（387 项：386 通过 / 1 skip）
 python -m unittest discover -s tests
 
-# 前端（26 node:test + 178 vitest）
+# 前端（26 node:test + 179 vitest）
 cd frontend && npm test
 ```
 
