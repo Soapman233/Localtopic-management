@@ -259,3 +259,68 @@ export type Template = (typeof TEMPLATES)[number]
 /** 知识点复核状态取值（与 bank.labels 一致）。 */
 export const REVIEW_STATUSES = ['待复核', '已确认', '已否决'] as const
 export type ReviewStatus = (typeof REVIEW_STATUSES)[number]
+
+// ---------------------------------------------------------------------------
+// Phase 2.3：DOCX 导入（个人客户端「自己建库」的唯一入口）
+// ---------------------------------------------------------------------------
+
+/** ``GET /api/import/status`` 响应：功能开关 + 限制（供前端决定入口是否可用）。 */
+export interface ImportStatus {
+  /** 导入功能是否启用（关闭时前端禁用入口并说明原因）。 */
+  enabled: boolean
+  /** 允许的文件扩展名（**不得在前端硬编码**，如 ``['.docx']``）。 */
+  allowed_suffixes: string[]
+  /** 单个文件大小上限（字节）。 */
+  max_bytes: number
+  /** 单文件处理超时（秒）。 */
+  timeout_seconds: number
+}
+
+/** ``POST /api/import/docx`` 成功响应：作业已提交，需轮询 ``/api/jobs/{job_id}``。 */
+export interface ImportSubmitResult {
+  job_id: string
+  filename: string
+  size_bytes: number
+}
+
+/** 导入报告里的题目构成摘要（``questions`` 字段，键随源文件而变）。 */
+export interface ImportQuestionsSummary {
+  questions?: number
+  with_formulas?: number
+  with_images?: number
+  [key: string]: unknown
+}
+
+/**
+ * 导入作业完成后的 ``result``（``GET /api/jobs/{job_id}`` 的 ``data.result``）。
+ *
+ * ⚠️ 预处理失败时作业本身仍是 ``done``，但 ``result.status === 'ERROR'``——
+ * 消费方必须按 ``status`` 分支，不能只看作业状态。
+ */
+export interface ImportJobResult {
+  status: 'OK' | 'ERROR' | string
+  filename: string
+  /** 题目构成摘要（题数 / 含公式 / 含图片…）。 */
+  questions?: ImportQuestionsSummary
+  /** 待复核条数。 */
+  review_count?: number
+  /** 预处理耗时（秒）。 */
+  seconds?: number
+  /** 新增 + 更新。 */
+  imported?: number
+  /** 新增题数。 */
+  inserted?: number
+  /** 更新题数。 */
+  updated?: number
+  /** 跳过（重复）题数。 */
+  skipped?: number
+  /** 无效题数。 */
+  junk?: number
+  /** 原始入库报告（键随 bank.importer 而变）。 */
+  import?: Record<string, unknown>
+  /** 失败阶段（``status === 'ERROR'`` 时存在）。 */
+  stage?: string
+  /** 失败原因（``status === 'ERROR'`` 时存在）。 */
+  error?: string
+  [key: string]: unknown
+}

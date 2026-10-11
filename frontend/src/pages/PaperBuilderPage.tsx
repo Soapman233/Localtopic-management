@@ -56,6 +56,7 @@ import { ExportDrawer } from '../components/ExportDrawer'
 import { EmptyState } from '../components/EmptyState'
 import { ErrorState } from '../components/ErrorState'
 import { LoadingState } from '../components/LoadingState'
+import { FirstRunImportGuide } from '../components/FirstRunImportGuide'
 import { useFacetsQuery, useSearchQuery } from '../hooks/useSearch'
 import {
   addQuestions,
@@ -489,6 +490,10 @@ export default function PaperBuilderPage() {
       >
         组卷工作台
       </Typography>
+
+      {/* 首启引导（Phase 2.4）：题库为空时引导导入第一份旧卷（可关闭；有数据不显示）。 */}
+      <FirstRunImportGuide />
+
       {error && (
         <Alert severity="error" sx={{ mb: 1 }} onClose={() => setError(null)}>
           {error}

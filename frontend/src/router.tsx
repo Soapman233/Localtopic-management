@@ -25,6 +25,7 @@ const LoginPage = lazy(() => import('./pages/LoginPage'))
 // 治理页代码不再进首屏）。加载态的呈现由 `App.tsx` 中包裹 `<Outlet/>` 的
 // `<Suspense>` 统一负责（fallback 复用全站统一的 `LoadingState`），此处无需重复处理。
 const SearchPage = lazy(() => import('./pages/SearchPage'))
+const ImportPage = lazy(() => import('./pages/ImportPage'))
 const QuestionDetailPage = lazy(() => import('./pages/QuestionDetailPage'))
 const PaperBuilderPage = lazy(() => import('./pages/PaperBuilderPage'))
 const ExportPage = lazy(() => import('./pages/ExportPage'))
@@ -36,6 +37,7 @@ const SettingsPage = lazy(() => import('./pages/SettingsPage'))
 
 const PAGES: Record<string, ReactElement> = {
   search: <SearchPage />,
+  import: <ImportPage />,
   builder: <PaperBuilderPage />,
   export: <ExportPage />,
   'manage/knowledge': <KnowledgeReviewPage />,

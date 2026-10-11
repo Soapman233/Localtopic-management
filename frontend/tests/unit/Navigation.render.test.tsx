@@ -45,6 +45,7 @@ function renderApp(initialPath = '/builder') {
 
 const GROUP_LABELS = ['日常备课', '数据治理']
 const ITEM_LABELS = [
+  '导入试卷',
   '组卷工作台',
   '找题',
   '导出中心',
@@ -69,7 +70,7 @@ describe('侧栏导航渲染', () => {
     }
   })
 
-  it('八个导航项全部渲染出来', () => {
+  it('九个导航项全部渲染出来', () => {
     renderApp()
     for (const label of ITEM_LABELS) {
       expect(screen.getByText(label)).toBeInTheDocument()

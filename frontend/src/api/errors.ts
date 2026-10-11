@@ -25,6 +25,11 @@ export const ErrorCode = {
   InvalidCsv: 40005,
   InvalidSettings: 40006,
   InvalidRevision: 40007,
+  // ---- 400 导入（Phase 2.3）----
+  /** 未提供上传文件 / 文件为空。 */
+  ImportMissingFile: 40010,
+  /** 上传文件非法：格式不支持 / 超过大小上限 / 导入功能已关闭。 */
+  ImportInvalidFile: 40011,
   // ---- 401 未授权（线上部署版鉴权）----
   Unauthorized: 40101,
   // ---- 403 权限不足（线上部署版鉴权：已登录但角色不允许该操作）----
@@ -59,6 +64,8 @@ const FALLBACK_MESSAGES: Record<number, string> = {
   [ErrorCode.InvalidCsv]: '导入的文件格式不正确，请检查后重试。',
   [ErrorCode.InvalidSettings]: '设置有误，请检查后重试。',
   [ErrorCode.InvalidRevision]: '修订请求不合法。',
+  [ErrorCode.ImportMissingFile]: '没有收到文件，或文件是空的。请重新选择一个试卷文件。',
+  [ErrorCode.ImportInvalidFile]: '这个文件无法导入：可能格式不对、文件过大，或本机已关闭导入功能。',
   [ErrorCode.Unauthorized]: '未授权：请确认访问权限后重试。',
   [ErrorCode.PermissionDenied]: '你的账号权限不足，不能执行这个操作。如需权限请联系管理员。',
   [ErrorCode.QuestionNotFound]: '题目不存在，可能已被删除。',
@@ -164,4 +171,44 @@ export function isConfirmationRequired(err: unknown): boolean {
 /** 是否为「未授权」（线上部署版令牌/会话失效）。 */
 export function isUnauthorized(err: unknown): boolean {
   return errorCodeOf(err) === ErrorCode.Unauthorized
+}
+
+/** 从任意抛出物里取出**可读错误文本**（ApiError.message / 作业体的 error / Error.message）。 */
+function extractMessage(err: unknown): string {
+  if (isApiError(err)) return err.message
+  if (err && typeof err === 'object') {
+    const o = err as { error?: unknown; message?: unknown }
+    if (typeof o.error === 'string' && o.error.trim()) return o.error
+    if (typeof o.message === 'string' && o.message.trim()) return o.message
+  }
+  if (err instanceof Error) return err.message
+  return ''
+}
+
+/**
+ * 导入错误 → **教师可读文案**（Phase 2.3）。
+ *
+ * 与 {@link describeApiError} 的区别：后端在「导入功能关闭」时会把内部环境开关名
+ * （``QB_IMPORT_ENABLED``）写进 message，属**开发者行话**，直接甩给老师看不懂。
+ * 故导入域单独映射：
+ *  - ``40010`` 未提供 / 空文件 → 固定教师文案；
+ *  - ``40011`` 格式 / 超限 / 功能关闭 → 优先用后端中文 message，但**含内部开关名时**替换为
+ *    「本机已关闭导入功能」；
+ *  - 其余（含作业体的 ``error_code`` / ``error``）→ 沿用后端文本，缺失再走通用兜底。
+ */
+export function describeImportError(err: unknown): string {
+  const code = errorCodeOf(err)
+  if (code === ErrorCode.ImportMissingFile) {
+    return FALLBACK_MESSAGES[ErrorCode.ImportMissingFile]
+  }
+  if (code === ErrorCode.ImportInvalidFile) {
+    const raw = extractMessage(err)
+    if (!raw || raw.includes('QB_IMPORT_ENABLED')) {
+      return '本机已关闭导入功能，暂时不能导入试卷。'
+    }
+    return raw
+  }
+  if (isApiError(err)) return describeApiError(err)
+  const raw = extractMessage(err)
+  return raw || describeApiError(err)
 }

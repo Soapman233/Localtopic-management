@@ -132,6 +132,35 @@ export const GLOSSARY = {
    * 超时后必须给老师**可执行出路**：明确告知超时并提示重试。
    */
   jobTimeout: '任务超时，请重试',
+
+  // ------------------------------------------------------------------------- //
+  // Phase 2.3 / 2.4 新增：导入试卷（个人客户端「自己建库」的唯一入口）
+  // ------------------------------------------------------------------------- //
+
+  /**
+   * 导入功能被关闭时的说明。
+   *
+   * 理由：后端 message 会带上内部环境开关名（``QB_IMPORT_ENABLED``），
+   * 老师看不懂；这里只讲**结论**——本机关掉了导入，所以不能导。
+   */
+  importDisabled: '本机已关闭导入功能，暂时不能导入试卷。',
+
+  /**
+   * 导入完成后「待复核」的教师语言。
+   *
+   * 理由：与全站「待复核」口径一致（导入可能带来需要人工确认的公式），
+   * 让老师知道导入结果里有多少条需要去看。
+   */
+  importPendingReview: '待复核',
+
+  /** 首启引导标题（也是主行动按钮文案）：题库为空时引导导入第一份旧卷。 */
+  importGuideTitle: '导入我的第一份旧卷',
+
+  /** 首启引导说明：告诉老师为什么现在最该做这件事。 */
+  importGuideBody: '题库还是空的。把以前的试卷（.docx）导入进来，就能开始组卷了。',
+
+  /** 导入完成后「去看题库」的跳转按钮文案。 */
+  importGoToLibrary: '去看题库',
 } as const
 
 /** 单题「快照锁定」提示（用于 Tooltip / 单行徽章）。 */
@@ -219,6 +248,30 @@ export function describeMentionScope(): string {
 /** 「给技术人员的信息」折叠区标题（对应内部「技术详情」）。 */
 export function describeTechnicalInfo(): string {
   return GLOSSARY.technicalInfo
+}
+
+/** 导入功能被关闭时的教师语言（替代含内部开关名的后端 message）。 */
+export function describeImportDisabled(): string {
+  return GLOSSARY.importDisabled
+}
+
+/** 导入结果里「待复核」的教师语言（与全站口径一致）。 */
+export function describeImportPendingReview(): string {
+  return GLOSSARY.importPendingReview
+}
+
+/** 导入完成后「去看题库」的按钮文案。 */
+export function describeImportGoToLibrary(): string {
+  return GLOSSARY.importGoToLibrary
+}
+
+/** 首启引导文案（题库为空时在落地页展示）。 */
+export function describeImportGuide(): { title: string; body: string; action: string } {
+  return {
+    title: GLOSSARY.importGuideTitle,
+    body: GLOSSARY.importGuideBody,
+    action: GLOSSARY.importGuideTitle,
+  }
 }
 
 /**

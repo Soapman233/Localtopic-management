@@ -10,6 +10,7 @@ import { DEFAULT_LANDING_PATH, LEGACY_REDIRECTS } from '../../src/router'
 
 /** 期望的导航路径全集（含顺序）——改动导航结构时必须同步更新此清单。 */
 const EXPECTED_PATHS = [
+  'import',
   'builder',
   'search',
   'export',
@@ -42,10 +43,10 @@ describe('导航配置不变量', () => {
     }
   })
 
-  it('分组项数符合预期（日常备课 3 项 / 数据治理 4 项）', () => {
+  it('分组项数符合预期（日常备课 4 项 / 数据治理 4 项）', () => {
     expect(NAV_GROUPS).toHaveLength(2)
     expect(NAV_GROUPS[0].label).toBe('日常备课')
-    expect(NAV_GROUPS[0].items).toHaveLength(3)
+    expect(NAV_GROUPS[0].items).toHaveLength(4)
     expect(NAV_GROUPS[1].label).toBe('数据治理')
     expect(NAV_GROUPS[1].items).toHaveLength(4)
   })

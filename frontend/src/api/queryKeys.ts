@@ -38,6 +38,7 @@ export const ROOT = {
   sources: 'sources',
   source: 'source',
   stats: 'stats',
+  importStatus: 'import-status',
 } as const
 
 export const qk = {
@@ -94,6 +95,10 @@ export const qk = {
 
   // ---- 统计 ----
   stats: () => [ROOT.stats] as const,
+
+  // ---- 导入（Phase 2.3）----
+  /** ``GET /api/import/status``：导入功能开关与限制。 */
+  importStatus: () => [ROOT.importStatus] as const,
 } as const
 
 export type QueryKeyFactory = typeof qk

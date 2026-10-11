@@ -24,6 +24,7 @@ import {
 } from '@mui/material'
 import MenuIcon from '@mui/icons-material/Menu'
 import SearchIcon from '@mui/icons-material/Search'
+import UploadFileIcon from '@mui/icons-material/UploadFile'
 import EditNoteIcon from '@mui/icons-material/EditNote'
 import DescriptionIcon from '@mui/icons-material/Description'
 import FileDownloadIcon from '@mui/icons-material/FileDownload'
@@ -73,6 +74,8 @@ export const NAV_GROUPS: NavGroup[] = [
   {
     label: '日常备课',
     items: [
+      // 个人客户端「自己建库」：导入是唯一建库途径，放在日常备课首位（题库为空时最该做的事）。
+      { path: 'import', label: '导入试卷', description: '导入旧试卷 DOCX 建库', icon: <UploadFileIcon /> },
       // 组卷工作台是老师最高频的动作，也是默认落地页（router.tsx 的 index/* 都指向 /builder）。
       { path: 'builder', label: '组卷工作台', description: '边找题边组卷，左题库右试卷', icon: <EditNoteIcon /> },
       { path: 'search', label: '找题', description: '关键词 + 筛选，批量找题', icon: <SearchIcon /> },
