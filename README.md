@@ -105,7 +105,7 @@ python -m webui
 ### 常用命令
 
 ```bash
-# 全量测试（当前基线 365 项：364 通过 / 1 skip）
+# 全量测试（当前基线 373 项：372 通过 / 1 skip）
 python -m unittest discover -s tests
 
 # CLI
@@ -201,7 +201,7 @@ python -m bank.cli normalize --db outputs/bank.db
 ## 测试
 
 ```bash
-# 后端（365 项：364 通过 / 1 skip）
+# 后端（373 项：372 通过 / 1 skip）
 python -m unittest discover -s tests
 
 # 前端（26 项）
@@ -210,7 +210,7 @@ cd frontend && npm test
 
 | 层 | 项数 | 说明 |
 |---|---|---|
-| 后端 | **365**（364 通过 / 1 skip） | 题库、检索、组卷、导出、内容守卫、Web API 等 |
+| 后端 | **371**（370 通过 / 1 skip） | 题库、检索、组卷、导出、内容守卫、Web API 等 |
 | 前端 | **26** | 预览门禁、主题、公式显示、门禁纯函数、设置 store、删除确认护栏等 |
 
 > 后端测试为 **Windows 专用**（导出相关用例依赖 `pywin32` 与 Office）。
@@ -257,7 +257,7 @@ cd frontend && npm test
 
 几条最容易踩的：
 
-1. **改任何东西前先跑测试**，确认基线（365 项）。
+1. **改任何东西前先跑测试**，确认基线（373 项）。
 2. **碰 `outputs/bank.db` 前先备份**；写入类验证请用**副本**。
 3. **改排版 / 导出后必须渲染出来看**——单元测试测不出视觉缺陷。
 4. **验证「修复类改动」要用反证**：确认修复前确实有问题。
