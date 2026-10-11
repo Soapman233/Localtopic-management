@@ -52,3 +52,22 @@
 - 其余：前端单 chunk 1058kB 无分割、无错误监控、无备份 SOP、`\begin{array}` 1 条公式桥接不支持（降级+告警）。
 - 评估文档：`deliverables/上线就绪度评估-2026-10-11.md`。
 
+### 版本拆分（editions，2026-10-11）
+- **架构：一个内核 + 两个版本外壳**。`bank/` `pipeline/` `webui/` `frontend/` 共享，业务代码零分叉；
+  差异全部收敛到 `webui/edition.py`（`QB_EDITION` / `QB_HOST` / `QB_PORT` / `QB_AUTH_TOKEN`）。
+- `QB_AUTH_TOKEN` **不设置 = 不启用鉴权**，与历史行为完全一致（既有测试零改动通过）。
+- **线上版硬约束**：导出依赖 editor_sdk+Office（Windows 专有）→ 线上版必须 Windows 宿主；
+  桥接单实例 → 并发导出 `WinError 10048`；鉴权仅访问控制级，无用户/角色。
+- 启动器：`editions/local/启动题库.bat`（可移植，`BANK_PY` > `.venv` > `PATH`）；根目录旧脚本已删。
+- 测试基数：后端 **387 项（386 通过 / 1 skip）**、前端 26 项。资产清单 168 条。
+
+### 前端重构准备（2026-10-11）
+- **技能市场工具 `search_and_install_skills` 返回 404 不可用**；改用 SkillHub API
+  （`https://lightmake.site/api/v1/search?q=...`，见 `find-skills` 技能）检索下载。
+  已装（用户级）：`ui-design`、`web-accessibility`、`ux-usability-auditor`、`ui-ux-pro-max`。
+- **npm 素材库踩坑**：`vitest` 必须用 **2.x**（5.x 要求 vite≥6，与本项目 vite 5 冲突 ERESOLVE）。
+- 前端分析结论（`deliverables/前端完整分析与重构方案-2026-10-11.md`）：
+  **Tailwind 是挂名依赖（0 工具类使用，建议移除）**；**测试基座是最大风险**
+  （26 项为源码字符串断言，重构即失效，须先建 vitest 组件测试）；5 项 P0 可用性问题。
+  重构分 6 阶段（护栏先行 → 术语/IA → 设计系统 → 主流程 → 两版适配 → 性能/a11y），**不推倒技术栈**。
+
