@@ -40,7 +40,7 @@
 | **阶段3 组卷** | 试卷 CRUD、加题、重排、分值、大题分组；**快照锁定**（出卷后改题不影响已出卷） |
 | **阶段4 导出** | 学生版 / 答案解析版 / 仅答案 × DOCX/PDF × 考试/测验/作业三种模板；公式为**原生 OMML**；图片尺寸自适应；页脚页码；真实制表位选项对齐 |
 | **内容守卫（P0）** | 答案区误切条目**阻断出卷**并给出逐条诊断；提供「查看修订候选 → 创建修订卷」的显式闭环；旧缓存/旧预览不可旁路 |
-| **Web 界面** | 9 个页面：检索 / 单题详情 / 组卷工作台 / 导出中心 / 知识点复核 / 待复核公式 / 来源文件 / 题库统计 / 系统设置；**强制先预览后导出**的门禁 |
+| **Web 界面** | 10 个页面：检索 / 单题详情 / 组卷工作台 / 导出中心 / 知识点复核 / 待复核公式 / 来源文件 / 题库统计 / 系统设置 / 登录（线上部署版）；**强制先预览后导出**的门禁 |
 
 ---
 
@@ -65,7 +65,7 @@ bank.db
 - **依赖方向**：`pipeline` → `bank` ← `webui` ← `frontend`
 - **webui 只调用 `bank/` 的函数，不复制业务逻辑。**
 - 后端 FastAPI（43 个路径 / 49 个 API 操作），统一返回 `{code, data, message}`。
-- 前端 Vite 5 + React 18 + TypeScript + MUI 5 + Tailwind 3 + KaTeX。
+- 前端 Vite 5 + React 18 + TypeScript + MUI 5 + KaTeX。
 
 ---
 
@@ -129,7 +129,7 @@ python -m bank.cli export verify out.docx    # 验证公式双端可编辑性（
 
 # 前端
 cd frontend && npx tsc --noEmit              # 类型检查
-cd frontend && npm test                      # 前端回归（26 node:test + 179 vitest）
+cd frontend && npm test                      # 前端回归（26 node:test + 214 vitest）
 cd frontend && npm run build                 # 生产构建
 ```
 
@@ -193,7 +193,7 @@ python -m bank.cli normalize --db outputs/bank.db
 │   ├── routers/         #   search/questions/papers/export/labels/review/sources/stats/settings
 │   └── services/        #   对应业务层（只调用 bank/）
 ├── frontend/            # Web 前端（Vite + React + TS）
-│   ├── src/pages/       #   9 个页面
+│   ├── src/pages/       #   10 个页面
 │   ├── src/components/  #   组件（含 LivePreviewPanel / ExportDrawer 等）
 │   ├── src/hooks/       #   含 useExportGate（导出门禁唯一实现）
 │   └── tests/           #   前端回归测试
@@ -219,14 +219,14 @@ python -m bank.cli normalize --db outputs/bank.db
 # 后端（387 项：386 通过 / 1 skip）
 python -m unittest discover -s tests
 
-# 前端（26 node:test + 179 vitest）
+# 前端（26 node:test + 214 vitest）
 cd frontend && npm test
 ```
 
 | 层 | 项数 | 说明 |
 |---|---|---|
 | 后端 | **387**（386 通过 / 1 skip） | 题库、检索、组卷、导出、内容守卫、版本/鉴权、Web API 等 |
-| 前端 | **204** | `node:test` 26（门禁纯函数、主题、公式显示、设置 store、删除确认护栏）+ `vitest` 178（组件行为测试、错误契约与反馈底座、术语映射、导航分组与路由不变量、四态组件、筛选 hook、作业轮询、**页面级集成测试**、**代码分割护栏**、**对比度契约**、**无障碍语义**） |
+| 前端 | **240** | `node:test` 26（门禁纯函数、主题、公式显示、设置 store、删除确认护栏）+ `vitest` 214（组件行为测试、错误契约与反馈底座、术语映射、导航分组与路由不变量、四态组件、筛选 hook、作业轮询、**页面级集成测试**、**代码分割护栏**、**对比度契约**、**无障碍语义**） |
 
 > 后端测试为 **Windows 专用**（导出相关用例依赖 `pywin32` 与 Office）。
 >

@@ -8,7 +8,6 @@
  */
 import { Button, Chip, Stack, Tooltip } from '@mui/material'
 import type { ChipProps } from '@mui/material'
-import { describeMentionScope } from '../lib/glossary'
 
 export interface BadgeProps {
   label: string
@@ -128,18 +127,6 @@ export function MissingBadge({ count }: { count?: number }) {
       label={count === undefined ? '待补充' : `待补充 (${count.toLocaleString('zh-CN')})`}
       color="default"
       title="该维度缺失元数据的题；缺失不影响关键词检索，但无法按此维度筛出"
-    />
-  )
-}
-
-/** 「仅看已确认知识点」严格模式状态徽章。 */
-export function StrictKpBadge({ confirmed, pending }: { confirmed: number; pending: number }) {
-  return (
-    <Badge
-      label={`已确认 ${confirmed.toLocaleString('zh-CN')} / 待复核 ${pending.toLocaleString('zh-CN')}`}
-      color="default"
-      variant="outlined"
-      title={describeMentionScope()}
     />
   )
 }

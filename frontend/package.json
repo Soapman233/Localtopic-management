@@ -27,7 +27,6 @@
     "react-dom": "^18.2.0",
     "react-error-boundary": "^6.1.6",
     "react-router-dom": "^6.26.0",
-    "zod": "^4.6.5",
     "zustand": "^4.5.0"
   },
   "optionalDependencies": {
