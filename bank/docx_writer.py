@@ -383,8 +383,19 @@ class DocxWriter:
 # --------------------------------------------------------------------------- #
 # 计划渲染
 # --------------------------------------------------------------------------- #
-def _fit_image_cm(path: Path, avail_cm: float) -> tuple[float, float]:
-    """按页面可用宽度自适应图片显示尺寸（不放大）。"""
+def _fit_image_cm(path: Path, avail_cm: float,
+                  src_w_emu: int | None = None) -> tuple[float, float]:
+    """按页面可用宽度自适应图片显示尺寸。
+
+    **关键规则：不得大于源文档中原图的显示尺寸**（``src_w_emu``）。
+    原桥接实现（``bank/export.py:1271-1276``）同样做了这层钳制：
+
+        width = min(fit_image_size(...), extent[0]/360000, avail_width_cm)
+
+    缺了这层钳制，图片会被放大到「可用宽度档位」，实测使同一份试卷
+    从 **4 页膨胀到 6 页**（图片平均宽 5.70cm → 9.81cm）。源文档的尺寸是
+    编者有意设定的，必须尊重。
+    """
     try:
         from PIL import Image  # 可选依赖：读不到就退回默认
         with Image.open(path) as im:
@@ -402,9 +413,19 @@ def _fit_image_cm(path: Path, avail_cm: float) -> tuple[float, float]:
         cap = 0.55 * avail_cm
     # 按 96 DPI 估算自然尺寸，且不放大
     nat_w = px_w / 96.0 * 2.54
-    nat_h = px_h / 96.0 * 2.54
     w = min(cap, nat_w, avail_cm)
-    w = max(w, 4.0) if avail_cm >= 4.0 else avail_cm
+    # 最小宽度：**有限放大**（而非硬性下限）——原实现同样如此：
+    #   if width < MIN: width = min(MIN, natural * MAX_UPSCALE)
+    # 注意顺序：**必须在源尺寸钳制之前**。若放在其后，会把已经按源尺寸缩小的图
+    # 重新放大回 4cm（实测：源宽 3.07cm 的图被抬到 4.0cm，与基线不符）。
+    if w < 4.0:
+        w = min(4.0, nat_w * 1.5)
+    # ★ 最后再钳到「源文档中原图的显示尺寸」——这是最外层的硬约束
+    if src_w_emu:
+        src_cm = float(src_w_emu) / EMU_PER_CM
+        if src_cm > 0 and w > src_cm:
+            w = src_cm
+    w = min(w, avail_cm)
     h = w / ratio
     if h > 7.0:
         h = 7.0
@@ -417,7 +438,9 @@ def render_plan(plan: dict) -> tuple[bytes, dict]:
     spec = dict(plan.get("spec") or {})
     w = DocxWriter(spec)
     margins = spec.get("margins") or {}
-    avail_cm = (21.0 - (margins.get("left", 73.7) + margins.get("right", 56.7)) / 72.0 * 2.54)
+    # 版心宽 = A4 − 左右边距 − 装订线（装订线必须计入，否则图会偏宽）
+    avail_cm = (21.0 - (margins.get("left", 73.7) + margins.get("right", 56.7)
+                        + float(spec.get("gutter") or 0.0)) / 72.0 * 2.54)
     avail_cm = max(6.0, avail_cm)
 
     # 卷头
@@ -462,7 +485,7 @@ def _render_question(w: DocxWriter, q: dict, avail_cm: float, spec: dict) -> Non
     for im in q.get("images") or []:
         p = im.get("path")
         if p:
-            cw, ch = _fit_image_cm(Path(p), avail_cm)
+            cw, ch = _fit_image_cm(Path(p), avail_cm, im.get("source_width_emu"))
             w.add_image(p, width_cm=cw, height_cm=ch)
     for key in ("answer_lines", "analysis_lines"):
         for segs in (q.get(key) or []):
@@ -482,7 +505,7 @@ def _render_blocks(w: DocxWriter, q: dict, blocks: list, avail_cm: float, spec: 
             im = blk[1]
             p = im.get("path")
             if p:
-                cw, ch = _fit_image_cm(Path(p), avail_cm)
+                cw, ch = _fit_image_cm(Path(p), avail_cm, im.get("source_width_emu"))
                 w.add_image(p, width_cm=cw, height_cm=ch, keep_next=keep)
         else:
             _, segs, _branch = blk

@@ -161,6 +161,63 @@ class TestLayout(unittest.TestCase):
         self.assertIn("word/footer1.xml", names)
 
 
+class TestImageSizing(unittest.TestCase):
+    """🔴 图片尺寸规则回归。
+
+    与基线（桥接版）逐张对齐的三条规则，顺序不可颠倒：
+      1. 档位上限（按宽高比取可用宽度比例）
+      2. 最小宽度：**有限放大**（min(4.0, natural×1.5)），不是硬性抬到 4cm
+      3. **最后**钳到源文档中原图尺寸 —— 最外层硬约束
+    顺序错了会把已按源尺寸缩小的图重新放大（实测：源宽 3.07cm → 4.0cm），
+    并使整卷从 4 页膨胀到 6 页。
+    """
+
+    def _img(self, td, w, h):
+        from PIL import Image
+        p = Path(td) / "f.png"
+        Image.new("RGB", (w, h), "white").save(p)
+        return p
+
+    def test_source_extent_is_outermost_clamp(self):
+        from bank.docx_writer import _fit_image_cm
+        with TemporaryDirectory() as td:
+            p = self._img(td, 669, 243)          # 自然宽 17.7cm，档位上限 10.47cm
+            src = int(7.73 * 360000)             # 源图 7.73cm
+            w, h = _fit_image_cm(p, 15.4, src)
+            self.assertAlmostEqual(w, 7.73, places=2)
+            self.assertAlmostEqual(h, 7.73 / (669 / 243), places=1)
+
+    def test_small_image_not_force_inflated(self):
+        """源宽 3.07cm 的图必须保持 3.07，不得被最小宽度抬到 4.0。"""
+        from bank.docx_writer import _fit_image_cm
+        with TemporaryDirectory() as td:
+            p = self._img(td, 544, 375)
+            src = int(3.07 * 360000)
+            w, _ = _fit_image_cm(p, 15.4, src)
+            self.assertAlmostEqual(w, 3.07, places=2)
+
+    def test_min_width_allows_limited_upscale(self):
+        """无源尺寸时，极小的图允许有限放大到不超过 4cm。"""
+        from bank.docx_writer import _fit_image_cm
+        with TemporaryDirectory() as td:
+            p = self._img(td, 77, 40)            # 自然宽 2.04cm
+            w, _ = _fit_image_cm(p, 15.4, None)
+            self.assertLessEqual(w, 4.0)
+            self.assertGreater(w, 2.0)
+
+    def test_width_ratio_tiers_and_height_cap(self):
+        from bank.docx_writer import _fit_image_cm
+        with TemporaryDirectory() as td:
+            # 宽幅 ratio 4.0 → 0.82×可用宽（自然宽 21.2cm 远超上限，取档位）
+            wide = self._img(td, 800, 200)
+            self.assertAlmostEqual(_fit_image_cm(wide, 15.4)[0], round(0.82 * 15.4, 2), places=1)
+            # 竖高 ratio 0.67 → 宽度档位(0.55×)受**高度上限 7cm** 约束，取更小者
+            tall = self._img(td, 200, 300)
+            w, h = _fit_image_cm(tall, 15.4)
+            self.assertAlmostEqual(h, 7.0, places=1)
+            self.assertAlmostEqual(w, round(7.0 * (200 / 300), 2), places=1)
+
+
 class TestQuestionNumbering(unittest.TestCase):
     """🔴 历史缺陷回归：题号**双重渲染**。
 
