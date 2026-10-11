@@ -182,6 +182,17 @@ class TestRepairLatex(unittest.TestCase):
         self.assertEqual(export.repair_latex("a\\sim b"), "a\\sim b")
         self.assertEqual(export.repair_latex("\\text{约}3\\text{米}"), "\\text{约}3\\text{米}")
 
+    def test_stray_alignment_ampersand_removed(self):
+        """MTEF 表格残留的游离 ``&``（无对齐语义）→ 剔除。"""
+        out = export.repair_latex("\\rho _{ & x } =")
+        self.assertNotIn("&", out)
+        self.assertEqual(out, "\\rho _{x } =")   # 残留一个空格，LaTeX 数学模式中无影响
+
+    def test_array_environment_keeps_ampersand(self):
+        """``\\begin{array}`` 内的 ``&`` 有真实对齐语义，不得剔除。"""
+        src = "\\begin{array}{cc} a & b \\end{array}"
+        self.assertIn("&", export.repair_latex(src))
+
 
 class TestPlaceholders(unittest.TestCase):
     """占位符解析与降级。"""

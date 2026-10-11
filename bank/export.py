@@ -487,6 +487,11 @@ _TILDE_CMD_RE = re.compile(
 _RM_SUPERSCRIPT_RE = re.compile(
     r"\\rm\s*\{\s*\{\s*\}\s*\^\s*\\text\s*\{\s*([^{}]*?)\s*\}\s*\}"
 )
+#: 游离的 LaTeX 对齐符 ``&``（MTEF 表格残留），桥接无法渲染，且无对齐语义可保留。
+#: 例：``\rho _{ & x } =`` → ``\rho _{x} =``。
+#: **注意**：``\begin{array}`` 环境内的 ``&`` 有真实对齐语义，本规则不处理
+#: （该环境本身不受桥接支持，属已知限制，导出会如实降级并告警）。
+_STRAY_AMP_RE = re.compile(r"\s*&\s*")
 
 
 def repair_latex(latex: str | None) -> str | None:
@@ -508,6 +513,9 @@ def repair_latex(latex: str | None) -> str | None:
     # 规则二先行：这些命令内部含 ``\`` 与空花括号，先归一避免干扰规则一的包裹逻辑。
     latex = _TILDE_CMD_RE.sub(r"\\sim", latex)
     latex = _RM_SUPERSCRIPT_RE.sub(r"^{\\text{\1}}", latex)
+    # 规则三：剔除游离对齐符（数组环境内的 ``&`` 有真实语义，不动）。
+    if "\\begin{" not in latex:
+        latex = _STRAY_AMP_RE.sub("", latex)
     protected: list[str] = []
 
     def _protect(m):
