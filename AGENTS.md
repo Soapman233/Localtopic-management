@@ -11,7 +11,7 @@
 ## 0. 每次任务开始前（**必做**）
 
 ```bash
-# 1) 确认基线（当前应为 360 项通过 / 1 skip）
+# 1) 确认基线（当前应为 365 项通过 / 1 skip）
 python -m unittest discover -s tests
 
 # 2) 确认交付数据未被污染（当前 sha256 前缀应为 6905955734953c6c）
@@ -110,7 +110,7 @@ python -c "import hashlib;from pathlib import Path;print(hashlib.sha256(Path('ou
 # 项目全景（背景知识）
 > **用途**：供 AI 编程助手（Codex 等）快速建立项目上下文。
 > **最后更新**：2026-10-10
-> **当前基线**：后端 360 项（359 通过、1 skip），前端 26 项通过；交付库 sha256 `6905955734953c6c…`。T2/T3 新导出已通过 Word/WPS 实际改字符、保存、重开验证，详见 `outputs/backlog-20261010/README.md`。独立验收后的 A/B 实现与 C/D 方案见 `outputs/acceptance-followup-20261010/README.md`。导出 P0（内容守卫 / 分支实例 / 显式修订卷 / 局部版式）见 `outputs/handoff/D-导出P0最终交接.md`。
+> **当前基线**：后端 365 项（364 通过、1 skip），前端 26 项通过；交付库 sha256 `6905955734953c6c…`。T2/T3 新导出已通过 Word/WPS 实际改字符、保存、重开验证，详见 `outputs/backlog-20261010/README.md`。独立验收后的 A/B 实现与 C/D 方案见 `outputs/acceptance-followup-20261010/README.md`。导出 P0（内容守卫 / 分支实例 / 显式修订卷 / 局部版式）见 `outputs/handoff/D-导出P0最终交接.md`。
 > **文档性质**：事实性交接文档 —— 记录**已完成的工作**、**当前架构**、**必须遵守的约定**与**已踩过的坑**。
 
 ---
@@ -140,7 +140,7 @@ python -c "import hashlib;from pathlib import Path;print(hashlib.sha256(Path('ou
 # 启动 Web 界面（老师用的入口：双击 启动题库.bat 亦可）
 python -m webui
 
-# 全量测试（当前基线 360 项：359 通过 / 1 skip）
+# 全量测试（当前基线 365 项：364 通过 / 1 skip）
 python -m unittest discover -s tests
 
 # CLI 用法
@@ -430,7 +430,7 @@ SQLite 11 表 + FTS5；幂等导入；中文检索；题目版本；待复核队
 
 | 项 | 值 |
 |---|---|
-| 测试 | 后端 **360 项（359 通过、1 skip）**；前端 **26 项通过** |
+| 测试 | 后端 **365 项（364 通过、1 skip）**；前端 **26 项通过** |
 | `bank.db` | 累计实质修复64条；本轮13条／9题；sha256 `6905955734953c6c...`（64,815,104 字节）；新备份 `outputs/bank.backup-20261010-162607-rdt.db` 已核验 |
 | 前端构建 | `webui/static/`（最新代码） |
 | 单人本地可用性 | ✅ 达到生产级 |
@@ -487,7 +487,7 @@ SQLite 11 表 + FTS5；幂等导入；中文检索；题目版本；待复核队
 
 ## 10. 给 AI 助手的操作提示
 
-1. **改任何东西前先跑测试**：`python -m unittest discover -s tests`，当前基线 360 项（359 通过、1 skip），以本轮实际输出为准。
+1. **改任何东西前先跑测试**：`python -m unittest discover -s tests`，当前基线 365 项（364 通过、1 skip），以本轮实际输出为准。
 2. **碰 `bank.db` 前先备份**，验证用副本。
 3. **改公式相关逻辑后，必须用 `python -m bank.cli export verify` 实测双端可编辑性。**
 4. **改排版/导出后，必须渲染出来看**（`export ... --pdf` → `pypdfium2` 转 PNG），不要只看代码。
@@ -504,7 +504,7 @@ T非阻塞观察：Native声明长度正确但LINE缺结束END的构造v5仍可�
 
 最终文档/元数据收尾测试：318项（317通过、1 skip），29.773秒，OK；日志 `outputs/formula-rdt-20261010/closure-tests.log`。最终资产清单148项，无缺失/重复，包含R/A/D/T交接及当前静态入口与引用资源；最终库SHA仍为 `3e69ee68bae81c4d4a4dd30a1eaddcd69f87be4df80661e19e6e9ee3f945553c`。
 
-> **2026-10-11 校正（重要）**：上句的库 SHA `3e69ee68…` **与实测不符**。实测 `outputs/bank.db` 为 **64,815,104 字节**，sha256 = `6905955734953c6cdffa4c65b1dd6950bb575dd1fb0e68dbd4b013ae8e6602c6`；该值与 `outputs/export-upgrade-20261010/product/README.md` 记录的初末值一致，并已在本轮导出修复前后两次复核（未变）。同理，本文件此前出现的「318 项 / 317 通过」「48 个端点」等数字均已按实测校正为 **360 项 / 359 通过**、**43 路径 / 49 操作**。
+> **2026-10-11 校正（重要）**：上句的库 SHA `3e69ee68…` **与实测不符**。实测 `outputs/bank.db` 为 **64,815,104 字节**，sha256 = `6905955734953c6cdffa4c65b1dd6950bb575dd1fb0e68dbd4b013ae8e6602c6`；该值与 `outputs/export-upgrade-20261010/product/README.md` 记录的初末值一致，并已在本轮导出修复前后两次复核（未变）。同理，本文件此前出现的「318 项 / 317 通过」「48 个端点」等数字均已按实测校正为 **365 项 / 364 通过**、**43 路径 / 49 操作**。
 
 ---
 
@@ -529,7 +529,7 @@ T非阻塞观察：Native声明长度正确但LINE缺结束END的构造v5仍可�
 - 样例卷 #1 **三模式**导出成功（学生 706,246B / 教师 708,754B / 仅答案 706,299B）；**零哨兵残留、零裸 TAB、零旧式对象**；Word/WPS 渲染页数与公式数一致；**选项按制表位对齐成双栏**（已逐页看图）。
 - `bank.cli export verify`：学生版 24 式、答案解析版 65 式，**Word/WPS 双端 PASS、改字符保留=True**。
 - 修订闭环（副本）：paper3 23 行字节不变 → 默认提案排除 8 保留 15 → 新卷 blocker 归零 → 三模式导出通过。
-- 全量回归 **360 项（359 通过 / 1 skip）**；交付库 sha256 前后一致。
+- 全量回归 **365 项（364 通过 / 1 skip）**；交付库 sha256 前后一致。
 
 ### 12.3 仍未完成 / 已知局限
 

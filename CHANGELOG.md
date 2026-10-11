@@ -8,6 +8,21 @@
 
 ## [Unreleased]
 
+### 修复
+
+- **部分公式无法渲染（全库回归发现）**。MTEF → LaTeX 把「范围号 / 约等号 ~」转成
+  `\tilde{\ }` / `\mathrm{\~{}}` / `\~{}`，把单位上标转成 `\rm{{}^\text{3}}`，
+  桥接渲染报 `ToCommands returned empty`，导出会**降级为「（公式）」占位**。
+  实测全库 **54 条公式（26 题）** 受影响；在 `bank/export.py::repair_latex`
+  增加两条归一化规则后降为 **0 条**。
+
+### 新增
+
+- 仓库工程化：`.gitignore` / `.gitattributes`（强制 `*.bat` CRLF）/ `README.md` /
+  `CHANGELOG.md` / `requirements.txt` / GitHub Actions CI。
+- 验证脚本：浏览器实机验收（Playwright）、全库 TAB 导出回归、Word/WPS 像素级页审计、
+  LibreOffice 第三渲染器对比。
+
 ## [0.7.0] - 2026-10-11
 
 ### 修复

@@ -470,17 +470,44 @@ def sanitize_latex(latex: str | None) -> str | None:
 _BARE_LETTERS_RE = re.compile(r"(?<![\\A-Za-z])([A-Za-z]{2,})(?![A-Za-z])")
 #: 需要保护的「命令 + 内容」组（其内容不参与裸标识符包裹）。
 _PROTECT_CMD_RE = re.compile(r"\\(?:text|rm|mathrm|operatorname|mbox)\{[^{}]*\}")
+#: MTEF 产生的**波浪号命令**（「范围号 / 约等号 ~」），桥接无法渲染：
+#:   ``\tilde{\ }`` / ``\tilde{}`` / ``\tilde{\}``（如 ``0\tilde{\ }0.6``）、
+#:   ``\mathrm{\~{}}``（如 ``t_{1}\mathrm{\~{}}t_{2}``）。
+#: 实测全库 54 条公式（26 题）因此报 ``ToCommands returned empty``，统一归一为 ``\sim``。
+#: 注意：``sanitize_latex`` 会去掉 ``\tilde{\ }`` 内部空格，故花括号内**只允许**
+#: 空白、反斜杠与波浪号。
+_TILDE_CMD_RE = re.compile(
+    r"\\tilde\s*\{\s*[\\~\s]*\}"               # \tilde{} / \tilde{\ } / \tilde{\} / \tilde{\~}
+    r"|\\mathrm\s*\{\s*\\~?\s*\{\s*\}\s*\}"    # \mathrm{\~{}} / \mathrm{{}}
+    r"|\\~\{\s*\}"                             # 裸 \~{}（如 ``18℃\~{}30℃``）
+)
+#: ``\rm{{}^\text{3}}`` —— MTEF 表达**单位上标**（如 ``m³``）的写法。
+#: ``\rm{}`` 的展开规则要求花括号内无嵌套，此处含嵌套故漏网；桥接同样无法渲染。
+#: 归一为 ``^{\text{3}}``（上标文本）。
+_RM_SUPERSCRIPT_RE = re.compile(
+    r"\\rm\s*\{\s*\{\s*\}\s*\^\s*\\text\s*\{\s*([^{}]*?)\s*\}\s*\}"
+)
 
 
 def repair_latex(latex: str | None) -> str | None:
-    """对渲染失败的 LaTeX 做保守修复：把**裸多字母标识符**用花括号包起来。
+    """对渲染失败的 LaTeX 做保守修复。
 
+    规则一：把**裸多字母标识符**用花括号包起来。
     背景：桥接的 LaTeX→OMML 解析器对 ``数字+多字母标识符+上下标``（如 ``4cm^{3}``）
     会返回 ``ToCommands returned empty``。实测 ``4{cm}^{3}`` 可正常渲染。
     ``\\text{}`` / ``\\rm{}`` 等命令的内容**不参与**包裹（先保护再还原），避免二次包裹。
+
+    规则二：把**波浪号命令**归一为 ``\\sim``。
+    背景：MTEF 把「范围号 / 约等号 ~」转成 ``\\tilde{\\ }``（如 ``0\\tilde{\\ }0.6``）
+    或 ``\\mathrm{\\~{}}``（如 ``t_{1}\\mathrm{\\~{}}t_{2}``），桥接渲染同样报
+    ``ToCommands returned empty``。**全库实测 54 条公式（26 题）因此无法渲染**，
+    导出会降级为「（公式）」占位。统一归一为可渲染的关系符 ``\\sim``。
     """
     if not latex:
         return latex
+    # 规则二先行：这些命令内部含 ``\`` 与空花括号，先归一避免干扰规则一的包裹逻辑。
+    latex = _TILDE_CMD_RE.sub(r"\\sim", latex)
+    latex = _RM_SUPERSCRIPT_RE.sub(r"^{\\text{\1}}", latex)
     protected: list[str] = []
 
     def _protect(m):

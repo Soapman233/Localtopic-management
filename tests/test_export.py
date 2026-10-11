@@ -155,6 +155,33 @@ class TestRepairLatex(unittest.TestCase):
         self.assertEqual(export.repair_latex("x^{2}"), "x^{2}")
         self.assertEqual(export.repair_latex("V_{a}"), "V_{a}")
 
+    # ------------------------------------------------------------------ #
+    # 波浪号命令与单位上标（全库回归发现的真实缺陷，2026-10-11）
+    # ------------------------------------------------------------------ #
+    def test_tilde_range_normalized_to_sim(self):
+        """MTEF 把「范围号 ~」转成 ``\\tilde{\\ }``，桥接无法渲染 → 归一为 ``\\sim``。"""
+        self.assertEqual(export.repair_latex("0\\tilde{\\ }0.6{A}"), "0\\sim0.6{A}")
+        # sanitize_latex 会去掉内部空格，故 ``\tilde{\}`` 形态也要覆盖
+        self.assertEqual(export.repair_latex("0\\tilde{\\}0.6{A}"), "0\\sim0.6{A}")
+
+    def test_mathrm_tilde_normalized_to_sim(self):
+        """``t_{1}\\mathrm{\\~{}}t_{2}``（约等号）同样无法渲染。"""
+        self.assertEqual(export.repair_latex("t_{1}\\mathrm{\\~{}}t_{2}"),
+                         "t_{1}\\simt_{2}")
+
+    def test_bare_tilde_braces_normalized(self):
+        self.assertEqual(export.repair_latex("18℃\\~{}30℃"), "18℃\\sim30℃")
+
+    def test_rm_superscript_normalized(self):
+        """``\\rm{{}^\\text{3}}``（单位上标，如 m³）→ ``^{\\text{3}}``。"""
+        self.assertEqual(export.repair_latex("V=0.5{c}{m}{\\rm{{}^\\text{3}}}"),
+                         "V=0.5{c}{m}{^{\\text{3}}}")
+
+    def test_normal_formula_untouched_by_tilde_rule(self):
+        """不应误伤普通 ``\\sim`` 或含 ``~`` 的正文命令。"""
+        self.assertEqual(export.repair_latex("a\\sim b"), "a\\sim b")
+        self.assertEqual(export.repair_latex("\\text{约}3\\text{米}"), "\\text{约}3\\text{米}")
+
 
 class TestPlaceholders(unittest.TestCase):
     """占位符解析与降级。"""
