@@ -114,3 +114,7 @@ htmlcov/
 # 探针临时库与工作目录（可再生，不入库）
 spike/programmatic_import/tmp_bank.db
 spike/programmatic_import/work/
+
+# 探针生成的中间产物（可再生）
+spike/latex2omml_smoke/*.pdf
+spike/latex2omml_smoke/real_*.docx
