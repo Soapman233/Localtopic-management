@@ -163,3 +163,7 @@ spike/acceptance/_mtef_frozen/
 spike/acceptance/_p41_clean_env/
 spike/acceptance/_p43_other_path/
 spike/acceptance/_p42_timing/
+
+spike/acceptance/_lan_e2e/
+spike/acceptance/_net*/
+spike/acceptance/_safety/

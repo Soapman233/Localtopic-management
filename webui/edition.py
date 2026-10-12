@@ -99,6 +99,66 @@ def is_auth_exempt(path: str) -> bool:
     return path in _AUTH_EXEMPT_PATHS
 
 
+# --------------------------------------------------------------------------- #
+# 暴露范围（exposure）与**安全不变量**
+# --------------------------------------------------------------------------- #
+#: 回环地址（只监听这些 = 仅本机可访问）。
+_LOOPBACK_HOSTS: frozenset[str] = frozenset({"127.0.0.1", "::1", "localhost"})
+
+#: 暴露范围取值。
+EXPOSURES: tuple[str, ...] = ("local", "lan", "public")
+
+
+def is_loopback(host: str | None = None) -> bool:
+    """监听地址是否仅本机可达。"""
+    h = (host if host is not None else resolve_host()).strip().lower()
+    return h in _LOOPBACK_HOSTS
+
+
+def resolve_exposure() -> str:
+    """生效的暴露范围。
+
+    * ``local``  —— 仅回环（本机一人）
+    * ``lan``    —— 绑定非回环但**非线上版**（局域网/同 WiFi 访问）
+    * ``public`` —— 线上版（容器/公网）
+
+    ⚠️ 该值由**实际监听地址**推导，而不是由用户"声称"的模式推导——
+    避免"以为只在本机，其实开在局域网上"这类静默暴露。
+    """
+    if is_loopback():
+        return "local"
+    return "public" if is_online() else "lan"
+
+
+def exposure_safety() -> dict:
+    """**安全不变量**：非回环监听时必须有鉴权，否则拒绝启动。
+
+    为什么必须 fail-closed
+    ----------------------
+    老师若把监听改成 ``0.0.0.0`` 却**没设令牌**，同网段任何人（含访客 WiFi、
+    隔壁办公室）都能读写整个题库。这种"静默裸奔"比不能用更糟。
+
+    Returns
+    -------
+    ``{ok, exposure, host, reason, hint}``；``ok=False`` 时调用方应**拒绝启动**。
+    """
+    exposure = resolve_exposure()
+    host = resolve_host()
+    if exposure == "local":
+        return {"ok": True, "exposure": exposure, "host": host,
+                "reason": "仅监听回环地址，本机单人使用。", "hint": ""}
+    if auth_enabled():
+        return {"ok": True, "exposure": exposure, "host": host,
+                "reason": "已启用访问令牌鉴权。", "hint": ""}
+    return {
+        "ok": False, "exposure": exposure, "host": host,
+        "reason": (f"监听地址 {host!r} 对网络开放，但**未启用任何鉴权**——"
+                   "同网段的任何人都能读写你的题库。"),
+        "hint": ("请设置访问令牌（QB_AUTH_TOKEN）后重启；"
+                 "或在「设置 → 局域网访问」中开启（会自动生成令牌）。"),
+    }
+
+
 def edition_summary() -> dict:
     """版本摘要（供启动日志与 ``/api/health`` 展示）。
 
@@ -110,6 +170,7 @@ def edition_summary() -> dict:
         "host": resolve_host(),
         "port": resolve_port(),
         "auth_enabled": auth_enabled(),
+        "exposure": resolve_exposure(),
         "notes": {
             "local": "本机单人使用，仅监听回环地址，无鉴权。",
             "online": "多人访问，建议置于 nginx 之后并开启 Basic Auth。",
@@ -118,7 +179,8 @@ def edition_summary() -> dict:
 
 
 __all__ = [
-    "EDITIONS", "DEFAULT_EDITION", "DEFAULT_PORT",
+    "EDITIONS", "DEFAULT_EDITION", "DEFAULT_PORT", "EXPOSURES",
     "current_edition", "is_online", "resolve_host", "resolve_port",
     "auth_token", "auth_enabled", "is_auth_exempt", "edition_summary",
+    "is_loopback", "resolve_exposure", "exposure_safety",
 ]

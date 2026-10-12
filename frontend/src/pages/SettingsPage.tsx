@@ -25,6 +25,7 @@ import { TEMPLATES } from '../api/types'
 import type { SettingsData } from '../api/types'
 import { ErrorState } from '../components/ErrorState'
 import { LoadingState } from '../components/LoadingState'
+import LanAccessPanel from '../components/LanAccessPanel'
 import { qk } from '../api/queryKeys'
 
 interface FormState {
@@ -201,6 +202,9 @@ export default function SettingsPage() {
           />
         </Box>
       </Paper>
+
+      {/* 局域网访问（方案 A）：手机 / 其他设备访问 */}
+      <LanAccessPanel />
 
       {/* 界面偏好 */}
       <Paper variant="outlined" sx={{ p: 2, mb: 2 }}>

@@ -57,7 +57,11 @@ hiddenimports = [
     "pipeline.segment",
     "webui.routers.imports",
     "webui.routers.backup",
+    "webui.routers.network",
     "webui.services.import_svc",
+    "webui.services.network_svc",
+    # 局域网访问：二维码生成（延迟导入，静态分析会漏）
+    "segno",
 ]
 
 # --- 排除（显著减小体积）--------------------------------------------------- #

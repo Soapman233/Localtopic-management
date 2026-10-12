@@ -15,6 +15,12 @@ import { AuthProvider } from './app/auth/AuthProvider'
 import ErrorBoundary from './components/ErrorBoundary'
 import NotifierBridge from './components/NotifierBridge'
 import AppRouter from './router'
+import { bootstrapLanToken } from './lib/lanToken'
+
+// 🔴 必须在渲染之前：局域网扫码链接里的 `?t=<令牌>` 要在**任何 API 调用之前**
+// 落到存储与 api 客户端，否则 AuthProvider 初始化时读不到令牌 → 首屏全 401。
+// 本地版（无该参数）此调用为空操作。
+bootstrapLanToken()
 
 const queryClient = new QueryClient({
   defaultOptions: {

@@ -39,6 +39,7 @@ export const ROOT = {
   source: 'source',
   stats: 'stats',
   importStatus: 'import-status',
+  networkStatus: 'network-status',
 } as const
 
 export const qk = {
@@ -99,6 +100,10 @@ export const qk = {
   // ---- 导入（Phase 2.3）----
   /** ``GET /api/import/status``：导入功能开关与限制。 */
   importStatus: () => [ROOT.importStatus] as const,
+
+  // ---- 局域网访问（方案 A）----
+  /** ``GET /api/network/status``：局域网状态（不含令牌）。 */
+  networkStatus: () => [ROOT.networkStatus] as const,
 } as const
 
 export type QueryKeyFactory = typeof qk

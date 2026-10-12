@@ -36,25 +36,9 @@ import {
 import { getAuthToken, setAuthToken, setUnauthorizedHandler } from '../../api/client'
 import { qk } from '../../api/queryKeys'
 import { IS_ONLINE } from '../../lib/deployMode'
-
-const TOKEN_KEY = 'qb-auth-token'
-
-function readStoredToken(): string | null {
-  try {
-    return window.localStorage.getItem(TOKEN_KEY)
-  } catch {
-    return null // 隐私模式 / 存储被禁用时按未登录处理，不抛错
-  }
-}
-
-function storeToken(token: string | null): void {
-  try {
-    if (token) window.localStorage.setItem(TOKEN_KEY, token)
-    else window.localStorage.removeItem(TOKEN_KEY)
-  } catch {
-    /* 存储不可用时忽略：本次会话仍能用（内存里的令牌已设） */
-  }
-}
+// 令牌存储的**单一来源**：局域网扫码链接（lib/lanToken.ts）也写这里，
+// 两处共用同一个键，避免漂移导致「扫了码仍提示未授权」。
+import { readStoredToken, storeToken } from '../../lib/authStorage'
 
 export interface AuthContextValue {
   /** 后端是否启用了鉴权。`false` = 本地版 → 一切透传。 */

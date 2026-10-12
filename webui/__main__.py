@@ -73,6 +73,10 @@ def _open_browser_later(url: str, delay: float = 1.5) -> None:
 def main(argv: list[str] | None = None) -> int:
     """启动 Web 服务；返回进程退出码。"""
     argv = list(sys.argv[1:] if argv is None else argv)
+    # 局域网配置（方案 A）落到环境变量：必须在 resolve_host/auth_token **之前**。
+    # 显式传入的 QB_HOST/QB_AUTH_TOKEN 优先（setdefault），便于排障与线上部署覆盖。
+    from .services import network_svc as _net
+    _net.apply_to_environment()
     # 版本配置：监听地址/端口由 ``QB_EDITION`` / ``QB_HOST`` / ``QB_PORT`` 决定。
     host = edition.resolve_host()
     port = edition.resolve_port()
@@ -93,6 +97,17 @@ def main(argv: list[str] | None = None) -> int:
         _print("鉴权：已启用（/api/* 需携带 Bearer 令牌）")
     if _ed["edition"] == "online" and host == "0.0.0.0":
         _print("提示：线上版监听 0.0.0.0，请务必置于 nginx 之后并开启访问控制。")
+
+    # 🔴 安全不变量（fail-closed）：**非回环监听必须有鉴权**，否则拒绝启动。
+    #    理由：把监听改成 0.0.0.0 却没设令牌 = 同网段任何人可读写整个题库；
+    #    这种"静默裸奔"比不能用更糟。见 webui/edition.py::exposure_safety。
+    _safety = edition.exposure_safety()
+    if not _safety["ok"]:
+        _print(f"安全校验未通过：{_safety['reason']}")
+        _print(f"  {_safety['hint']}")
+        return 1
+    if _safety["exposure"] == "lan":
+        _print(f"局域网访问：已开启（http://{host}:{port}）——手机连同一 WiFi 即可使用。")
 
     if not db_path.is_file():
         # 便携客户端**首启必须能自动建库**——老师不会去命令行跑 bank.cli init。
