@@ -18,9 +18,7 @@ import {
   DialogTitle,
   Divider,
   IconButton,
-  MenuItem,
   Paper,
-  Select,
   Stack,
   TextField,
   Typography,
@@ -29,6 +27,7 @@ import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline'
 import AddIcon from '@mui/icons-material/Add'
 import EditIcon from '@mui/icons-material/Edit'
 import RefreshIcon from '@mui/icons-material/Refresh'
+import { PaperSettings } from './PaperSettings'
 import { useDroppable } from '@dnd-kit/core'
 import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable'
 import type { Paper as PaperModel, PaperItem, PaperSection, ExportQuestion } from '../api/types'
@@ -40,9 +39,6 @@ import { ErrorState } from './ErrorState'
 import { LoadingState } from './LoadingState'
 import { GLOSSARY, describeSnapshotStale } from '../lib/glossary'
 import { usePaperStore } from '../store/paperStore'
-
-const TEMPLATES = ['考试', '测验', '作业']
-const ANSWER_MODES = ['学生版', '答案解析版', '仅答案']
 
 export interface PaperActions {
   addQuestions: (questionIds: number[], sectionId?: number | null) => void
@@ -67,6 +63,8 @@ export interface PaperPanelProps {
   onOpenDrawer: () => void
   onOpenDetail: (questionId: number) => void
   contentQuestions?: ExportQuestion[]
+  /** 工作台外层已提供设置时关闭，其他消费者默认保持完整入口。 */
+  showSettings?: boolean
 }
 
 interface Group {
@@ -85,7 +83,8 @@ function groupItems(ordered: PaperItem[], sections: PaperSection[]): Group[] {
     const g = it.section_id != null ? groups.find((x) => x.section?.id === it.section_id) : undefined
     ;(g ?? ungrouped).items.push(it)
   }
-  const out = groups.filter((g) => g.items.length > 0)
+  // 空大题也保留：新增后必须立即能够改名、调序或删除。
+  const out = groups
   if (ungrouped.items.length > 0) out.push(ungrouped)
   return out
 }
@@ -101,11 +100,11 @@ export function PaperPanel({
   onOpenDrawer,
   onOpenDetail,
   contentQuestions,
+  showSettings = true,
 }: PaperPanelProps) {
   const [scoreEdit, setScoreEdit] = useState<{ itemId: number; value: string } | null>(null)
   const [newSection, setNewSection] = useState<string | null>(null)
   const [rename, setRename] = useState<{ id: number; name: string } | null>(null)
-  const [titleDraft, setTitleDraft] = useState<string | null>(null)
   // 删除大题二次确认（P0-1）：单击不再直接 force 删除，先确认（显示该大题题数）。
   const [confirmSection, setConfirmSection] = useState<{ id: number; name: string; count: number } | null>(null)
 
@@ -174,65 +173,8 @@ export function PaperPanel({
         borderColor: isOver ? 'primary.main' : 'divider',
       }}
     >
-      {/* 试卷元数据（P0-9） */}
-      <Stack direction="row" spacing={1} alignItems="center" sx={{ mb: 1 }} flexWrap="wrap" useFlexGap>
-        <TextField
-          size="small"
-          variant="standard"
-          value={titleDraft ?? paper.title}
-          onChange={(e) => setTitleDraft(e.target.value)}
-          onBlur={() => {
-            if (titleDraft != null && titleDraft.trim() && titleDraft !== paper.title) {
-              actions.updatePaper({ title: titleDraft.trim() })
-            }
-            setTitleDraft(null)
-          }}
-          sx={{ flex: 1, minWidth: 140 }}
-        />
-        <Button size="small" onClick={onOpenDrawer}>
-          试卷管理
-        </Button>
-      </Stack>
-      <Stack direction="row" spacing={1} sx={{ mb: 1 }} flexWrap="wrap" useFlexGap>
-        <Select
-          size="small"
-          value={paper.template}
-          onChange={(e) => actions.updatePaper({ template: e.target.value })}
-          sx={{ minWidth: 96 }}
-        >
-          {TEMPLATES.map((t) => (
-            <MenuItem key={t} value={t}>
-              {t}
-            </MenuItem>
-          ))}
-        </Select>
-        <Select
-          size="small"
-          value={paper.answer_mode}
-          onChange={(e) => actions.updatePaper({ answer_mode: e.target.value })}
-          sx={{ minWidth: 128 }}
-        >
-          {ANSWER_MODES.map((m) => (
-            <MenuItem key={m} value={m}>
-              {m}
-            </MenuItem>
-          ))}
-        </Select>
-        <Select
-          size="small"
-          value={targetSectionId ?? ''}
-          onChange={(e) => onTargetSectionChange(e.target.value === '' ? null : Number(e.target.value))}
-          displayEmpty
-          sx={{ minWidth: 140 }}
-        >
-          <MenuItem value="">加入目标：卷末/未分组</MenuItem>
-          {(paper.sections ?? []).map((s) => (
-            <MenuItem key={s.id} value={s.id}>
-              加入目标：{s.name}
-            </MenuItem>
-          ))}
-        </Select>
-      </Stack>
+      {showSettings && <PaperSettings key={paper.id} paper={paper} onUpdate={actions.updatePaper}
+        targetSectionId={targetSectionId} onTargetSectionChange={onTargetSectionChange} onOpenLibrary={onOpenDrawer} />}
 
       {/* 预警：无答案（尤其解析版） */}
       {paper.answer_mode === '答案解析版' && noAnswerCount > 0 && (
@@ -267,7 +209,7 @@ export function PaperPanel({
             <Typography variant="body2">试卷为空。从左侧题库点「加入」或拖拽题目到此处。</Typography>
           </Box>
         )}
-        {groups.map((g) => {
+        {groups.map((g, groupIndex) => {
           const groupIds = g.items.map((i) => `item-${i.id}`)
           const globalIndex = (item: PaperItem) => ordered.findIndex((x) => x.id === item.id)
           return (
@@ -283,6 +225,9 @@ export function PaperPanel({
                 </Typography>
                 {g.section && (
                   <>
+                    {/* 仅在大题之间移动；未分组不参与，首尾明确禁用。 */}
+                    <Button size="small" disabled={groupIndex === 0} onClick={() => actions.moveSection(g.section!.id, groupIndex)} aria-label={'上移大题 ' + g.section.name}>上移</Button>
+                    <Button size="small" disabled={groupIndex === (paper.sections ?? []).length - 1} onClick={() => actions.moveSection(g.section!.id, groupIndex + 2)} aria-label={'下移大题 ' + g.section.name}>下移</Button>
                     <IconButton
                       size="small"
                       onClick={() => setRename({ id: g.section!.id, name: g.section!.name })}

@@ -10,7 +10,7 @@
  * **强制预览门禁（§5-Q3）**：任何组卷编辑动作（加/删/调序/设分/大题增删改移/刷新快照/改元数据）
  * 成功后都会 `useUiStore.invalidatePreview(paperId)` → **重新锁定导出**。漏一个即等于门禁失效。
  */
-import { useEffect, useRef, useState } from 'react'
+import { lazy, Suspense, useCallback, useEffect, useRef, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   Alert,
@@ -46,8 +46,10 @@ import { useLocation, useNavigate } from 'react-router-dom'
 import { FilterSidebar } from '../components/FilterSidebar'
 import { QuestionCard } from '../components/QuestionCard'
 import { PaperPanel, type PaperActions } from '../components/PaperPanel'
-import { LivePreviewPanel } from '../components/LivePreviewPanel'
-import { ExportDrawer } from '../components/ExportDrawer'
+import { LivePreviewPanel, type LivePreviewPageSummary } from '../components/LivePreviewPanel'
+import { PaperSettings } from '../components/PaperSettings'
+// 首次打开才加载导出业务；打开后保持挂载，关闭抽屉不丢本次结果。
+const ExportDrawer = lazy(() => import('../components/ExportDrawer'))
 import { EmptyState } from '../components/EmptyState'
 import { ErrorState } from '../components/ErrorState'
 import { LoadingState } from '../components/LoadingState'
@@ -173,6 +175,12 @@ export default function PaperBuilderPage() {
   const [error, setError] = useState<string | null>(null)
   const [errorDiagnostics, setErrorDiagnostics] = useState<ExportDiagnostics | null>(null)
   const [exportOpen, setExportOpen] = useState(() => returnIntent.current?.paperId != null)
+  const exportEverOpened = useRef(exportOpen)
+  if (exportOpen) exportEverOpened.current = true
+  const [diagnosticsOpen, setDiagnosticsOpen] = useState(false)
+  const [pageSummary, setPageSummary] = useState<LivePreviewPageSummary | null>(null)
+  const receivePageSummary = useCallback((summary: LivePreviewPageSummary) => setPageSummary(summary), [])
+  const searchInputRef = useRef<HTMLInputElement>(null)
   const [undo, setUndo] = useState<{ msg: string; run: () => void } | null>(null)
   // P0-3 响应式（断点统一）：窄屏用 MUI 标准断点 `<lg`（<1200px）折叠右栏，
   // **不再用 1439 魔法值**——否则 1366×768（教师笔记本主流分辨率）会被误判为窄屏，
@@ -182,10 +190,10 @@ export default function PaperBuilderPage() {
   // 「紧凑」= 视口不足以同时舒适容纳「筛选栏(248) + 题目列表 + 右栏」。
   // 实测题卡宽度：1366→338px、1280→281px、1440→386px、1920→716px。
   // 这里给老师一个**可收回 264px**（筛选栏 248 + 间距 16）的开关；
-  // 默认**保持展开**——不改变既有默认行为，只在需要更宽结果区时手动收起。
+  // 紧凑视口首次收起；用户主动展开后保留选择，宽屏始终常驻。
   const compact = useMediaQuery('(max-width:1439px)')
   const [rightOpen, setRightOpen] = useState(false)
-  const [filtersOpen, setFiltersOpen] = useState(true)
+  const [filtersOpen, setFiltersOpen] = useState(() => !compact)
 
   // 检索条件状态（关键词防抖 / URL 同步 / query 与 facets 参数）——与检索页共用同一实现（§1.6）。
   const {
@@ -360,39 +368,40 @@ export default function PaperBuilderPage() {
             ? 'clamp(360px, 34vw, 640px)'
             : 'clamp(320px, 30vw, 420px)',
         flexShrink: 0,
+        minWidth: 0,
         minHeight: 0,
         display: 'flex',
         flexDirection: 'column',
       }}
     >
-      <ToggleButtonGroup
-        size="small"
-        exclusive
-        value={builderView}
-        onChange={(_e, v: 'layout' | 'list' | null) => v && setBuilderView(v)}
-        sx={{ mb: 1, alignSelf: 'flex-start' }}
-      >
-        <ToggleButton value="layout" data-testid="view-layout">排版</ToggleButton>
-        <ToggleButton value="list" data-testid="view-list">清单</ToggleButton>
-      </ToggleButtonGroup>
-
-      {exportDataQ.isFetching && <Typography variant="caption">正在检查内容…</Typography>}
+      {/* 一行保留视图、分页与内容状态；收起详情只影响展示，不触碰 export_allowed。 */}
+      <Stack direction="row" spacing={1} alignItems="center" sx={{ mb: 1 }} data-testid="builder-summary">
+        <ToggleButtonGroup size="small" exclusive value={builderView}
+          onChange={(_e, v: 'layout' | 'list' | null) => v && setBuilderView(v)} aria-label="试卷视图">
+          <ToggleButton value="layout" data-testid="view-layout">排版</ToggleButton>
+          <ToggleButton value="list" data-testid="view-list">清单</ToggleButton>
+        </ToggleButtonGroup>
+        {paperId != null && <Typography variant="caption" sx={{ whiteSpace: 'nowrap' }} title={pageSummary?.overflowPages ? '含长题，结构分页近似，最终以像素预览为准' : '结构分页近似'}>
+          {pageSummary?.paperId === paperId && pageSummary.contentDigest === exportDataQ.data?.content_digest && pageSummary.ready ? '约 ' + pageSummary.pageCount + ' 页' : '计算页数…'}
+        </Typography>}
+        {exportDataQ.isFetching ? <Typography variant="caption">正在检查…</Typography> : exportDataQ.data && <>
+          <Typography variant="caption" sx={{ whiteSpace: 'nowrap' }}>
+            {exportDataQ.data.diagnostics.export_allowed ? '检查通过' + (exportDataQ.data.diagnostics.warning_count ? ' · ' + exportDataQ.data.diagnostics.warning_count + ' 条提示' : '') : '需处理 ' + exportDataQ.data.diagnostics.blocker_count + ' 项'}
+          </Typography>
+          <Button size="small" sx={{ minWidth: 0, whiteSpace: 'nowrap' }} aria-expanded={diagnosticsOpen} aria-controls="builder-diagnostics" onClick={() => setDiagnosticsOpen(v => !v)}>
+            {diagnosticsOpen ? '收起' : exportDataQ.data.diagnostics.export_allowed ? '详情' : '查看问题'}
+          </Button>
+        </>}
+      </Stack>
+      {paperQ.data && <PaperSettings key={paperId} paper={paperQ.data} onUpdate={actions.updatePaper}
+        targetSectionId={targetSectionId} onTargetSectionChange={setTargetSectionId} onOpenLibrary={openPaperLibrary} />}
       {exportDataQ.isError && <Alert severity="error" action={<Button onClick={() => exportDataQ.refetch()}>重试</Button>}>内容检查失败：{(exportDataQ.error as Error).message}</Alert>}
-      {paperId != null && exportDataQ.data && <Box sx={{ maxHeight: '35vh', overflow: 'auto' }}><ExportDiagnosticsPanel paperId={paperId} data={exportDataQ.data} onRevised={() => setExportOpen(false)} /></Box>}
-      {builderView === 'layout' ? (
-        <Box sx={{ flex: 1, minHeight: 0, overflow: 'auto' }}>
-          {/* 常驻轻提示（§5-Q8③） */}
-          <Alert
-            severity="info"
-            sx={{ mb: 1, py: 0.25 }}
-            action={
-              <Button size="small" color="inherit" onClick={() => setBuilderView('list')} data-testid="switch-to-list">
-                切到清单视图
-              </Button>
-            }
-          >
-            需要批量调序 / 批量设分？切到「清单视图」更快。
-          </Alert>
+      {paperId != null && exportDataQ.data && diagnosticsOpen && <Box id="builder-diagnostics" sx={{ maxHeight: '35vh', overflow: 'auto' }}>
+        <ExportDiagnosticsPanel paperId={paperId} data={exportDataQ.data} readOnly />
+        {!exportDataQ.data.diagnostics.export_allowed && <Button size="small" onClick={() => setExportOpen(true)}>到导出处理</Button>}
+      </Box>}
+      <Box sx={{ flex: builderView === 'layout' ? 1 : undefined, minHeight: 0, overflow: 'auto' }}>
+        {builderView === 'layout' && <>
           {paperId == null ? (
             <EmptyState
               title="还没有试卷"
@@ -410,38 +419,26 @@ export default function PaperBuilderPage() {
               title="加载结构预览失败"
               onRetry={() => exportDataQ.refetch()}
             />
-          ) : exportDataQ.data && exportDataQ.data.sections.length === 0 ? (
-            // B2 §4 #14：空卷不是终点，给出可点击的下一步（去「找题」页搜索并加入）。
-            <EmptyState
-              title="试卷为空"
-              description="这份试卷还没有题目。到「找题」页搜索，点题卡上的「加入」即可放进本卷。"
-              actionLabel="去找题"
-              onAction={() => navigate('/search')}
-            />
-          ) : exportDataQ.data ? (
-            <LivePreviewPanel
-              paperId={paperId}
-              data={exportDataQ.data}
-              editable
-              scale={LAYOUT_SCALE}
-              onScoreChange={(itemId, score) => mut.score.mutate({ itemId, score })}
-              onRemove={(itemId) => handleRemove(itemId)}
-            />
-          ) : null}
-        </Box>
-      ) : (
-        <PaperPanel
-          paper={paperQ.data ?? null}
-          contentQuestions={exportDataQ.data?.sections.flatMap(s => s.questions)}
-          loading={paperQ.isLoading}
-          error={paperQ.isError ? (paperQ.error as Error).message : null}
-          actions={actions}
-          targetSectionId={targetSectionId}
-          onTargetSectionChange={setTargetSectionId}
-          onOpenDrawer={openPaperLibrary}
-          onOpenDetail={(qid) => navigate(`/question/${qid}`)}
-        />
-      )}
+           ) : exportDataQ.data && exportDataQ.data.sections.every(s => s.questions.length === 0) ? (
+             <EmptyState title="试卷为空" description="从左侧题库点「加入」或拖拽题目到本卷。"
+               actionLabel="从左加入题目" onAction={() => { setRightOpen(false); searchInputRef.current?.focus() }} />
+           ) : null}
+        </>}
+        {/* 清单态仅不画页面，测量层仍是缩放容器的兄弟，不能放进 display:none。 */}
+        {paperId != null && exportDataQ.data && <LivePreviewPanel
+          paperId={paperId} data={exportDataQ.data} editable scale={LAYOUT_SCALE}
+          toolbarMode="hidden" showPages={builderView === 'layout' && exportDataQ.data.sections.some(s => s.questions.length > 0)}
+          onPageSummary={receivePageSummary} onScoreChange={(itemId, score) => mut.score.mutate({ itemId, score })}
+          onRemove={handleRemove} />}
+      </Box>
+      {builderView === 'list' && <Box sx={{ flex: 1, minHeight: 0 }}>
+
+        <PaperPanel paper={paperQ.data ?? null} showSettings={false}
+          contentQuestions={exportDataQ.data?.sections.flatMap(s => s.questions)} loading={paperQ.isLoading}
+          error={paperQ.isError ? (paperQ.error as Error).message : null} actions={actions}
+          targetSectionId={targetSectionId} onTargetSectionChange={setTargetSectionId}
+          onOpenDrawer={openPaperLibrary} onOpenDetail={qid => navigate('/question/' + qid)} />
+      </Box>}
     </Box>
   )
 
@@ -498,6 +495,8 @@ export default function PaperBuilderPage() {
               startIcon={<FilterListIcon />}
               onClick={() => setFiltersOpen((v) => !v)}
               data-testid="toggle-filters"
+              aria-expanded={filtersOpen}
+              aria-controls="builder-filters"
             >
               筛选
             </Button>
@@ -535,6 +534,7 @@ export default function PaperBuilderPage() {
               <TextField
                 size="small"
                 fullWidth
+                inputRef={searchInputRef}
                 placeholder="搜题…（点「加入」或拖拽到右栏）"
                 value={keywordInput}
                 onChange={(e) => {
@@ -547,7 +547,7 @@ export default function PaperBuilderPage() {
               {/* P1-1：窄屏下筛选栏默认收起（由顶部「筛选」按钮开合） */}
               {/* P1-1 / P0-3：紧凑视口下筛选栏由顶部「筛选」按钮开合；宽屏（≥1440）常驻 */}
               {(!compact || filtersOpen) && (
-                <Box sx={{ overflow: 'auto', flexShrink: 0 }}>
+                <Box id="builder-filters" sx={{ overflow: 'auto', flexShrink: 0 }}>
                   <FilterSidebar
                     facets={facetsQ.data}
                     loading={facetsQ.isLoading}
@@ -614,9 +614,9 @@ export default function PaperBuilderPage() {
       )}
 
       {/* 导出抽屉（P2 组件；与导出页共用同一份 uiStore 门禁状态） */}
-      {paperId != null && (
+      {paperId != null && exportEverOpened.current && <Suspense fallback={exportOpen ? <LoadingState dense label="加载导出面板…" /> : null}>
         <ExportDrawer key={paperId} open={exportOpen} onClose={() => setExportOpen(false)} paperId={paperId} />
-      )}
+      </Suspense>}
 
       {/* 删除撤销 Toast（§5-Q9） */}
       <Snackbar

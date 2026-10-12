@@ -11,13 +11,16 @@ import ExportPage from '../../src/pages/ExportPage'
 import PaperBuilderPage from '../../src/pages/PaperBuilderPage'
 const stubs = vi.hoisted(() => ({ getPaper: vi.fn(), preview: vi.fn(), export: vi.fn(), gate: vi.fn() }))
 vi.mock('../../src/api/papers', async importOriginal => ({ ...await importOriginal<object>(), getPaper: stubs.getPaper }))
-vi.mock('../../src/api/export', () => ({ getExportData: vi.fn(async () => ({ sections: [], paper: { title: '卷B' } })) }))
+vi.mock('../../src/api/export', () => ({ getExportData: vi.fn(async () => ({ sections: [], paper: { title: '卷B' }, diagnostics: { export_allowed: true, warning_count: 0, blocker_count: 0 } })) }))
 vi.mock('../../src/hooks/useSearch', () => ({ useSearchQuery: () => ({ data: { items: [], total: 0 } }), useFacetsQuery: () => ({ data: {} }) }))
 vi.mock('../../src/components/FilterSidebar', () => ({ FilterSidebar: () => null }))
 vi.mock('../../src/components/QuestionCard', () => ({ QuestionCard: () => null }))
 vi.mock('../../src/components/LivePreviewPanel', () => ({ LivePreviewPanel: () => <div>结构预览</div> }))
 vi.mock('../../src/components/livePreview/ExportDiagnostics', () => ({ ExportDiagnosticsPanel: (p: { readOnly?: boolean }) => <div data-testid="diagnostics-mode">{p.readOnly ? '只读' : '可修订'}</div>, IssueDetails: () => null }))
-vi.mock('../../src/components/ExportDrawer', () => ({ ExportDrawer: (p: { open: boolean; paperId: number; onClose: () => void }) => p.open ? <div role="dialog" aria-label={'导出卷' + p.paperId}><button onClick={p.onClose}>关闭导出</button></div> : null }))
+vi.mock('../../src/components/ExportDrawer', () => {
+  const Drawer = (p: { open: boolean; paperId: number; onClose: () => void }) => p.open ? <div role="dialog" aria-label={'导出卷' + p.paperId}><button onClick={p.onClose}>关闭导出</button></div> : null
+  return { ExportDrawer: Drawer, default: Drawer }
+})
 vi.mock('../../src/hooks/useExportGate', () => ({ useExportGate: (p: unknown) => stubs.gate(p), describeEnvFailure: () => '环境不可用' }))
 const paper = { id: 2, title: '卷B', template: '考试', answer_mode: '学生版', items: [], sections: [], summary: { item_count: 0, total_score: 0, unscored_count: 0 } }
 // jsdom AbortSignal 与 Node Request 不同 realm；测试无 loader，仅去掉传入 signal。
@@ -86,7 +89,7 @@ describe('B1 全屏辅助与指定卷一次性回程', () => {
     const router = routes(['/export?paper_id=bad'])
     renderWithProviders(<RouterProvider router={router} />)
     expect(stubs.gate.mock.calls[0][0]).toMatchObject({ paperId: 0, enabled: false })
-    fireEvent.click(screen.getByRole('button', { name: '试卷管理' }))
+    fireEvent.click(screen.getByRole('button', { name: '选择试卷' }))
     expect(usePaperLibraryStore.getState().open).toBe(true)
   })
 })

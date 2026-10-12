@@ -8,7 +8,6 @@ import {
   Box,
   Button,
   Chip,
-  Divider,
   MenuItem,
   Paper,
   Select,
@@ -103,7 +102,7 @@ function PaperExportPage({ paperId }: { paperId: number }) {
         <EmptyState
           title="尚未选择试卷"
           description="请在「试卷管理」选择一份试卷。"
-          actionLabel="试卷管理"
+          actionLabel="选择试卷"
           onAction={openPaperLibrary}
         />
       </Box>
@@ -292,7 +291,7 @@ function PaperExportPage({ paperId }: { paperId: number }) {
                     title="该试卷暂无题目"
                     description="这份试卷还没有题目，先到「组卷」页加入题目。"
                     actionLabel="去组卷"
-                    onAction={() => navigate('/builder')}
+                    onAction={() => navigate({ pathname: '/builder', search: location.search }, { state: { ...(location.state ?? {}), openExportForPaperId: paperId } })}
                   />
                 )}
               </Box>
@@ -301,11 +300,6 @@ function PaperExportPage({ paperId }: { paperId: number }) {
         )}
       </Paper>
 
-      <Divider sx={{ my: 2 }} />
-      <Typography variant="caption" color="text.secondary">
-        提示：预览与导出走同一份文档计划与同一个 DOCX 渲染器，因此像素预览与导出结果逐像素一致；
-        若修改试卷内容（加题/删题/重排/设分/改模板/刷新快照）后需重新生成预览。
-      </Typography>
     </Box>
   )
 }

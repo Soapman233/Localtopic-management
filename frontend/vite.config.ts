@@ -37,6 +37,8 @@ export default defineConfig({
     manifest: true,
     rollupOptions: {
       output: {
+        // 只归入下面明确列出的模块，禁止业务块贪婪吸收主入口共用依赖而提前预加载。
+        onlyExplicitManualChunks: true,
         /**
          * 阶段 5 性能优化（P5-1）——**vendor 分包**。
          *
@@ -61,6 +63,22 @@ export default defineConfig({
          * KaTeX 的 JS 就仍只在懒加载页面里按需下载。
          */
         manualChunks(id) {
+          // B3：结构分页与共享预览门禁原本同时用于组卷，合为业务共享块以减少
+          // 路由预加载映射和碎片请求；只延迟抽屉 UI，不把业务塞入预加载 vendor。
+          // KaTeX 组件仍自然独立，避免找题/详情被迫加载分页实现。
+          if (id.endsWith('/components/LivePreviewPanel.tsx') ||
+              id.includes('/components/livePreview/') ||
+              id.endsWith('/hooks/useExportGate.ts') ||
+              id.endsWith('/hooks/exportGateShared.ts') ||
+              id.endsWith('/hooks/useJob.ts') ||
+              id.endsWith('/api/export.ts')) return 'preview'
+          // 显式分包后，恢复原有共用业务依赖的聚合，避免拆成多个极小请求。
+          // 这些模块在旧首屏均已加载；不包含页面、分页或公式业务。
+          if (['/store/paperStore.ts', '/store/settingsStore.ts', '/lib/glossary.ts', '/components/ErrorState.tsx',
+               '/api/client.ts', '/api/queryKeys.ts', '/api/errors.ts', '/api/papers.ts',
+               '/components/LoadingState.tsx'].some(path => id.endsWith(path))) return 'app-common'
+          // Rollup 的 CommonJS 互操作助手恢复至原 React 运行时分组，无业务代码进入 vendor。
+          if (id.includes('commonjsHelpers')) return 'vendor-react'
           if (!id.includes('node_modules')) return undefined
           if (id.endsWith('.css')) return undefined
           if (id.includes('@mui') || id.includes('@emotion')) return 'vendor-mui'

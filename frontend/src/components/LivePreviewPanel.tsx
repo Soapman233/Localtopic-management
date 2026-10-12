@@ -23,7 +23,7 @@
  *  - 题目右上角工具栏：点**分值 chip** 就地改分（`onScoreChange`，非法值红框）、
  *    `✕` 删除（`onRemove`）；**不改题干文字**（点题号跳详情页由父级处理）。
  */
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Alert, Box, Chip, Stack, Tooltip, Typography, useTheme } from '@mui/material'
 import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable'
 import type { ExportPayload, ContentBlock } from '../api/types'
@@ -47,6 +47,15 @@ import './livePreview/livePreview.css'
 /** 分值上限（与后端 `_validate_score` 一致）。 */
 const SCORE_MAX = 1000
 
+/** 页数只来自分页引擎；父级必须按卷与内容摘要匹配，避免沿用旧预览。 */
+export interface LivePreviewPageSummary {
+  paperId: number
+  contentDigest: string
+  pageCount: number
+  overflowPages: number
+  ready: boolean
+}
+
 export interface LivePreviewPanelProps {
   /** 试卷 id（用于诊断信息；数据本身由 `data` 提供）。 */
   paperId: number
@@ -66,6 +75,11 @@ export interface LivePreviewPanelProps {
   scale?: number
   /** 可选：显示每页调试徽标。 */
   debug?: boolean
+  /** 只收敛工具条展示；默认完整，工作台由外层显示统一摘要。 */
+  toolbarMode?: 'full' | 'compact' | 'hidden'
+  /** false 仅隐藏页面层，测量层仍参与布局及分页，供清单态更新页数。 */
+  showPages?: boolean
+  onPageSummary?: (summary: LivePreviewPageSummary) => void
 }
 
 /** 取 payload.paper.template（后端为 `Record<string, unknown>`）。 */
@@ -143,7 +157,7 @@ function QuestionChrome({
 }
 
 export function LivePreviewPanel(props: LivePreviewPanelProps) {
-  const { paperId, data, editable = false, template: templateProp, scale = 1, debug: debugProp } = props
+  const { paperId, data, editable = false, template: templateProp, scale = 1, debug: debugProp, toolbarMode = 'full', showPages = true, onPageSummary } = props
 
   // 显式 prop 优先：降级预览传 false 时，URL/storage 开关也不能覆盖；所有可见诊断共用此值。
   const debug = debugProp ?? isDebugMode()
@@ -205,6 +219,11 @@ export function LivePreviewPanel(props: LivePreviewPanelProps) {
     [data],
   )
   const overflowPages = pages.filter((p) => p.overflow).length
+  const pageCount = pages.length
+  // 不在 render 更新父状态；摘要按内容身份上报，清单态也继续测量。
+  useEffect(() => {
+    onPageSummary?.({ paperId, contentDigest: data.content_digest, pageCount, overflowPages, ready })
+  }, [paperId, data.content_digest, pageCount, overflowPages, ready, onPageSummary])
 
   // ---- 分值就地编辑状态（受控，避免分页重排时输入丢失） --------------------
   const [scoreEdit, setScoreEdit] = useState<{ itemId: number; value: string } | null>(null)
@@ -321,7 +340,7 @@ export function LivePreviewPanel(props: LivePreviewPanelProps) {
   return (
     <Box className={`lp-doc${dark ? ' lp-dark' : ''}`}>
       {/* 顶部工具栏 */}
-      <Stack direction="row" spacing={1} alignItems="center" flexWrap="wrap" useFlexGap sx={{ mb: 1 }}>
+      {toolbarMode !== 'hidden' && <Stack direction="row" spacing={1} alignItems="center" flexWrap="wrap" useFlexGap sx={{ mb: 1 }}>
         <Tooltip title={overflowTip}>
           <Chip
             size="small"
@@ -330,17 +349,17 @@ export function LivePreviewPanel(props: LivePreviewPanelProps) {
             label={pageCountLabel}
           />
         </Tooltip>
-        <Chip size="small" variant="outlined" label={`模板 ${template}`} />
+        {toolbarMode === 'full' && <><Chip size="small" variant="outlined" label={`模板 ${template}`} />
         {debug && <Chip size="small" variant="outlined" label={data.layout_revision} />}
         <Chip size="small" variant="outlined" label={data.answer_mode || '—'} />
-        <Chip size="small" variant="outlined" label={`${totalQuestions} 题`} />
+        <Chip size="small" variant="outlined" label={`${totalQuestions} 题`} /></>}
         {!ready && <LoadingState dense size={14} label="正在准备预览…" />}
         {ready && debug && (
           <Typography variant="caption" color="text.secondary">
             测量 {ms.toFixed(2)}ms · 重排 v{version}
           </Typography>
         )}
-      </Stack>
+      </Stack>}
 
       {/* 测量层（不可见，宽度 = 正文区宽）。
           ★ 必须放在缩放容器之外：否则 transform:scale 会等比缩小
@@ -359,7 +378,7 @@ export function LivePreviewPanel(props: LivePreviewPanelProps) {
       </div>
 
       {/* 页面层（可缩放展示） */}
-      <Box
+      {showPages && <Box
         sx={{
           bgcolor: dark ? '#1b1b1b' : '#EDEFF2',
           borderRadius: 1,
@@ -387,7 +406,7 @@ export function LivePreviewPanel(props: LivePreviewPanelProps) {
             pagesEl
           )}
         </div>
-      </Box>
+      </Box>}
     </Box>
   )
 }
