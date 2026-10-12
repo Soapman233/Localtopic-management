@@ -159,3 +159,7 @@ spike/acceptance/_backup_api/
 
 spike/acceptance/_mtef/
 spike/acceptance/_mtef_frozen/
+
+spike/acceptance/_p41_clean_env/
+spike/acceptance/_p43_other_path/
+spike/acceptance/_p42_timing/
