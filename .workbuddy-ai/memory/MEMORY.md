@@ -1,143 +1,114 @@
 # 项目记忆 · 私有题库管理系统
 
-> 整理于 2026-10-11。过程细节见 `.workbuddy-ai/memory/2026-10-*.md` 日志。
+> 更新 2026-10-12（已压缩去重）。过程细节见 `.workbuddy-ai/memory/2026-10-*.md`。
 
-## 1. 项目定位与约束
-- 为约 10 名中学教师（首个学科：**初中物理**）建**私有题库**：DOCX 抽题 → 建库检索 → 组卷 → 导出**公式可编辑**试卷 → 本地 Web 操作。参照学科网。
-- **验收环境**：统一 WPS（版本可不一致）+ 兼容 Microsoft Word。本机 WPS 12.1.0.28505 / Word 16.0.20326。
-- **硬要求**：异地访问；导出公式必须可编辑，**公式图片不算达标**。
-- 首批素材仅物理：`C:\Users\SOAP\Desktop\物理\初中\2026学科网教案`、`D:\Open-source project\Localtopic-management\2026_10_05_西附国庆练习卷`。源文件只读、未授权上传；统计须标注时间与范围（589→748 文件，567 DOCX/14 PDF）。
+## 1. 定位与约束
+- 为约 10 名中学教师（首个学科：**初中物理**）建**私有题库**：DOCX 抽题 → 建库检索 → 组卷 → 导出**公式可编辑**试卷 → 本地 Web。参照学科网。
+- 验收：统一 WPS + 兼容 Word（本机 WPS 12.1.0.28505 / Word 16.0.20326）。硬要求：异地访问；导出公式必须可编辑，**公式图片不算达标**。
+- 素材仅物理，源文件只读、未授权上传；统计须标注时间与范围。
 - 参考对话：https://chat.deepseek.com/share/bmwbcfzgsrs2aau0d7
 
-## 2. 核心结论：公式可编辑路线（已定案）
+## 2. 公式可编辑路线（已定案）
 - 源试卷约 **80% 含旧式 MathType OLE 公式**，是首要阻塞项。
-- 旧式对象三种互不兼容格式：`Equation.DSMT4`(MathType) **98.48%**（可转，99.93%）；`Equation.KSEE3`(WPS公式3.0) 0.90% 与 `Equation.3`(微软旧版) 0.16% **不支持**；`DSEquations` 0.45% 未验证。
-- **解法**：开源 `mtef-py`(Apache-2.0) 解析 OLE 内 `Equation Native` 流(MTEF) → LaTeX，**精确解码非 OCR**，成功率 **99.69%**（977/980，0.21s）；再 LaTeX → OMML，Word/WPS 双端原生可编辑（8/8）。**无需 MathType 授权。**
+- 三种互不兼容格式：`Equation.DSMT4`(MathType) **98.48%**（可转 99.93%）；`Equation.KSEE3`(WPS公式3.0) 0.90% 与 `Equation.3`(微软旧版) 0.16% **不支持**；`DSEquations` 0.45% 未验证。
+- 解法：开源 `mtef-py`(Apache-2.0) 解析 OLE 内 `Equation Native` 流(MTEF) → LaTeX，**精确解码非 OCR**，成功率 **99.69%**（977/980，0.21s）；再 LaTeX → OMML，Word/WPS 双端原生可编辑。**无需 MathType 授权。**
 - **OMML 是唯一不依赖第三方软件、双端可编辑的格式**；MathType 对象两端均不可编辑。
-- **推荐架构**：原件原样归档 + 题库存 LaTeX 文本 + 导出时按需渲染（OMML，可选 MathType）。复现学科网架构但**不复现其输出格式**。
-- 学科网 Word 导出**压倒性使用 MathType**（其目录 DSMT4 11,845 个，99/209 文件无原生公式）。
-- 30 题三路径验证（`outputs/公式可编辑验证报告-30题.md`）：原生 OMML 10/10；旧式 OLE 0/10（未装 MathType 时）；扫描 PDF 重建 9/10（需人工校准，唯一仍需人工环节）。
+- 架构：原件原样归档 + 题库存 LaTeX + 导出时按需渲染（OMML，可选 MathType）。
+- 学科网 Word 导出压倒性使用 MathType（其目录 DSMT4 11,845 个）。
+- 30 题三路径（`outputs/公式可编辑验证报告-30题.md`）：原生 OMML 10/10；旧式 OLE 0/10；扫描 PDF 重建 9/10（唯一仍需人工校准的环节）。
 
-### 转换踩坑（必记）
-- 公式中文必须写成 `\text{浮}`；MTEF 输出中文为 `{\text{[U+6d6e]}}`，替换**必须在已有 `\text{}` 内部**，套成 `\text{\text{浮}}` 会报 `ToCommands returned empty`。
-- 需去掉公式开头 `~` 占位符。
+### 转换踩坑
+- 公式中文必须写 `\text{浮}`；MTEF 输出中文为 `{\text{[U+6d6e]}}`，替换**必须在已有 `\text{}` 内部**（套成 `\text{\text{浮}}` 报 `ToCommands returned empty`）。
+- 去掉公式开头 `~` 占位符。
 - **必须先取出 OLE 容器内 `Equation Native` 流**再解析，直接传整个 .bin 会**静默返回空**。
-- `Equation.KSEE3` 会让解析器**死循环**，必须按 ProgID 预判跳过。
-- 进程 spawn ~0.43s/次 → 用**流式单进程 + 逐条回报**（卡住即重启续跑）。
+- `Equation.KSEE3` 会让解析器**死循环** → 按 ProgID 预判跳过。
+- 进程 spawn ~0.43s/次 → 流式单进程 + 逐条回报。
 
 ## 3. 里程碑与关键数字
-- **阶段1 预处理** `pipeline/`（omml/mtef_conv/docx_scan/segment/stage1 + vendor/mtef_py）：209/209 成功、**9,765 题**、18,131 公式、转换率 98.91%、65 秒。产出 `outputs/preprocess_final/`（**勿重新生成**）。
-- **阶段2 题库** `bank/`（SQLite 11 表 + FTS5）：**7945 题**、17771 公式（OK 17575）、7102 图片、待复核 196。中文检索 **bigram + FTS5 + bm25**（不用 trigram，两字词会失效）。
-- **元数据补全** `bank/enrich.py`：grade 21.1%、textbook 18.7%、chapter 35.4%、**difficulty 0%（源数据无标注，刻意不编造）**、知识点 97.2%。
-  - ⚠️ **知识点是「提及」口径不是「考查」**（`term in text`，平均 4.26 标签/题），只能作检索辅助。
-  - ⚠️ 统计覆盖率**必须排除「未标注/待补充」取值**，否则误判为「齐全」。
-- **阶段3 组卷** `bank/paper.py`：**快照锁定靠 `snapshot_json`**（加题时拷 text+formulas+images+source）；改题 v1→v2 后已出卷仍取 v1 原公式原图。
-- **答案/解析** `bank/answers.py`：答案 3,973、解析 4,639（inline 3,090 / paired_file 1,739）。**刻意排除裸「参考答案」标记**（整卷答案表，逐题用会错配）。
-- **阶段4 导出** `bank/export.py`：原生 OMML（`word/embeddings=0`，非图片冒充）、Word+WPS 双端可编辑、学生版/答案解析版。测试 130→172。
+- **阶段1** `pipeline/`：209/209 成功、**9,765 题**、18,131 公式、转换率 98.91%、65 秒 → `outputs/preprocess_final/`（**勿重新生成**）。
+- **阶段2** `bank/`（SQLite 11 表 + FTS5）：**7,945 题**、17,771 公式（OK 17,575）、7,102 图片、待复核 196。中文检索 **bigram + FTS5 + bm25**（不用 trigram）。
+- 元数据 `bank/enrich.py`：grade 21.1%、textbook 18.7%、chapter 35.4%、**difficulty 0%（源无标注，刻意不编造）**、知识点 97.2%。⚠️ 知识点是「**提及**」口径非「考查」（平均 4.26 标签/题），仅作检索辅助；⚠️ 覆盖率**必须排除「未标注/待补充」取值**。
+- **阶段3** `bank/paper.py`：快照锁定靠 `snapshot_json`；改题后已出卷仍取原公式原图。
+- 答案/解析 `bank/answers.py`：答案 3,973、解析 4,639（inline 3,090 / paired_file 1,739）；刻意排除裸「参考答案」标记。
+- **阶段4** `bank/export.py`：原生 OMML（`word/embeddings=0`）、双端可编辑、学生版/答案解析版。
 
-## 4. 必须遵守的工程规则（踩坑总结）
-- **改排版/导出后必须渲染出来看**：单元测试测不出视觉缺陷（曾出现「题号连续」通过但导出件有双重题号）。
-- **验证「修复类改动」要用反证**（确认修复前确实有问题）；**对照实验必须用当前代码新导出的产物**（`outputs/export/` 有历史版本）。
-- **判定「公式可编辑」必须实际改公式内部字符→保存→重开→比对**，不能用「有 OMML 节点」或「能打印」代替。
-- **指标必须用 SQL 核实真实含义**；给用户的时间承诺必须与实测相符。
-- **放宽判定条件修一个方向时，必须构造反方向反例**（verify_backup 从「误判好备份」修好后出现「误判空壳备份为合格」）。
-- **「唯一候选才写」防得住"多候选"，防不住"唯一但错误"**——守卫前提是"候选本身可靠"。
-- **交付产物可能早于代码修改时间** → 必须比对时间戳并重生成。
-- 性能优化必须同时验证结果集逐条一致；不确定行为先写探针（参考 `spike/`）。
-- `.bat` 必须 **CRLF** 换行（LF 会让 cmd 闪退）。
-- 测试必须用 venv：`C:/Users/SOAP/.workbuddy-ai/binaries/python/envs/kb/Scripts/python.exe`（裸 `python` 会跑成 215 项/20 errors）。
-- 写入类验证必须用副本；改交付库 `outputs/bank.db` 前必须备份 + `verify_backup(原库, 备份)`（**参数顺序：原库在前、备份在后**；判定 structure_ok + integrity_ok + core_nonempty）。
+## 4. 工程铁律（踩坑总结）
+- 改排版/导出后**必须渲染出来看**（单元测试测不出视觉缺陷）。
+- 验证「修复类改动」要用**反证**；对照实验必须用**当前代码新导出**的产物。
+- 判定「公式可编辑」必须**实际改字符→保存→重开→比对**。
+- 指标必须用 **SQL 核实真实含义**；时间承诺必须与实测相符。
+- 放宽判定条件修一个方向时，**必须构造反方向反例**。
+- 「唯一候选才写」防得住多候选，防不住**唯一但错误**。
+- 交付产物可能早于代码修改时间 → 比对时间戳并重生成。
+- 性能优化必须同时验证**结果集逐条一致**；不确定行为先写探针（`spike/`）。
+- `.bat` 必须 **CRLF**（LF 会让 cmd 闪退）。
+- 测试必须用 venv `C:/Users/SOAP/.workbuddy-ai/binaries/python/envs/kb/Scripts/python.exe`（裸 `python` 会跑成 215 项/20 errors）。
+- 改交付库前必须备份 + `verify_backup(原库, 备份)`（**原库在前**；structure_ok + integrity_ok + core_nonempty）；写入类验证用副本。
 
-### 导出控制字符（🔴 级）
-- 桥接工具对 TAB 容忍度不同：`doc_insert_text` 任意位置**拒绝** TAB(9)/垂直制表(11)；`doc_insert_paragraph_with_text` **接受**。
-- 真实故障：占位符后紧跟 TAB 切段 → 以 TAB 开头的文本段直送 `doc_insert_text` 失败 → **整卷导出中断**。波及含 TAB 1,393 题、必失败 89 题。
-- 修复：`bridge_safe_text()` 把 `\t` 换哨兵 `BRIDGE_TAB_SENTINEL`(`U+E000`)，`_set_explicit_tab_stops()` 在 OOXML 层还原为真正 `<w:tab/>`。**哨兵残留必须为 0**。
-- `text_to_lines` docstring 曾谎称「`\t` 转 4 空格」——**不要信 docstring，看代码**。
-- 选项标签判定 `is_option_label_segments` 不能用「整段纯文本」，须用「可见文本」（真实选项含行内公式）。
-- 桥接 `doc_insert_image` 的 `<a:graphicData>` **缺 `uri`** → WPS 容忍但 **Word 报错打不开**（只在 WPS 测会漏）。
-- 桥接对一批符号命令输出 HTML 实体名（如 `\Delta`→`&Delta;`，78 个命令）→ 需对 `<m:t>` 做实体还原。
-- 导出已改为真正只读（`db.connect_readonly()` + `schema_ready`），导出后 `bank.db` hash/mtime 不变。
-- 题号剥离保险：行首数字必须等于快照原题号才剥离（避免误删 `3．14`）。
-- **构建漂移**：实现者构建后源码若又改动，其报告产物 hash 失效，以当前源码重建为准。
-- `embed_metadata.py::insert_html` 的 DOCTYPE 查找已改大小写不敏感，并跳过 `webui/static/` 构建产物。
-- `frontend/scripts/prune-stale-assets.mjs` 已接入 `npm run build`（清理旧 hash 资产）。
+### 导出控制字符（🔴）
+- `doc_insert_text` 任意位置**拒绝** TAB(9)/垂直制表(11)；`doc_insert_paragraph_with_text` **接受**。真实故障：占位符后紧跟 TAB → 以 TAB 开头的段直送失败 → **整卷导出中断**（波及 1,393 题，必失败 89 题）。
+- 修复：`bridge_safe_text()` 把 `\t` 换哨兵 `U+E000`，`_set_explicit_tab_stops()` 在 OOXML 层还原 `<w:tab/>`。**哨兵残留必须为 0**。
+- `text_to_lines` docstring 谎称「`\t` 转 4 空格」→ **不要信 docstring**。
+- `is_option_label_segments` 须用「可见文本」（真实选项含行内公式）。
+- 桥接 `doc_insert_image` 的 `<a:graphicData>` **缺 `uri`** → WPS 容忍但 **Word 打不开**（只在 WPS 测会漏）。
+- 桥接对 78 个符号命令输出 HTML 实体名（`\Delta`→`&Delta;`）→ 对 `<m:t>` 做实体还原。
+- 导出已真正只读（`db.connect_readonly()` + `schema_ready`），导出后 `bank.db` hash/mtime 不变。
+- 题号剥离保险：行首数字必须等于快照原题号才剥离。
+- 构建漂移：源码在构建后又改动 → 报告产物 hash 失效，以当前源码重建为准。
+- `embed_metadata.py::insert_html` DOCTYPE 查找已大小写不敏感，并跳过 `webui/static/`。
+- `frontend/scripts/prune-stale-assets.mjs` 已接入 `npm run build`。
 
 ## 5. 版本拆分（editions）
-- **一个内核 + 两个外壳**：`bank/` `pipeline/` `webui/` `frontend/` 共享，业务零分叉；差异收敛到 `webui/edition.py`（`QB_EDITION`/`QB_HOST`/`QB_PORT`/`QB_AUTH_TOKEN`）。
-- `QB_AUTH_TOKEN` 不设置 = 不启用鉴权（与历史行为一致）。
-- **线上版硬约束**：导出依赖 editor_sdk+Office（Windows 专有）→ 必须 Windows 宿主；桥接单实例 → 并发导出 `WinError 10048`；鉴权仅访问控制级，无用户/角色。
-- 启动器：`editions/local/启动题库.bat`（可移植，`BANK_PY` > `.venv` > `PATH`）。
+- **一个内核 + 两个外壳**：`bank/` `pipeline/` `webui/` `frontend/` 共享，差异收敛到 `webui/edition.py`（`QB_EDITION`/`QB_HOST`/`QB_PORT`/`QB_AUTH_TOKEN`）。`QB_AUTH_TOKEN` 不设 = 不鉴权。
+- 线上版硬约束：导出依赖 editor_sdk+Office（Windows 专有）；桥接单实例 → 并发导出 `WinError 10048`；鉴权仅访问控制级，无用户/角色。
+- 启动器 `editions/local/启动题库.bat`（`BANK_PY` > `.venv` > `PATH`）。
 
 ## 6. 前端重构（阶段 0/1/2/3/5 已完成）
-- 技能市场 `search_and_install_skills` 返回 404；改用 SkillHub API（`https://lightmake.site/api/v1/search?q=...`，见 `find-skills`）。已装用户级：`ui-design`、`web-accessibility`、`ux-usability-auditor`、`ui-ux-pro-max`。
-- ⚠️ `vitest` 必须 **2.x**（5.x 要 vite≥6，与本项目 vite 5 冲突 ERESOLVE）；`vitest.config.ts` 的 include 必须限定 `tests/unit/**`；jsdom 缺 `matchMedia`/`ResizeObserver`/`IntersectionObserver`/`document.fonts`，setup 需补桩。
-- **阶段0 护栏**：ErrorBoundary（顶层+页面级）、`lib/feedback.ts`+NotifierBridge（notistack 容器懒渲染，别用它做断言）、`api/errors.ts`+`api/queryKeys.ts`（11 文件内联 queryKey 全迁移，残留 0）；`webui/config.py` 支持 `QB_DB_PATH`/`QB_EXPORT_DIR`。
-- **阶段1 术语/IA**：术语唯一来源 `lib/glossary.ts`（原始技术字段默认不渲染，仅 `?debug=1` 或 `localStorage.qb_debug=1` 显示）；`NAV_GROUPS`（日常备课/数据治理）+ `SETTINGS_ITEM`；默认落地 `/builder`；`LEGACY_REDIRECTS` 必须注册在 `*` 之前。⚠️ 改术语口径须同步 `tests/preview-and-theme.test.cjs`。
-- **阶段2 设计系统**：**Tailwind 已彻底移除**（保留 `autoprefixer`）；设计 token 单一来源 `src/theme.ts`；四态组件 `LoadingState`/`EmptyState`/`ErrorState`/`ProgressStages`。
-- **阶段3 主流程**：`PaperBuilderPage` 断点 `theme.breakpoints.down('lg')`（<1200 折叠右栏）；🔴 **MUI Button 键盘焦点不可见**根因（`disableElevation` 走 `boxShadow:'none'` + `ButtonBase outline:0`）→ 已在 `theme.ts` 补 outline 焦点环；视觉基线机制 `frontend/tests/visual/`（基线 PNG 不入库，manifest 记 sha256，更新基线须人工看图）。
-- **阶段5 性能/无障碍**：代码分割（入口 1.12MB→24KB，首屏 −36%）；⚠️ `Suspense` 放 `Outlet` 外层；⚠️ CSS 不参与 vendor 分包；构建产物清理改按 `build.manifest` 判定（按「是否被 index.html 引用」会误删懒加载 chunk）；**对比度 65/65 达 WCAG AA**（门禁接入 `npm run build`，校验器 `frontend/scripts/check-contrast.mjs`）；skip-link 在 HashRouter 下须拦 onClick；MUI `subtitle1/2` 默认渲染 `<h6>` 是标题跳级根源。
-- 待用户决策：深色 primary 作文字 3.52:1；`settings.json` 旧主色迁移；`tokens.difficulty`/`palette.badge` 零消费方。
+- ⚠️ `vitest` 必须 **2.x**（5.x 要 vite≥6，冲突 ERESOLVE）；`vitest.config.ts` include 限定 `tests/unit/**`；jsdom 缺 `matchMedia`/`ResizeObserver`/`IntersectionObserver`/`document.fonts`，setup 需补桩。
+- 阶段0：ErrorBoundary、`lib/feedback.ts`+NotifierBridge（别用它做断言）、`api/errors.ts`+`api/queryKeys.ts`（残留 0）；`webui/config.py` 支持 `QB_DB_PATH`/`QB_EXPORT_DIR`。
+- 阶段1：术语唯一来源 `lib/glossary.ts`（技术字段仅 `?debug=1` 显示）；`NAV_GROUPS`；默认落地 `/builder`；`LEGACY_REDIRECTS` 必须注册在 `*` 之前。⚠️ 改术语须同步 `tests/preview-and-theme.test.cjs`。
+- 阶段2：**Tailwind 已彻底移除**；token 单一来源 `src/theme.ts`；四态组件。
+- 阶段3：`PaperBuilderPage` 断点 `down('lg')`；🔴 MUI Button 焦点不可见根因（`disableElevation` → `boxShadow:'none'` + `ButtonBase outline:0`）→ `theme.ts` 补 outline 焦点环；视觉基线 `frontend/tests/visual/`。
+- 阶段5：代码分割（入口 1.12MB→24KB）；⚠️ `Suspense` 放 `Outlet` 外层；⚠️ CSS 不参与 vendor 分包；产物清理按 `build.manifest` 判定；对比度 65/65 WCAG AA（`frontend/scripts/check-contrast.mjs`）；skip-link 在 HashRouter 下须拦 onClick；MUI `subtitle1/2` 默认渲染 `<h6>` 是标题跳级根源。
+- 待决策：深色 primary 作文字 3.52:1；`settings.json` 旧主色迁移；`tokens.difficulty`/`palette.badge` 零消费方。
 
-## 7. 当前基线与常用命令
-- 后端 **387 项（386 通过 / 1 skip）**；前端 **205 项**（26 node:test + 179 vitest）；tsc 0；build 成功。
+## 7. 基线与常用命令
+- 后端 **436** 项、前端 **251** 项（26 node:test + 225 vitest）；tsc 0；build 成功。
 - `outputs/bank.db` sha256 `6905955734953c6cdffa4c65b1dd6950bb575dd1fb0e68dbd4b013ae8e6602c6`（64,815,104B）。
-- API：**43 路径 / 49 操作**；资产清单 168 条；导出门禁 revision `export-content-p0-v5`，布局 `export-layout-p0-v4`。
-- 服务地址 `http://127.0.0.1:8720`（仅本机）；`python -m webui` 启动。
+- API **43 路径 / 49 操作**；资产清单 168 条；导出门禁 revision `export-content-p0-v5`，布局 `export-layout-p0-v4`。
+- 服务 `http://127.0.0.1:8720`（仅本机）；`python -m webui`。
 
-## 8. 上线就绪度（2026-10-11 评估）
-- **单人本地基本就绪**（差 Git 凭据、`启动题库.bat` 硬编码 venv 路径不可移植、首启需手动 init+导入、`bank.db` 62MB 不分发）。
-- **10 人团队口径远未就绪**：`webui/` 零认证代码、只绑 `127.0.0.1`（`webui/config.py:53`）、桥接必须串行、数据分发未定义。
-- 其余：无错误监控、无备份 SOP；`\begin{array}` 1 条公式桥接不支持（降级+告警）。
-- 文档：`deliverables/上线就绪度评估-2026-10-11.md`。
-### 阶段 4「两版适配」+ 用户体系（2026-10-11）
-- **鉴权库独立**：`outputs/webui/auth.db`，**绝不往交付数据 `bank.db` 里加表**（否则污染交付库 + 改变其 sha256）。
-- 后端：`webui/auth.py` + `routers/auth.py` + `tests/test_auth.py`；角色 viewer(read)/editor(read+write)/admin；
-  `pbkdf2_hmac`+`compare_digest`（纯标准库）；会话优先 Bearer、兼容 Cookie `qb_session`；
-  CLI `python -m webui.auth user add|list|set-password`。
-  ⚠️ **仅 `QB_EDITION=online` 且库中有用户时才启用鉴权**，否则单机全权（本地版零影响）。
-- 前端：`lib/deployMode.ts`（`VITE_DEPLOY_MODE`，**缺省 local 是安全默认**）、`app/auth/{AuthProvider,RequireAuth}`、
-  `pages/LoginPage`、`lib/permissions.ts` + `hooks/usePermission` + `components/Can`、`components/SessionControls`。
-- ⚠️ **令牌在 `api/client.ts` 全局自动附加**（逐个 api 函数传 header 必漏）；
-  登录接口须传 `skipAuthRedirect`（否则"密码错"会连带跳转、冲掉提示）。
-- ⚠️ **`useAuth` 缺 Provider 必须抛错**（静默兜底 = 鉴权被无声绕过）；测试侧补生产同款 Provider。
-- ⚠️ `vi.mock('api/client')` 的测试替身需同步新导出（`setAuthToken`/`getAuthToken`/`setUnauthorizedHandler`）。
-- 测试基数：后端 **423**、前端 **240**（26 node:test + 214 vitest）。
-- **本地版零影响的证据**：视觉回归 8 页 **全部 0.00**（像素级一致）。
-- 读屏：**NVDA 2026.2 已装且能启动**，但**语音未捕获**——`%APPDATA%\nvda\addons\` 为空说明插件未真正安装
-  （NVDA 只认 `addons/<包名>/` + `manifest.ini`，**缺字段会静默不加载**）。
+## 8. 阶段4 鉴权 / 两版适配（2026-10-11）
+- **鉴权库独立** `outputs/webui/auth.db`，**绝不往 `bank.db` 加表**（否则污染交付库 + 改 sha256）。
+- 后端 `webui/auth.py` + `routers/auth.py` + `tests/test_auth.py`；角色 viewer/editor/admin；`pbkdf2_hmac`+`compare_digest`；会话优先 Bearer、兼容 Cookie `qb_session`；CLI `python -m webui.auth user add|list|set-password`。⚠️ **仅 `QB_EDITION=online` 且库中有用户才启用**，否则单机全权。
+- 前端 `lib/deployMode.ts`（**缺省 local 是安全默认**）、`app/auth/{AuthProvider,RequireAuth}`、`pages/LoginPage`、`lib/permissions.ts` + `usePermission` + `Can`、`SessionControls`。
+- ⚠️ 令牌在 `api/client.ts` **全局自动附加**；登录接口须传 `skipAuthRedirect`。
+- ⚠️ `useAuth` 缺 Provider **必须抛错**；`vi.mock('api/client')` 替身需同步 `setAuthToken`/`getAuthToken`/`setUnauthorizedHandler`。
+- 本地版零影响证据：视觉回归 8 页全部 **0.00**。
 
-### 真实读屏（NVDA）实测 —— 已完成（2026-10-11）
-- 报告：`deliverables/读屏实测报告-2026-10-11.md`。**方法**：add-on hook
-  **`speech.manager.SpeechManager.speak`**（NVDA 所有语音必经的单一漏斗）+ 自检语句证明 hook 生效。
-- **结果：6 通过 / 1 部分 / 1 未捕获**。已用真实播报确认：skip-link、主导航地标、`aria-current`、
-  main 地标 + h1、`role="alert"` 播报、路由改 `document.title`。
-- ⚠️ **NVDA 工程踩坑（复用）**：`nvda.exe` 启动器受**残留单实例互斥量**影响会**静默退出**，
-  须用 `nvda_noUIAccess.exe`；`manifest.ini` 的 `description` **含逗号 → 被解析成 list → 静默不加载**；
-  中文 argv 经控制台代码页损坏 → 窗口匹配须用 **ASCII 标记**；**捕获依赖浏览器持有 OS 前台**。
-- ⚠️ **NVDA 不念「对话框」角色词**（用最小参照 ARIA dialog 对照实验证明与标准行为一致，非项目缺陷）。
-- ⚠️ **仍不等于完整 WCAG 合规**；未做 browse mode / VoiceOver / Narrator。
-
-### 两个易踩的 MUI 坑（2026-10-11 实测）
-- ⚠️ **`sx` 里的 `width`/`height` 不要写数字**：`width: 1` 会被当 spacing 乘数，
-  实测产出 `width: 1366px`（=视口宽）→ 撑出横向溢出。**必须写 `'1px'` 字符串**。
-- ⚠️ **`<Drawer>` 顶部内容会被固定 AppBar 遮挡**（项目把 AppBar 的 zIndex 设为 `drawer+1`）：
-  需在抽屉内容顶部放 `<Toolbar variant="dense" />` 占位。
-
-### 视觉回归机制修正
-- ⚠️ **不要用 `sha256` 判断基线是否被换过**：实测同一代码两次采集字节不完全一致
-  （builder 约 40px，mean≤0.0017）。**判定一律以像素阈值（mean_diff / pct_gt32）为准**。
-
-### 鉴权体系安全审计与收口（2026-10-11）
+### 鉴权安全审计收口
 > 报告：`deliverables/gstack/phase4-closeout-auth-2026-10-11.md`
-- 🔴 **已修的 3 个 P0**：① **fail-open**（`auth.db` 不可读 → 回落 `off` → 无凭据可读写全站；
-  修法：`auth_store_status()` 区分 ok/missing/error，`uninitialized`/`error` **fail-closed 返回 503**
-  `50301`/`50302`）；② `/api/auth/me` 未豁免导致**线上版无登录入口**；③ **请求风暴**（登出后 12s 内 7328 次，修后 1~3 次）。
-- ⚠️ **契约陷阱**：`/api/auth/me` **豁免 + 恒返回 200**（令牌失效时也 200、只是 `user:null`）
-  → **不能用它判断会话有效性**，一律以**受保护端点的 401** 为准。
-- ⚠️ **耦合**：`interactions.mjs` 的写路径安全闸门依赖 `GET /api/health` 的 `data.db`；
-  线上版不回显该字段 → 闸门**安全 SKIP**。
-- ⚠️ **删依赖必须同步 lockfile**：只改 `package.json` 不跑 `npm install` → **`npm ci` 会失败**。
-- ⚠️ **`tokens.neutral` 不是零消费方**（`ThemeContrast.test.ts` 在用）；
-  difficulty token **接线有害**（鲜艳值作浅底文字 2.28/2.15/3.76:1，且 `contrast-pairs.json` 无该组合 → 门禁抓不到）。
-- 测试基数：后端 **436**、前端 **251**（26 node:test + 225 vitest）。
+- 🔴 已修 3 个 P0：① **fail-open**（`auth.db` 不可读 → 回落 off）→ `auth_store_status()` 区分 ok/missing/error，`uninitialized`/`error` **fail-closed 返回 503** `50301`/`50302`；② `/api/auth/me` 未豁免 → **线上版无登录入口**；③ **请求风暴**（登出后 12s 内 7328 次 → 修后 1~3 次）。
+- ⚠️ `/api/auth/me` **豁免 + 恒返回 200**（失效也 200、`user:null`）→ **不能用它判断会话有效性**，以受保护端点的 401 为准。
+- ⚠️ `interactions.mjs` 写路径闸门依赖 `GET /api/health` 的 `data.db`；线上版不回显 → **安全 SKIP**。
+- ⚠️ 删依赖**必须同步 lockfile**（否则 `npm ci` 失败）。
+- ⚠️ `tokens.neutral` 不是零消费方（`ThemeContrast.test.ts` 在用）；difficulty token **接线有害**。
 
+### 真实读屏（NVDA）实测（2026-10-11）
+- 报告 `deliverables/读屏实测报告-2026-10-11.md`。方法：add-on hook **`speech.manager.SpeechManager.speak`** + 自检语句。
+- 结果 **6 通过 / 1 部分 / 1 未捕获**（skip-link、导航地标、`aria-current`、main+h1、`role="alert"`、`document.title` 均已真实播报）。
+- ⚠️ 工程踩坑：`nvda.exe` 受残留单实例互斥量影响**静默退出** → 用 `nvda_noUIAccess.exe`；`manifest.ini` 的 `description` **含逗号 → 被解析成 list → 静默不加载**；中文 argv 经控制台代码页损坏 → 窗口匹配用 **ASCII 标记**；捕获依赖浏览器持有 OS 前台。
+- ⚠️ NVDA 不念「对话框」角色词（对照实验证明与标准行为一致）；仍**不等于完整 WCAG 合规**。
+
+### 其他实测坑
+- ⚠️ MUI `sx` 里 `width`/`height` **不要写数字**（`width: 1` 被当 spacing → 1366px）；必须写 `'1px'`。
+- ⚠️ `<Drawer>` 顶部内容会被固定 AppBar 遮挡 → 抽屉内容顶部放 `<Toolbar variant="dense" />`。
+- ⚠️ 视觉回归**不要用 sha256** 判断基线被换（同代码两次采集字节不一致）→ 一律用像素阈值（mean_diff / pct_gt32）。
+- 上线就绪度：单人本地基本就绪；10 人团队远未就绪（只绑 `127.0.0.1`、桥接串行、数据分发未定义、无监控/备份 SOP）。文档 `deliverables/上线就绪度评估-2026-10-11.md`。
+
+## 9. 仓库与 Git 现状（2026-10-12）
+- 远程 `git@github.com:Soapman233/Localtopic-management.git`；本地 `D:/Open-source project/Localtopic-management` 与 `origin/main` 同步于 `338583f`。
+- **误合并**：`6efac2c`（PR #1）把 `workbuddy/main-14dd9452` 的**便携化 / 自研导出**研究线合进 main，引入 **60 个文件**：`bank/latex2omml.py`、`bank/docx_writer.py`、`tests/test_latex2omml.py`、`tests/test_docx_writer.py`、`tools/md2pdf/md2pdf.py`、5 个 `spike/` 目录、29 份文档（`deliverables/` 20 + `outputs/handoff/` 9），并改 `.gitignore` + 2 个 memory 文件。
+- 合并后 main 自己的 13 个提交只动了 3 个文件（`2026-10-11.md`、`deliverables/gstack/*`）。
+- 该分支 tip `596c25c` **未合入 main**（12 个提交：导出引擎切 native、DOCX 导入 API、导入试卷页、便携打包等）。
+- worktree：`C:/Users/SOAP/WorkBuddy/Worktrees/Localtopic-management/main-14dd9452`。
