@@ -45,11 +45,11 @@ describe('FormulaReviewPage 页面级集成', () => {
     await waitFor(() => expect(screen.queryByText('正在加载复核队列…')).not.toBeInTheDocument())
   })
 
-  it('空队列 → 显示 EmptyState（队列已清零）', async () => {
+  it('空队列 → 显示 EmptyState（该分类暂无待处理项，不宣称全队列清零）', async () => {
     vi.stubGlobal('fetch', mockFetchWithList(() => jsonResponse(emptyList)))
     renderPage(<FormulaReviewPage />)
 
-    expect(await screen.findByText('队列已清零')).toBeInTheDocument()
+    expect(await screen.findByText('该分类暂无待处理项')).toBeInTheDocument()
   })
 
   it('请求失败 → 显示 ErrorState（含重试按钮）', async () => {

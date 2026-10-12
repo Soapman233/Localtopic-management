@@ -72,7 +72,8 @@ describe('StatsPage 页面级集成', () => {
 
     expect(await screen.findByText('题目总数')).toBeInTheDocument()
     expect(screen.getByText('题库统计')).toBeInTheDocument()
-    expect(screen.getByText('题型分布')).toBeInTheDocument()
+    // 分布标题带**实际数量**（不再写死「Top20」）。
+    expect(screen.getByText('题型分布（1）')).toBeInTheDocument()
     // 用 qk 工厂断言缓存键（禁止内联数组）。
     expect(client.getQueryData(qk.stats())).toEqual(statsFixture)
   })
@@ -98,6 +99,9 @@ describe('B0 统计状态中文显示', () => {
     vi.stubGlobal('fetch', vi.fn(async () => jsonResponse(fixture)))
     renderPage(<StatsPage />)
     await screen.findByText('题目总数')
+    // 分布默认 Top5，展开后才显示接口返回的全部状态行。
+    fireEvent.click(screen.getByRole('button', { name: `公式状态分布 展开全部 ${states.length} 项` }))
+    await waitFor(() => expect(screen.getAllByText('状态信息不可用，待核对').length).toBe(4))
     for (const chinese of ['转换完成', '不支持', '未提取到内容', '转换失败', '待核对', '状态信息不可用，待核对']) expect(screen.getAllByText(chinese).length).toBeGreaterThan(0)
     expect(screen.getAllByText('状态信息不可用，待核对')).toHaveLength(4)
     expect(screen.getByText('转换完成 ' + statsFixture.formulas_ok.toLocaleString('zh-CN'))).toBeInTheDocument()

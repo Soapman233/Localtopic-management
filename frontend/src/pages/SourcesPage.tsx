@@ -30,14 +30,18 @@ import {
   TableHead,
   TableRow,
   TextField,
+  Tooltip,
   Typography,
 } from '@mui/material'
 import EditIcon from '@mui/icons-material/Edit'
+import ExpandMoreIcon from '@mui/icons-material/ExpandMore'
+import Accordion from '@mui/material/Accordion'
+import AccordionSummary from '@mui/material/AccordionSummary'
+import AccordionDetails from '@mui/material/AccordionDetails'
 import { useNavigate } from 'react-router-dom'
 import { getSource, getSourceImpact, listSources, updateSourceMetadata } from '../api/sources'
 import type { SourceDetail, SourceFileMeta, SourceRow } from '../api/types'
 import { ConfirmDialog } from '../components/ConfirmDialog'
-import { MissingBadge } from '../components/StatusBadges'
 import { EmptyState } from '../components/EmptyState'
 import { ErrorState } from '../components/ErrorState'
 import { LoadingState } from '../components/LoadingState'
@@ -52,6 +56,17 @@ function isMissing(v: string | null | undefined): boolean {
 function pctText(bucket?: { n: number; total: number; pct: number } | null): string {
   if (!bucket) return '—'
   return `${bucket.pct}%（${bucket.n}/${bucket.total}）`
+}
+
+/** 缺失单元格：用「—」表示缺失（**不只靠颜色**），并给出可访问的文字说明。 */
+function MissingCell({ field }: { field: string }) {
+  return (
+    <Tooltip title={`${field}缺失，可点开本行回填（不影响关键词检索）`}>
+      <Box component="span" aria-label={`${field}缺失`} sx={{ color: 'text.secondary' }}>
+        —
+      </Box>
+    </Tooltip>
+  )
 }
 
 /** 文件级元数据编辑对话框（含影响题数二次确认）。 */
@@ -163,9 +178,17 @@ function SourceDetailDialog({
                 {src.subject && <Chip size="small" variant="outlined" label={src.subject} />}
                 {src.imported_at && <Chip size="small" variant="outlined" label={`导入 ${src.imported_at}`} />}
               </Stack>
-              <Typography variant="caption" color="text.secondary" sx={{ display: 'block', wordBreak: 'break-all' }}>
-                路径：{src.path ?? '（未知）'}
-              </Typography>
+              {/* 绝对路径默认折叠：首屏只给文件名与关键数值，路径按需展开（可读可复制）。 */}
+              <Accordion disableGutters elevation={0} sx={{ mt: 1, '&:before': { display: 'none' }, border: '1px solid', borderColor: 'divider' }}>
+                <AccordionSummary expandIcon={<ExpandMoreIcon />} sx={{ minHeight: 40, '& .MuiAccordionSummary-content': { my: 0.5 } }}>
+                  <Typography variant="body2" color="text.secondary">文件位置</Typography>
+                </AccordionSummary>
+                <AccordionDetails sx={{ pt: 0 }}>
+                  <Typography variant="caption" color="text.secondary" sx={{ display: 'block', wordBreak: 'break-all', userSelect: 'text' }}>
+                    {src.path ?? '（未知）'}
+                  </Typography>
+                </AccordionDetails>
+              </Accordion>
 
               {/* 该来源内的覆盖率 */}
               <Typography variant="subtitle2" component="h3" sx={{ mt: 2 }}>
@@ -311,17 +334,7 @@ export default function SourcesPage({ headingLevel = 1 }: { headingLevel?: 1 | 2
         />
       </Stack>
 
-      <Alert severity="info" sx={{ mb: 2 }}>
-        共 {totalFiles} 份来源文件；其中 <strong>{missingFiles}</strong> 份的年级 / 教材元数据缺失
-        （显示为「待补充」）。缺失不影响关键词检索，但无法按该维度筛出——可在此逐份回填。
-      </Alert>
-
-      {toast && (
-        <Alert severity={toast.kind} sx={{ mb: 1 }} onClose={() => setToast(null)}>
-          {toast.text}
-        </Alert>
-      )}
-
+      {/* 主工具条：搜索 + 仅看缺失，保留 N/M 计数 */}
       <Paper variant="outlined" sx={{ p: 1.5, mb: 1 }}>
         <Stack direction="row" spacing={2} alignItems="center" flexWrap="wrap" useFlexGap>
           <TextField
@@ -340,6 +353,17 @@ export default function SourcesPage({ headingLevel = 1 }: { headingLevel?: 1 | 2
           </Typography>
         </Stack>
       </Paper>
+
+      <Typography variant="caption" color="text.secondary" display="block" sx={{ mb: 1 }}>
+        共 {totalFiles} 份来源文件；其中 <strong>{missingFiles}</strong> 份的<strong>年级 / 教材</strong>元数据缺失。
+        缺失不影响关键词检索，但无法按该维度筛出——可在此逐份回填。
+      </Typography>
+
+      {toast && (
+        <Alert severity={toast.kind} sx={{ mb: 1 }} onClose={() => setToast(null)}>
+          {toast.text}
+        </Alert>
+      )}
 
       {sourcesQ.isLoading && <LoadingState label="正在加载来源文件…" />}
       {sourcesQ.isError && (
@@ -380,10 +404,10 @@ export default function SourcesPage({ headingLevel = 1 }: { headingLevel?: 1 | 2
                       {[r.stage, r.subject].filter(Boolean).join(' / ') || '—'}
                     </TableCell>
                     <TableCell>
-                      {gMissing ? <MissingBadge /> : r.grade}
+                      {gMissing ? <MissingCell field="年级" /> : r.grade}
                     </TableCell>
                     <TableCell>
-                      {tMissing ? <MissingBadge /> : r.textbook}
+                      {tMissing ? <MissingCell field="教材" /> : r.textbook}
                     </TableCell>
                     <TableCell align="right">{r.questions_count}</TableCell>
                     <TableCell align="right">{r.formulas_count}</TableCell>

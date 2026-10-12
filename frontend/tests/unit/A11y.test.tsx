@@ -139,14 +139,19 @@ describe('页面标题层级（以设置页为例）', () => {
     expect(screen.getAllByRole('heading', { level: 1 })).toHaveLength(1)
   })
 
-  it('区块标题是 h2（不跳级到 h6）', async () => {
+  it('区块标题是 h2（不跳级到 h6）：外观 Tab 有「外观」，高级 Tab 有「数据库 / 导出目录」', async () => {
     vi.stubGlobal('fetch', vi.fn(async () => jsonResponse(settingsFixture)))
     renderPage(<SettingsPage />)
 
-    const h2s = await screen.findAllByRole('heading', { level: 2 })
-    const texts = h2s.map((h) => h.textContent)
+    // 默认「外观」Tab。
+    let texts = (await screen.findAllByRole('heading', { level: 2 })).map((h) => h.textContent)
+    expect(texts).toContain('外观')
+
+    // 切到「高级」Tab。
+    fireEvent.click(screen.getByRole('tab', { name: '高级' }))
+    texts = (await screen.findAllByRole('heading', { level: 2 })).map((h) => h.textContent)
     expect(texts).toContain('数据库')
-    expect(texts).toContain('导出')
+    expect(texts).toContain('导出目录')
   })
 })
 

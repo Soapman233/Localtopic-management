@@ -50,10 +50,21 @@ describe('SettingsPage 页面级集成', () => {
     await waitFor(() => expect(fetchMock.mock.calls.length).toBeGreaterThan(before))
   })
 
-  it('有数据 → 回填表单（数据库路径等）', async () => {
+  it('默认进入「外观」Tab，主色回填为已保存值（不静默迁移）', async () => {
     vi.stubGlobal('fetch', vi.fn(async () => jsonResponse(settingsFixture)))
     renderPage(<SettingsPage />)
 
+    // 默认外观 Tab：主色输入框回填历史值 #3370FF（不得被静默改写成新默认色）。
+    expect(await screen.findByDisplayValue('#3370FF')).toBeInTheDocument()
+    // 高级字段（数据库路径）默认不渲染。
+    expect(screen.queryByDisplayValue('C:/qb/bank.db')).not.toBeInTheDocument()
+  })
+
+  it('切到「高级」Tab 后回填数据库路径与导出目录', async () => {
+    vi.stubGlobal('fetch', vi.fn(async () => jsonResponse(settingsFixture)))
+    renderPage(<SettingsPage />)
+
+    fireEvent.click(await screen.findByRole('tab', { name: '高级' }))
     expect(await screen.findByDisplayValue('C:/qb/bank.db')).toBeInTheDocument()
     expect(screen.getByDisplayValue('C:/qb/exports')).toBeInTheDocument()
   })
