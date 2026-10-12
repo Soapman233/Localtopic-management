@@ -171,3 +171,6 @@ spike/acceptance/_safety/
 spike/acceptance/_https/
 spike/acceptance/_tls/
 spike/acceptance/_redact/
+
+spike/acceptance/_shots/
+spike/acceptance/_shots_run/

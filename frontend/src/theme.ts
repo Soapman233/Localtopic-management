@@ -566,6 +566,35 @@ export function buildTheme(preferences?: { primary?: string; dark?: boolean }) {
         },
       },
       /**
+       * 折叠面板（筛选栏等）——**贴合式**，而非一摞独立卡片。
+       *
+       * 问题（截图实测）：MUI `Accordion` 默认每个都带圆角边框 + 上下外边距，
+       * 四个筛选维度叠起来就是「四张浮空小卡片」，视觉碎片化、且每条边框都在抢注意力。
+       *
+       * 改为：**无圆角、无独立边框、用 1px 分隔线相连**，读作「一个连续面板」。
+       * 外层容器负责唯一的边框（`Paper variant="outlined"`），面板自身不再重复描边。
+       * 同时去掉 MUI 默认的 `::before` 上边线（否则与外层边框形成双线）。
+       */
+      MuiAccordion: {
+        defaultProps: { disableGutters: true, elevation: 0, square: true },
+        styleOverrides: {
+          root: ({ theme }: { theme: Theme }) => ({
+            border: 'none',
+            borderBottom: `1px solid ${theme.palette.divider}`,
+            backgroundImage: 'none',
+            '&::before': { display: 'none' },
+            '&:last-of-type': { borderBottom: 'none' },
+          }),
+        },
+      },
+      MuiAccordionSummary: {
+        styleOverrides: {
+          root: { minHeight: 44, paddingLeft: 12, paddingRight: 12 },
+          content: { margin: '8px 0' },
+        },
+      },
+      MuiAccordionDetails: { styleOverrides: { root: { padding: '0 12px 12px' } } },
+      /**
        * M3 tab 的圆角体现在 **active indicator**（tab 本体是直角，故不改 `MuiTab`）：
        * 高度 2 → 3、顶部加圆角，与 M3 的「indicator 为圆角短条」一致。
        */

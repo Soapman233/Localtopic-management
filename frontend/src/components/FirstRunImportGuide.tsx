@@ -15,7 +15,7 @@
  */
 import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { Alert, AlertTitle, Button } from '@mui/material'
+import { Alert, AlertTitle, Box, Button, Stack } from '@mui/material'
 import UploadFileIcon from '@mui/icons-material/UploadFile'
 import { useNavigate } from 'react-router-dom'
 import { getStats } from '../api/stats'
@@ -60,22 +60,42 @@ export function FirstRunImportGuide() {
   }
 
   return (
+    /**
+     * 布局说明（移动端实测修正）：
+     * 原先用 `Alert` 的 `action` 槽放按钮——该槽是**固定窄列**，
+     * 手机上「导入我的第一份旧卷」会被挤成**三行**，横幅因此变得很高很丑。
+     * 改为自绘布局：文字区 `flex:1` + 按钮 `flexShrink:0`，
+     * 窄屏**纵向堆叠**（按钮占满一行，易点按），宽屏**横向并排**。
+     */
     <Alert
       severity="info"
       icon={<UploadFileIcon />}
-      sx={{ mb: 2, alignItems: 'center' }}
+      sx={{ mb: 2, alignItems: 'flex-start', '& .MuiAlert-message': { width: '100%', minWidth: 0 } }}
       onClose={dismiss}
-      action={
-        enabled ? (
-          <Button color="inherit" size="small" onClick={() => navigate('/import')}>
+    >
+      <Stack
+        direction={{ xs: 'column', sm: 'row' }}
+        spacing={{ xs: 1.5, sm: 2 }}
+        alignItems={{ xs: 'stretch', sm: 'center' }}
+        justifyContent="space-between"
+      >
+        <Box sx={{ minWidth: 0 }}>
+          <AlertTitle sx={{ mb: 0.25 }}>{guide.title}</AlertTitle>
+          {guide.body}
+          {!enabled && <div>{describeImportDisabled()}</div>}
+        </Box>
+        {enabled && (
+          <Button
+            variant="contained"
+            size="small"
+            startIcon={<UploadFileIcon />}
+            onClick={() => navigate('/import')}
+            sx={{ flexShrink: 0, alignSelf: { xs: 'stretch', sm: 'center' } }}
+          >
             {guide.action}
           </Button>
-        ) : undefined
-      }
-    >
-      <AlertTitle>{guide.title}</AlertTitle>
-      {guide.body}
-      {!enabled && <div>{describeImportDisabled()}</div>}
+        )}
+      </Stack>
     </Alert>
   )
 }

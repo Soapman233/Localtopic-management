@@ -19,6 +19,7 @@ import {
   Stack,
   TextField,
   Toolbar,
+  Tooltip,
   Typography,
   useMediaQuery,
   useTheme,
@@ -198,14 +199,16 @@ function NavListButton({ item, onNavigate }: { item: NavItem; onNavigate: (path:
   return (
     // P5-3：`aria-current="page"` 明确告诉读屏用户「当前就在这一页」，
     // 仅靠视觉高亮（selected）对读屏用户不可见。
-    <ListItemButton selected={selected} aria-current={selected ? 'page' : undefined} onClick={() => onNavigate(item.path)}>
-      <ListItemIcon sx={{ minWidth: 40 }}>{item.icon}</ListItemIcon>
-      <ListItemText
-        primary={item.label}
-        secondary={item.description}
-        secondaryTypographyProps={{ variant: 'caption', noWrap: true }}
-      />
-    </ListItemButton>
+    //
+    // 说明文字**退到 Tooltip**（实施方案 §2.1：「导航说明不再占每个链接第二行，退到帮助」）：
+    // 原先在第二行渲染 description，240px 宽的侧栏必然被 `noWrap` 截断成
+    // 「边找题边组卷，左题库右…」——半句话比没有更糟。改为单行 + 悬停/聚焦提示。
+    <Tooltip title={item.description} placement="right" enterDelay={500}>
+      <ListItemButton selected={selected} aria-current={selected ? 'page' : undefined} onClick={() => onNavigate(item.path)}>
+        <ListItemIcon sx={{ minWidth: 40 }}>{item.icon}</ListItemIcon>
+        <ListItemText primary={item.label} />
+      </ListItemButton>
+    </Tooltip>
   )
 }
 
@@ -252,11 +255,8 @@ function CollapsibleNavGroup({
         onClick={onToggle}
       >
         <ListItemIcon sx={{ minWidth: 40 }}>{open ? <ExpandLessIcon /> : <ExpandMoreIcon />}</ListItemIcon>
-        <ListItemText
-          primary={group.label}
-          secondary={open ? '收起维护页入口' : '展开维护页入口'}
-          secondaryTypographyProps={{ variant: 'caption', noWrap: true }}
-        />
+        {/* 单行：展开/收起语义已由 aria-expanded + 图标表达，第二行说明纯属噪音。 */}
+        <ListItemText primary={group.label} />
       </ListItemButton>
       <Collapse in={open} id={regionId} timeout="auto" unmountOnExit>
         <List disablePadding>
