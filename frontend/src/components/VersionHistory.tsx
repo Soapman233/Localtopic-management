@@ -140,7 +140,7 @@ export function VersionHistory({ questionId, versions }: VersionHistoryProps) {
   return (
     <Box>
       <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
-        系统会自动保留每次编辑前的旧版，**仅供查看，不提供一键回滚**。
+        系统会自动保留每次编辑前的旧版，<strong>仅供查看，不提供一键回滚</strong>。
       </Typography>
       {rows.length === 0 ? (
         <EmptyState dense title="暂无版本记录" />

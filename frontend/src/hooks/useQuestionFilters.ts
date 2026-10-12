@@ -82,7 +82,13 @@ export function useQuestionFilters({ pageSize }: UseQuestionFiltersOptions): Use
 
   // 筛选条件 / 页码写入 URL（replace，避免污染历史）。
   useEffect(() => {
-    setSearchParams(writeFiltersToUrl(filters, page), { replace: true })
+    setSearchParams((current) => {
+      const next = writeFiltersToUrl(filters, page)
+      // B0：debug 是路由诊断开关，不是检索条件；同步筛选时保留当前原值及重复值。
+      // 只保留这个明确冻结的键，不能把其它未知参数带回，更不能写入查询/API 参数。
+      for (const value of current.getAll('debug')) next.append('debug', value)
+      return next
+    }, { replace: true })
   }, [filters, page, setSearchParams])
 
   const queryParams: SearchParams = useMemo(

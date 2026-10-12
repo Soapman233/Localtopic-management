@@ -38,6 +38,7 @@ import { useSettingsStore } from '../store/settingsStore'
 import { notify } from '../lib/feedback'
 import { usePermissionGuard } from '../hooks/usePermission'
 import { useQuestionFilters } from '../hooks/useQuestionFilters'
+import { isDebugMode } from '../lib/glossary'
 import { qk } from '../api/queryKeys'
 
 const PAGE_SIZE = 20
@@ -330,8 +331,8 @@ export default function SearchPage() {
 
           {!answerStatusAvailable && items.length > 0 && (
             <Alert severity="info" sx={{ mb: 1, py: 0.25 }}>
-              未能从 <code>/api/search</code> 获取 <code>has_answer / has_analysis</code> 标志，
-              结果卡暂不展示答案/解析徽章（避免误标为「无答案」）。
+              答案/解析信息暂不可用，结果卡暂不显示相关标记。
+              {isDebugMode() && <>未能从 <code>/api/search</code> 获取 <code>has_answer / has_analysis</code> 标志。</>}
               可用左侧「仅看有答案 / 仅看有解析」按内容筛选。
             </Alert>
           )}

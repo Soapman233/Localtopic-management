@@ -18,6 +18,7 @@ import {
 import { useNavigate } from 'react-router-dom'
 import { getStats } from '../api/stats'
 import type { CountRow, CoverageBucket, StatsData } from '../api/types'
+import { describeFormulaStatus } from '../lib/glossary'
 import { qk } from '../api/queryKeys'
 import { EmptyState } from '../components/EmptyState'
 import { ErrorState } from '../components/ErrorState'
@@ -162,7 +163,7 @@ export default function StatsPage() {
         <StatCard
           label="公式"
           value={s.formulas.toLocaleString('zh-CN')}
-          hint={`OK ${s.formulas_ok.toLocaleString('zh-CN')}`}
+          hint={`转换完成 ${s.formulas_ok.toLocaleString('zh-CN')}`}
         />
         <StatCard label="图片" value={s.images.toLocaleString('zh-CN')} />
         <StatCard label="标签" value={s.labels.toLocaleString('zh-CN')} />
@@ -220,7 +221,7 @@ export default function StatsPage() {
           <LinearProgress variant="determinate" value={reviewPct} sx={{ mt: 1, height: 8, borderRadius: 4 }} />
           <Stack direction="row" spacing={1} sx={{ mt: 1 }} flexWrap="wrap" useFlexGap>
             {Object.entries(s.review?.by_status ?? {}).map(([k, v]) => (
-              <Chip key={k} size="small" color="warning" variant="outlined" label={`${k} ${v}`} />
+              <Chip key={k} size="small" color="warning" variant="outlined" label={`${describeFormulaStatus(k)} ${v}`} />
             ))}
           </Stack>
 
@@ -247,7 +248,7 @@ export default function StatsPage() {
         <DistributionList title="学科分布" rows={s.by_subject} onItemClick={() => navigate('/search')} />
         <DistributionList
           title="公式状态分布"
-          rows={s.formula_status.map((f) => ({ key: f.status ?? '（空）', count: f.count }))}
+          rows={s.formula_status.map((f) => ({ key: describeFormulaStatus(f.status), count: f.count }))}
         />
         <DistributionList title="高频章节（Top 20）" rows={s.top_chapters} onItemClick={() => navigate('/search')} />
       </Stack>

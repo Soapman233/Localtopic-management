@@ -41,6 +41,7 @@ import { PageView } from './livePreview/PageView'
 import {
   useImageMetrics,
 } from './livePreview/useResolvedImages'
+import { isDebugMode } from '../lib/glossary'
 import './livePreview/livePreview.css'
 
 /** 分值上限（与后端 `_validate_score` 一致）。 */
@@ -142,7 +143,10 @@ function QuestionChrome({
 }
 
 export function LivePreviewPanel(props: LivePreviewPanelProps) {
-  const { paperId, data, editable = false, template: templateProp, scale = 1, debug = false } = props
+  const { paperId, data, editable = false, template: templateProp, scale = 1, debug: debugProp } = props
+
+  // 显式 prop 优先：降级预览传 false 时，URL/storage 开关也不能覆盖；所有可见诊断共用此值。
+  const debug = debugProp ?? isDebugMode()
 
   // P1-6：深色模式下给「非纸张 chrome」加 `lp-dark` 类（纸张本身保持白底黑字）。
   const dark = useTheme().palette.mode === 'dark'
@@ -327,11 +331,11 @@ export function LivePreviewPanel(props: LivePreviewPanelProps) {
           />
         </Tooltip>
         <Chip size="small" variant="outlined" label={`模板 ${template}`} />
-        <Chip size="small" variant="outlined" label={data.layout_revision} />
+        {debug && <Chip size="small" variant="outlined" label={data.layout_revision} />}
         <Chip size="small" variant="outlined" label={data.answer_mode || '—'} />
         <Chip size="small" variant="outlined" label={`${totalQuestions} 题`} />
-        {!ready && <LoadingState dense size={14} label="正在测量（等待字体与图片）…" />}
-        {ready && (
+        {!ready && <LoadingState dense size={14} label="正在准备预览…" />}
+        {ready && debug && (
           <Typography variant="caption" color="text.secondary">
             测量 {ms.toFixed(2)}ms · 重排 v{version}
           </Typography>
@@ -366,7 +370,7 @@ export function LivePreviewPanel(props: LivePreviewPanelProps) {
       >
         {!ready && (
           <Alert severity="info" sx={{ mb: 1 }}>
-            正在测量分页（等待 KaTeX 字体与题目图片就绪）…
+            正在准备预览，请稍候…
           </Alert>
         )}
         <div

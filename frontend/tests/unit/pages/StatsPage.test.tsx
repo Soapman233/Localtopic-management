@@ -89,3 +89,19 @@ describe('StatsPage 页面级集成', () => {
     await waitFor(() => expect(fetchMock.mock.calls.length).toBeGreaterThan(before))
   })
 })
+
+describe('B0 统计状态中文显示', () => {
+  afterEach(() => vi.unstubAllGlobals())
+  it('待复核及转换状态全部中文化，空与未知状态不标为正常', async () => {
+    const states = ['OK', 'UNSUPPORTED', 'EMPTY', 'FAIL', 'UNVERIFIED', 'NEW_CODE', 'OTHER_CODE', null, '']
+    const fixture = { ...statsFixture, formula_status: states.map(status => ({ status, count: 1 })), review: { ...statsFixture.review, by_status: Object.fromEntries(states.filter(status => status !== null).map(status => [status, 1])) } }
+    vi.stubGlobal('fetch', vi.fn(async () => jsonResponse(fixture)))
+    renderPage(<StatsPage />)
+    await screen.findByText('题目总数')
+    for (const chinese of ['转换完成', '不支持', '未提取到内容', '转换失败', '待核对', '状态信息不可用，待核对']) expect(screen.getAllByText(chinese).length).toBeGreaterThan(0)
+    expect(screen.getAllByText('状态信息不可用，待核对')).toHaveLength(4)
+    expect(screen.getByText('转换完成 ' + statsFixture.formulas_ok.toLocaleString('zh-CN'))).toBeInTheDocument()
+    expect(document.body.textContent).not.toMatch(/\bOK\b/)
+    expect(document.body.textContent).not.toMatch(/UNSUPPORTED|EMPTY|FAIL|UNVERIFIED|NEW_CODE|OTHER_CODE|OK 1/)
+  })
+})

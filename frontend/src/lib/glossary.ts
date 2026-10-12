@@ -252,7 +252,7 @@ export function describeIssueTechnical(issue: ExportIssue): string {
  * 是否处于「给技术人员」的调试模式。
  *
  * 判定规则（任一命中即视为开启）：
- *  1. URL 查询串含 `debug=1`（例如 `?debug=1`，便于临时排查、可分享链接）；
+ *  1. 普通或 HashRouter 查询串含 `debug=1`（例如 `?debug=1` / `#/builder?debug=1`）；
  *  2. `localStorage['qb_debug'] === '1'`（便于长期开启，刷新后仍生效）。
  *
  * ⚠️ **默认关闭**：老师界面**绝不**出现 scan index / snapshot_digest 等原始字段。
@@ -263,6 +263,10 @@ export function isDebugMode(): boolean {
     // 1) URL 查询串：window 不存在时跳过。
     if (typeof window !== 'undefined' && window.location) {
       if (new URLSearchParams(window.location.search).get('debug') === '1') return true
+      // HashRouter 把路由查询放在 hash 内；只解析问号后的查询，不能把路径当参数。
+      const hash = window.location.hash
+      const queryStart = hash.indexOf('?')
+      if (queryStart >= 0 && new URLSearchParams(hash.slice(queryStart + 1)).get('debug') === '1') return true
     }
     // 2) localStorage：优先取全局（浏览器即 window.localStorage；node 测试可注入 global.localStorage）。
     const store = typeof localStorage !== 'undefined' ? localStorage : undefined
@@ -271,4 +275,19 @@ export function isDebugMode(): boolean {
     // 隐私模式 / 存储被禁用等情况下读取可能抛错，一律按「非 debug」处理。
     return false
   }
+}
+
+/** 公式转换状态的展示文案；转换完成只表示转换结果，不代替内容核对。
+ * 空值与新出现的未知码必须如实提示，不能退回「正常」或透出内部原码。 */
+export function describeFormulaStatus(status: string | null | undefined): string {
+  const labels: Record<string, string> = {
+    OK: '转换完成',
+    UNSUPPORTED: '不支持',
+    EMPTY: '未提取到内容',
+    FAIL: '转换失败',
+    UNVERIFIED: '待核对',
+  }
+  return status && Object.prototype.hasOwnProperty.call(labels, status)
+    ? labels[status]
+    : '状态信息不可用，待核对'
 }

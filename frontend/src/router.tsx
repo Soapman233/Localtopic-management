@@ -2,6 +2,7 @@ import { lazy, type ReactElement } from 'react'
 import { Navigate, RouterProvider, createHashRouter } from 'react-router-dom'
 import App, { NAV_ITEMS } from './App'
 import RequireAuth from './app/auth/RequireAuth'
+import LoginLoadBoundary from './components/LoginLoadBoundary'
 
 /** 登录页（阶段 4）。同样走懒加载——本地版永远不会访问它。 */
 const LoginPage = lazy(() => import('./pages/LoginPage'))
@@ -76,8 +77,8 @@ const router = createHashRouter([
   // 登录页**不套 RequireAuth**（否则未登录时跳登录页会无限重定向）。
   // ⚠️ 因此"本地版访问 /login 要透传"**不能**依赖下面的 RequireAuth——它是顶层路由，
   // 根本走不到 RequireAuth。真正的兜底在 `LoginPage` 内部：本地版（auth_enabled=false）
-  // 会自行 `<Navigate>` 回默认落地页。此处仅登记路由。
-  { path: '/login', element: <LoginPage /> },
+  // 会自行 `<Navigate>` 回默认落地页。局部边界独立负责登录模块延迟与加载失败。
+  { path: '/login', element: <LoginLoadBoundary><LoginPage /></LoginLoadBoundary> },
   {
     path: '/',
     // 阶段 4：线上版未登录 → 跳 `/login`；**本地版恒真透传**（见 RequireAuth 注释）。

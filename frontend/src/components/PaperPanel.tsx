@@ -457,7 +457,7 @@ export function PaperPanel({
           setConfirmSection(null)
         }}
       >
-        将删除大题「{confirmSection?.name}」。其中的 {confirmSection?.count ?? 0} 道题**不会丢失**，
+        将删除大题「{confirmSection?.name}」。其中的 {confirmSection?.count ?? 0} 道题<strong>不会丢失</strong>，
         会移到「未分组」；但大题分组本身无法通过撤销恢复（如需，请重新新增大题并设为目标）。
       </ConfirmDialog>
     </Paper>

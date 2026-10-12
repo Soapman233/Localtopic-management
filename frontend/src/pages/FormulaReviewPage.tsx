@@ -37,6 +37,7 @@ import { KatexFormula } from '../components/KatexFormula'
 import { EmptyState } from '../components/EmptyState'
 import { ErrorState } from '../components/ErrorState'
 import { LoadingState } from '../components/LoadingState'
+import { describeFormulaStatus, isDebugMode } from '../lib/glossary'
 import { qk } from '../api/queryKeys'
 
 const PAGE_SIZE = 50
@@ -56,12 +57,6 @@ function ReviewPreview({ item }: { item: ReviewItem }) {
   )
 }
 
-/** 状态代码 → 中文说明（三类原因处理方式不同，见 PRD 5.4）。 */
-const STATUS_LABEL: Record<string, string> = {
-  UNSUPPORTED: '不支持',
-  EMPTY: '未提取到内容',
-  FAIL: '转换失败',
-}
 
 /** 状态代码 → 处理提示。 */
 const STATUS_HINT: Record<string, string> = {
@@ -136,8 +131,8 @@ export default function FormulaReviewPage() {
       </Stack>
 
       <Alert severity="info" sx={{ mb: 2 }}>
-        非 OK 公式<strong>可见但不阻塞</strong>主链路：它影响公式正确性（报告定为「中」级），
-        请逐条核对后处理，无法确认的项目保持待处理；三类转换状态分 tab 呈现。
+        待核对公式<strong>可见但不阻塞</strong>主链路：它影响公式正确性（报告定为「中」级），
+        请逐条核对后处理，无法确认的项目保持待处理；三类转换状态分标签页呈现。
       </Alert>
 
       {/* 处理进度不代表内容核对通过 */}
@@ -168,7 +163,7 @@ export default function FormulaReviewPage() {
                 value={t.key}
                 label={
                   <Stack direction="row" spacing={0.5} alignItems="center">
-                    <span>{STATUS_LABEL[t.key] ?? t.key}</span>
+                    <span>{describeFormulaStatus(t.key)}</span>
                     <Chip size="small" label={t.count} color={tab === t.key ? 'warning' : 'default'} />
                   </Stack>
                 }
@@ -189,7 +184,7 @@ export default function FormulaReviewPage() {
 
         {tab && STATUS_HINT[tab] && (
           <Alert severity="warning" sx={{ mb: 1 }}>
-            {STATUS_LABEL[tab]}：{STATUS_HINT[tab]}
+            {describeFormulaStatus(tab)}：{STATUS_HINT[tab]}
           </Alert>
         )}
 
@@ -216,7 +211,7 @@ export default function FormulaReviewPage() {
                 <Chip
                   size="small"
                   color={it.resolved ? 'success' : 'warning'}
-                  label={STATUS_LABEL[it.status ?? ''] ?? it.status ?? '未知'}
+                  label={describeFormulaStatus(it.status)}
                 />
                 {it.resolved === 1 && <Chip size="small" variant="outlined" label="已处理" />}
                 <Chip
@@ -226,7 +221,7 @@ export default function FormulaReviewPage() {
                   onClick={() => it.question_id && navigate(`/question/${it.question_id}`)}
                   sx={{ cursor: it.question_id ? 'pointer' : 'default' }}
                 />
-                {it.kind && <Chip size="small" variant="outlined" label={`kind: ${it.kind}`} />}
+                {isDebugMode() && it.kind && <Chip size="small" variant="outlined" label={`kind: ${it.kind}`} />}
                 {it.chapter && <Chip size="small" variant="outlined" label={`章节 ${it.chapter}`} />}
                 <Box sx={{ flex: 1 }} />
                 {it.question_id && (
@@ -264,12 +259,12 @@ export default function FormulaReviewPage() {
                 <Typography variant="caption" color="text.secondary">
                   来源：{it.file_name ?? '（未知）'}
                 </Typography>
-                {it.reason && (
+                {isDebugMode() && it.reason && (
                   <Typography variant="caption" color="text.secondary">
                     原因：{it.reason}
                   </Typography>
                 )}
-                {it.part && (
+                {isDebugMode() && it.part && (
                   <Typography variant="caption" color="text.secondary">
                     部件：{it.part}
                   </Typography>

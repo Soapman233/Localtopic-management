@@ -41,7 +41,7 @@ import { ErrorState } from '../components/ErrorState'
 import { LoadingState } from '../components/LoadingState'
 import { ErrorCode, errorCodeOf, errorDataOf } from '../api/errors'
 import { qk } from '../api/queryKeys'
-import { describeMentionScope } from '../lib/glossary'
+import { describeMentionScope, describeFormulaStatus } from '../lib/glossary'
 import { usePermissionGuard } from '../hooks/usePermission'
 
 /** 单条公式展示块（点击可查看 latex 源码）。 */
@@ -52,8 +52,8 @@ function FormulaRow({ formula }: { formula: Formula }) {
       <Box sx={{ flex: 1, minWidth: 0, overflowX: 'auto' }}>
         <KatexFormula latex={formula.latex} />
       </Box>
-      {formula.status && formula.status !== 'OK' && (
-        <Chip size="small" color="warning" label={formula.status} title={formula.preview ?? undefined} />
+      {formula.status !== 'OK' && (
+        <Chip size="small" color="warning" label={describeFormulaStatus(formula.status)} title={formula.preview ?? undefined} />
       )}
       {formula.needs_review ? <ReviewBadge /> : null}
     </Stack>

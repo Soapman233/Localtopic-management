@@ -164,11 +164,6 @@ function PaperExportPage({ paperId, onRevised }: { paperId: number; onRevised: (
           回到组卷工作台
         </Button>
       </Stack>
-      <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1 }}>
-        定位：**全屏预览 / 导出历史**。日常导出请回「组卷工作台」用导出抽屉完成（单一入口）；
-        本页与导出抽屉**共用同一份门禁状态**，此处仅用于全屏查看与结果留档。
-        预览通常秒回；仅当内容有改动时才需约 3–8 秒。
-      </Typography>
 
       {summary && (
         <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap sx={{ mb: 1 }}>

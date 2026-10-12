@@ -63,3 +63,19 @@ describe('FormulaReviewPage 页面级集成', () => {
     expect(screen.getByRole('button', { name: /重试/ })).toBeInTheDocument()
   })
 })
+
+/** B0：真实列表字段 fixture，独立观察默认 DOM 与 debug DOM。 */
+describe('公式复核技术字段收敛', () => {
+  afterEach(() => { vi.unstubAllGlobals(); window.history.replaceState(null, '', '/'); localStorage.removeItem('qb_debug') })
+  it.each([false, true])('debug=%s：技术字段按开关可见，未知状态仍如实提示', async (debug) => {
+    if (debug) window.history.replaceState(null, '', '/#/manage/formula-review?debug=1')
+    const list = { ...emptyList, total: 1, items: [{ id: 1, question_id: 1, number: '1', status: 'NEW_CODE', kind: 'mathtype', part: 'embeddings/oleObject5.bin', reason: 'internal-parser-reason', question_text: '计算 2**3 的值', preview_url: '/source.png', fid: 'F1' }] }
+    vi.stubGlobal('fetch', mockFetchWithList(() => jsonResponse(list)))
+    renderPage(<FormulaReviewPage />)
+    expect(await screen.findByText('状态信息不可用，待核对')).toBeInTheDocument()
+    expect(screen.getByText('题干：计算 2**3 的值')).toBeInTheDocument()
+    expect(document.body.textContent).not.toContain('NEW_CODE')
+    for (const technical of ['kind: mathtype', 'embeddings/oleObject5.bin', 'internal-parser-reason']) expect(document.body.textContent?.includes(technical)).toBe(debug)
+    expect(screen.getByText(/转换预览可能出现字距或重叠失真/)).toBeInTheDocument()
+  })
+})

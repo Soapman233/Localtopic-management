@@ -5,7 +5,7 @@
  * 1. 术语映射函数返回**产品定的教师语言**，且映射结果里不再残留开发者术语；
  * 2. `isDebugMode()` 仅在 `?debug=1` 或 `localStorage.qb_debug=1` 时为真，**默认关闭**。
  */
-import { describe, it, expect, afterEach } from 'vitest'
+import { describe, it, expect, afterEach, vi } from 'vitest'
 import {
   GLOSSARY,
   describeDegradedMode,
@@ -17,6 +17,7 @@ import {
   describeSnapshotStale,
   describeTechnicalInfo,
   isDebugMode,
+  describeFormulaStatus,
   type IssueSource,
 } from '../../src/lib/glossary'
 
@@ -75,6 +76,7 @@ describe('describe* 文案函数', () => {
 describe('isDebugMode', () => {
   afterEach(() => {
     // 还原 URL 查询串与 localStorage，避免用例互相污染。
+    vi.restoreAllMocks()
     window.history.replaceState(null, '', window.location.pathname)
     localStorage.removeItem('qb_debug')
   })
@@ -85,6 +87,22 @@ describe('isDebugMode', () => {
 
   it('URL 查询串含 debug=1 时开启', () => {
     window.history.replaceState(null, '', '/?debug=1')
+    expect(isDebugMode()).toBe(true)
+  })
+
+  it('HashRouter 路由查询串开启 debug，不把路由文本当参数', () => {
+    window.history.replaceState(null, '', '/#/builder?debug=1')
+    expect(isDebugMode()).toBe(true)
+    window.history.replaceState(null, '', '/#/builder?debug=0')
+    expect(isDebugMode()).toBe(false)
+  })
+
+  it('存储读取异常安全关闭，已命中的 URL 开关仍开启', () => {
+    vi.spyOn(Storage.prototype, 'getItem').mockImplementation(() => { throw new Error('storage disabled') })
+    expect(isDebugMode()).toBe(false)
+    window.history.replaceState(null, '', '/?debug=1')
+    expect(isDebugMode()).toBe(true)
+    window.history.replaceState(null, '', '/#/builder?debug=1')
     expect(isDebugMode()).toBe(true)
   })
 
@@ -99,4 +117,9 @@ describe('isDebugMode', () => {
     localStorage.setItem('qb_debug', 'true')
     expect(isDebugMode()).toBe(false)
   })
+})
+
+describe('公式转换状态中文映射', () => {
+  it.each([['OK', '转换完成'], ['UNSUPPORTED', '不支持'], ['EMPTY', '未提取到内容'], ['FAIL', '转换失败'], ['UNVERIFIED', '待核对'], ['', '状态信息不可用，待核对'], ['NEW_CODE', '状态信息不可用，待核对'], ['toString', '状态信息不可用，待核对']])('%s → %s', (status, expected) => { expect(describeFormulaStatus(status)).toBe(expected) })
+  it('null/undefined 不当作正常', () => { expect(describeFormulaStatus(null)).toBe('状态信息不可用，待核对'); expect(describeFormulaStatus(undefined)).toBe('状态信息不可用，待核对') })
 })
