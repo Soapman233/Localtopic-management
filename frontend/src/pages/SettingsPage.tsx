@@ -2,6 +2,10 @@
  *
  * 覆盖需求：DB 路径、默认导出目录 / 模板、KaTeX 与界面偏好。
  * 读写 ``outputs/webui/settings.json``（``GET/PUT /api/settings``）。
+ *
+ * 渐进披露（方案 §3.9）：日常会用到的设置（数据库路径、导出目录、默认模板、
+ * 外观、局域网访问）默认可见可改；仅「公式渲染（KaTeX）」属高级项，
+ * **默认只读**，需显式点「编辑高级设置」解锁后才可修改。
  */
 import { useEffect, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
@@ -51,12 +55,28 @@ function toForm(s: SettingsData): FormState {
   }
 }
 
+/** 分组小标题（非 heading，避免进入标题大纲）。 */
+function GroupLabel({ children }: { children: string }) {
+  return (
+    <Typography
+      variant="overline"
+      color="text.secondary"
+      display="block"
+      sx={{ letterSpacing: 1, mb: 0.5 }}
+    >
+      {children}
+    </Typography>
+  )
+}
+
 /** P9 系统设置页。 */
 export default function SettingsPage() {
   const qc = useQueryClient()
   const settingsQ = useQuery({ queryKey: qk.settings(), queryFn: () => getSettings() })
   const [form, setForm] = useState<FormState | null>(null)
   const [toast, setToast] = useState<{ kind: 'success' | 'error'; text: string } | null>(null)
+  // 高级项（公式渲染）默认只读，需显式解锁才可编辑。
+  const [advancedEditing, setAdvancedEditing] = useState(false)
 
   // 首次加载后回填表单。
   useEffect(() => {
@@ -119,6 +139,9 @@ export default function SettingsPage() {
         </Alert>
       )}
 
+      {/* ── 常用（默认可见可改） ───────────────────────────────────── */}
+      <GroupLabel>常用</GroupLabel>
+
       {/* 数据库 */}
       <Paper variant="outlined" sx={{ p: 2, mb: 2 }}>
         <Typography variant="subtitle2" component="h2" gutterBottom>
@@ -133,7 +156,6 @@ export default function SettingsPage() {
         />
         <Alert severity="warning" sx={{ mt: 1 }}>
           修改数据库路径后需<strong>重启服务</strong>方可生效；指向不存在的库将无法检索 / 编辑。
-          涉及写入的联调请使用副本，避免污染真实题库。
         </Alert>
       </Paper>
 
@@ -174,42 +196,10 @@ export default function SettingsPage() {
         </Stack>
       </Paper>
 
-      {/* 公式渲染（KaTeX） */}
+      {/* 外观 */}
       <Paper variant="outlined" sx={{ p: 2, mb: 2 }}>
         <Typography variant="subtitle2" component="h2" gutterBottom>
-          公式渲染（KaTeX）
-        </Typography>
-        {/* P0-2：这两个开关已真正生效——保存后经 main.tsx 的 syncFrom 镜像到 settingsStore，
-            由 KatexFormula 渲染时读取；「默认模板」同理被建卷流程消费。不再是「点了没用」的假开关。 */}
-        <Typography variant="caption" color="text.secondary" display="block" sx={{ mb: 1 }}>
-          保存后立即生效：作用于试卷预览与导出中的公式渲染。
-        </Typography>
-        <FormControlLabel
-          control={
-            <Switch
-              checked={form.katex_throw_on_error}
-              onChange={(e) => set('katex_throw_on_error', e.target.checked)}
-            />
-          }
-          label="渲染失败时抛出错误（关闭则降级为红色源码）"
-        />
-        <Box>
-          <FormControlLabel
-            control={
-              <Switch checked={form.katex_strict} onChange={(e) => set('katex_strict', e.target.checked)} />
-            }
-            label="严格模式（对非标准 LaTeX 语法告警）"
-          />
-        </Box>
-      </Paper>
-
-      {/* 局域网访问（方案 A）：手机 / 其他设备访问 */}
-      <LanAccessPanel />
-
-      {/* 界面偏好 */}
-      <Paper variant="outlined" sx={{ p: 2, mb: 2 }}>
-        <Typography variant="subtitle2" component="h2" gutterBottom>
-          界面偏好
+          外观
         </Typography>
         <Stack direction="row" spacing={2} alignItems="center" flexWrap="wrap" useFlexGap>
           <Box>
@@ -219,6 +209,7 @@ export default function SettingsPage() {
             <Stack direction="row" spacing={1} alignItems="center">
               <input
                 type="color"
+                aria-label="主色"
                 value={form.theme_primary}
                 onChange={(e) => set('theme_primary', e.target.value)}
                 style={{ width: 48, height: 32, border: 'none', background: 'none' }}
@@ -236,6 +227,60 @@ export default function SettingsPage() {
             label="深色模式"
           />
         </Stack>
+      </Paper>
+
+      {/* 局域网访问（方案 A）：手机 / 其他设备访问，属常用项，始终可用 */}
+      <LanAccessPanel />
+
+      {/* ── 高级（默认只读，显式解锁） ─────────────────────────────── */}
+      <Divider sx={{ my: 2 }} />
+      <GroupLabel>高级</GroupLabel>
+
+      <Paper variant="outlined" sx={{ p: 2, mb: 2 }}>
+        <Stack direction="row" alignItems="center" justifyContent="space-between" spacing={1}>
+          <Typography variant="subtitle2" component="h2">
+            公式渲染（KaTeX）
+          </Typography>
+          <Button
+            size="small"
+            variant={advancedEditing ? 'text' : 'outlined'}
+            aria-pressed={advancedEditing}
+            onClick={() => setAdvancedEditing((v) => !v)}
+          >
+            {advancedEditing ? '完成' : '编辑高级设置'}
+          </Button>
+        </Stack>
+        <Typography variant="caption" color="text.secondary" display="block" sx={{ mt: 0.5 }}>
+          高级设置默认只读，避免误改影响公式渲染；点「编辑高级设置」后可修改。
+        </Typography>
+        {/* P0-2：这两个开关已真正生效——保存后经 main.tsx 的 syncFrom 镜像到 settingsStore，
+            由 KatexFormula 渲染时读取；「默认模板」同理被建卷流程消费。不再是「点了没用」的假开关。 */}
+        <Box sx={{ mt: 1 }}>
+          <FormControlLabel
+            disabled={!advancedEditing}
+            control={
+              <Switch
+                checked={form.katex_throw_on_error}
+                onChange={(e) => set('katex_throw_on_error', e.target.checked)}
+              />
+            }
+            label="渲染失败时抛出错误（关闭则降级为红色源码）"
+          />
+        </Box>
+        <Box>
+          <FormControlLabel
+            disabled={!advancedEditing}
+            control={
+              <Switch checked={form.katex_strict} onChange={(e) => set('katex_strict', e.target.checked)} />
+            }
+            label="严格模式（对非标准 LaTeX 语法告警）"
+          />
+        </Box>
+        {advancedEditing && (
+          <Alert severity="info" sx={{ mt: 1 }}>
+            保存后立即生效：作用于试卷预览与导出中的公式渲染。
+          </Alert>
+        )}
       </Paper>
 
       <Divider sx={{ mb: 2 }} />

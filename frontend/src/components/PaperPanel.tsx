@@ -12,6 +12,7 @@ import {
   Alert,
   Box,
   Button,
+  Collapse,
   Dialog,
   DialogActions,
   DialogContent,
@@ -29,7 +30,8 @@ import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline'
 import AddIcon from '@mui/icons-material/Add'
 import EditIcon from '@mui/icons-material/Edit'
 import RefreshIcon from '@mui/icons-material/Refresh'
-import FileDownloadIcon from '@mui/icons-material/FileDownload'
+import SettingsIcon from '@mui/icons-material/Settings'
+import ExpandMoreIcon from '@mui/icons-material/ExpandMore'
 import { useDroppable } from '@dnd-kit/core'
 import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable'
 import type { Paper as PaperModel, PaperItem, PaperSection, ExportQuestion } from '../api/types'
@@ -66,7 +68,6 @@ export interface PaperPanelProps {
   targetSectionId: number | null
   onTargetSectionChange: (id: number | null) => void
   onOpenDrawer: () => void
-  onGoExport: () => void
   onOpenDetail: (questionId: number) => void
   contentQuestions?: ExportQuestion[]
 }
@@ -101,7 +102,6 @@ export function PaperPanel({
   targetSectionId,
   onTargetSectionChange,
   onOpenDrawer,
-  onGoExport,
   onOpenDetail,
   contentQuestions,
 }: PaperPanelProps) {
@@ -109,6 +109,8 @@ export function PaperPanel({
   const [newSection, setNewSection] = useState<string | null>(null)
   const [rename, setRename] = useState<{ id: number; name: string } | null>(null)
   const [titleDraft, setTitleDraft] = useState<string | null>(null)
+  // §3.1：模板 / 答案模式 / 加入目标收进「试卷设置」展开层（默认收起），收回常驻纵向空间。
+  const [settingsOpen, setSettingsOpen] = useState(false)
   // 删除大题二次确认（P0-1）：单击不再直接 force 删除，先确认（显示该大题题数）。
   const [confirmSection, setConfirmSection] = useState<{ id: number; name: string; count: number } | null>(null)
 
@@ -196,46 +198,62 @@ export function PaperPanel({
           试卷管理
         </Button>
       </Stack>
-      <Stack direction="row" spacing={1} sx={{ mb: 1 }} flexWrap="wrap" useFlexGap>
-        <Select
+      {/* 试卷设置（§3.1）：模板 / 答案模式 / 加入目标默认收起，需要时展开；业务语义不变。 */}
+      <Box sx={{ mb: 1 }}>
+        <Button
           size="small"
-          value={paper.template}
-          onChange={(e) => actions.updatePaper({ template: e.target.value })}
-          sx={{ minWidth: 96 }}
+          startIcon={<SettingsIcon />}
+          endIcon={<ExpandMoreIcon sx={{ transform: settingsOpen ? 'rotate(180deg)' : 'none', transition: 'transform .15s' }} />}
+          onClick={() => setSettingsOpen((o) => !o)}
+          aria-expanded={settingsOpen}
+          aria-controls="paper-settings-panel"
+          data-testid="toggle-paper-settings"
         >
-          {TEMPLATES.map((t) => (
-            <MenuItem key={t} value={t}>
-              {t}
-            </MenuItem>
-          ))}
-        </Select>
-        <Select
-          size="small"
-          value={paper.answer_mode}
-          onChange={(e) => actions.updatePaper({ answer_mode: e.target.value })}
-          sx={{ minWidth: 128 }}
-        >
-          {ANSWER_MODES.map((m) => (
-            <MenuItem key={m} value={m}>
-              {m}
-            </MenuItem>
-          ))}
-        </Select>
-        <Select
-          size="small"
-          value={targetSectionId ?? ''}
-          onChange={(e) => onTargetSectionChange(e.target.value === '' ? null : Number(e.target.value))}
-          displayEmpty
-          sx={{ minWidth: 140 }}
-        >
-          <MenuItem value="">加入目标：卷末/未分组</MenuItem>
-          {(paper.sections ?? []).map((s) => (
-            <MenuItem key={s.id} value={s.id}>
-              加入目标：{s.name}
-            </MenuItem>
-          ))}
-        </Select>
-      </Stack>
+          试卷设置
+        </Button>
+        <Collapse in={settingsOpen} id="paper-settings-panel">
+          <Stack direction="row" spacing={1} sx={{ mt: 1 }} flexWrap="wrap" useFlexGap>
+            <Select
+              size="small"
+              value={paper.template}
+              onChange={(e) => actions.updatePaper({ template: e.target.value })}
+              sx={{ minWidth: 96 }}
+            >
+              {TEMPLATES.map((t) => (
+                <MenuItem key={t} value={t}>
+                  {t}
+                </MenuItem>
+              ))}
+            </Select>
+            <Select
+              size="small"
+              value={paper.answer_mode}
+              onChange={(e) => actions.updatePaper({ answer_mode: e.target.value })}
+              sx={{ minWidth: 128 }}
+            >
+              {ANSWER_MODES.map((m) => (
+                <MenuItem key={m} value={m}>
+                  {m}
+                </MenuItem>
+              ))}
+            </Select>
+            <Select
+              size="small"
+              value={targetSectionId ?? ''}
+              onChange={(e) => onTargetSectionChange(e.target.value === '' ? null : Number(e.target.value))}
+              displayEmpty
+              sx={{ minWidth: 140 }}
+            >
+              <MenuItem value="">加入目标：卷末/未分组</MenuItem>
+              {(paper.sections ?? []).map((s) => (
+                <MenuItem key={s.id} value={s.id}>
+                  加入目标：{s.name}
+                </MenuItem>
+              ))}
+            </Select>
+          </Stack>
+        </Collapse>
+      </Box>
 
       {/* 预警：无答案（尤其解析版） */}
       {paper.answer_mode === '答案解析版' && noAnswerCount > 0 && (
@@ -339,7 +357,7 @@ export function PaperPanel({
         </Button>
       </Box>
 
-      {/* 实时汇总（P0-8） */}
+      {/* 实时汇总（P0-8）。导出统一由工作台顶部「导出」按钮打开抽屉（单一入口，§2.4）。 */}
       <Divider sx={{ my: 1 }} />
       <Stack direction="row" spacing={2} alignItems="center" flexWrap="wrap" useFlexGap>
         <Typography variant="body2">
@@ -354,10 +372,6 @@ export function PaperPanel({
         <Typography variant="body2" color={noAnswerCount > 0 ? 'warning.main' : 'text.secondary'}>
           无答案 <strong>{noAnswerCount}</strong> 题
         </Typography>
-        <Box sx={{ flex: 1 }} />
-        <Button variant="contained" startIcon={<FileDownloadIcon />} onClick={onGoExport}>
-          导出
-        </Button>
       </Stack>
 
       {/* 设分对话框 */}
@@ -457,7 +471,7 @@ export function PaperPanel({
           setConfirmSection(null)
         }}
       >
-        将删除大题「{confirmSection?.name}」。其中的 {confirmSection?.count ?? 0} 道题**不会丢失**，
+        将删除大题「{confirmSection?.name}」。其中的 {confirmSection?.count ?? 0} 道题<strong>不会丢失</strong>，
         会移到「未分组」；但大题分组本身无法通过撤销恢复（如需，请重新新增大题并设为目标）。
       </ConfirmDialog>
     </Paper>

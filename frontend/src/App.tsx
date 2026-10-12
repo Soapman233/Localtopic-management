@@ -7,6 +7,7 @@ import {
   AlertTitle,
   Box,
   Button,
+  Collapse,
   Divider,
   Drawer,
   IconButton,
@@ -26,14 +27,12 @@ import MenuIcon from '@mui/icons-material/Menu'
 import SearchIcon from '@mui/icons-material/Search'
 import UploadFileIcon from '@mui/icons-material/UploadFile'
 import EditNoteIcon from '@mui/icons-material/EditNote'
-import DescriptionIcon from '@mui/icons-material/Description'
-import FileDownloadIcon from '@mui/icons-material/FileDownload'
-import ChecklistIcon from '@mui/icons-material/Checklist'
-import FunctionsIcon from '@mui/icons-material/Functions'
-import FolderIcon from '@mui/icons-material/Folder'
-import BarChartIcon from '@mui/icons-material/BarChart'
+import StorageIcon from '@mui/icons-material/Storage'
 import SettingsIcon from '@mui/icons-material/Settings'
-import { Outlet, useLocation, useNavigate } from 'react-router-dom'
+import ExpandLessIcon from '@mui/icons-material/ExpandLess'
+import ExpandMoreIcon from '@mui/icons-material/ExpandMore'
+import { Outlet, useLocation } from 'react-router-dom'
+import { useAppNavigate } from './lib/navigation'
 import api from './api/client'
 import { qk } from './api/queryKeys'
 import ErrorBoundary from './components/ErrorBoundary'
@@ -54,49 +53,59 @@ export interface NavItem {
   icon: ReactNode
 }
 
-/** 导航分组：一个分组标题（渲染为 `ListSubheader`）+ 若干导航项。 */
+/**
+ * 导航分组：一个分组标题 + 若干导航项。
+ *
+ * `collapsible` 为真时表示**低频分组**，侧栏默认折叠（方案 §2.1），
+ * 用 MUI `Collapse` 承载，触发器带 `aria-expanded` / `aria-controls`。
+ */
 export interface NavGroup {
   label: string
   items: NavItem[]
+  collapsible?: boolean
 }
 
 /**
- * 侧栏导航分组（P0-4 / P1-6 信息架构重构）。
+ * 侧栏导航分组（B1 信息架构重构，方案 §2.1）。
  *
- * 原来是一个 8 项扁平等权的 `NAV_ITEMS`，老师分不清"日常要用的"和"偶尔维护的"。
- * 现按**使用频率**拆成两组：
- * - 「日常备课」：老师每天都要用的高频页（组卷 / 找题 / 导出）；
- * - 「数据治理」：偶尔维护的低频页（知识点复核 / 公式复核 / 来源文件 / 统计）。
+ * 老师反馈侧栏「太杂、找不到重点」：原来日常与治理 8 项平权罗列，
+ * 高频动作被低频维护页淹没。现按**使用频率**收敛为两组：
+ * - 「日常」：高频页（导入 / 组卷 / 找题）；
+ * - 「数据维护」：低频维护页，**默认折叠**，点击才展开（见 `CollapsibleNavGroup`）。
  *
- * 「系统设置」不属任何分组，固定在侧栏底部单独呈现（见 `SETTINGS_ITEM`）。
+ * ⚠️ **偏离方案的一处（有意为之）**：方案 §2.1 的目标导航只有 4 项
+ * （builder / search / manage / settings），**漏掉了「导入试卷」页**。
+ * 但导入是老师**唯一的建库途径**——没有导入就没有题库，绝不能从侧栏消失。
+ * 故这里把 `import` 保留在「日常」分组（沿用原顺序：导入 → 组卷 → 找题），
+ * 最终侧栏为 **5 项**。这是本项目对方案的唯一实质偏离。
+ *
+ * 「设置」不属任何分组，固定在侧栏底部单独呈现（见 `SETTINGS_ITEM`）。
  */
 export const NAV_GROUPS: NavGroup[] = [
   {
-    label: '日常备课',
+    label: '日常',
     items: [
-      // 个人客户端「自己建库」：导入是唯一建库途径，放在日常备课首位（题库为空时最该做的事）。
+      // 个人客户端「自己建库」：导入是唯一建库途径，放在日常首位（题库为空时最该做的事）。
       { path: 'import', label: '导入试卷', description: '导入旧试卷 DOCX 建库', icon: <UploadFileIcon /> },
       // 组卷工作台是老师最高频的动作，也是默认落地页（router.tsx 的 index/* 都指向 /builder）。
       { path: 'builder', label: '组卷工作台', description: '边找题边组卷，左题库右试卷', icon: <EditNoteIcon /> },
       { path: 'search', label: '找题', description: '关键词 + 筛选，批量找题', icon: <SearchIcon /> },
-      { path: 'export', label: '导出中心', description: '先预览，再导出 DOCX / PDF', icon: <FileDownloadIcon /> },
     ],
   },
   {
-    label: '数据治理',
+    // 低频分组：四个维护页收进维护页 Tab，侧栏只留一个入口，默认折叠。
+    label: '数据维护',
+    collapsible: true,
     items: [
-      { path: 'manage/knowledge', label: '知识点复核', description: '按标签确认或否决知识点', icon: <ChecklistIcon /> },
-      { path: 'manage/formula-review', label: '公式复核', description: '处理待复核的公式', icon: <FunctionsIcon /> },
-      { path: 'manage/sources', label: '来源文件', description: '管理题目来源文件', icon: <FolderIcon /> },
-      { path: 'manage/stats', label: '题库统计', description: '查看题库总量与分布', icon: <BarChartIcon /> },
+      { path: 'manage', label: '数据维护', description: '知识点 / 公式 / 来源 / 统计', icon: <StorageIcon /> },
     ],
   },
 ]
 
-/** 系统设置：不归入任何分组，固定显示在侧栏底部。 */
+/** 设置：不归入任何分组，固定显示在侧栏底部。 */
 export const SETTINGS_ITEM: NavItem = {
   path: 'settings',
-  label: '系统设置',
+  label: '设置',
   description: '数据库路径、导出目录与偏好',
   icon: <SettingsIcon />,
 }
@@ -104,8 +113,9 @@ export const SETTINGS_ITEM: NavItem = {
 /**
  * 扁平导航项（**向后兼容导出**）。
  *
- * `router.tsx` 依赖它构建路由子表，测试也用它做"路径唯一 / 无漏项"等不变量校验。
- * 顺序 = 各分组项顺序 + 末尾的系统设置。
+ * 顺序 = 各分组项顺序 + 末尾的设置项，共 5 项。
+ * ⚠️ 路由集合**不再**由它派生（见 `router.tsx` 的 `ROUTES`）：侧栏项与路由必须解耦，
+ * 否则删掉一个导航项会连带删掉路由（B1 硬性要求 1）。
  */
 export const NAV_ITEMS: NavItem[] = [...NAV_GROUPS.flatMap((g) => g.items), SETTINGS_ITEM]
 
@@ -113,17 +123,65 @@ export const NAV_ITEMS: NavItem[] = [...NAV_GROUPS.flatMap((g) => g.items), SETT
 export const BASE_TITLE = '初中物理 · 题库与组卷'
 
 /**
+ * **独立的路由标题表**（B1 硬性要求 6）。
+ *
+ * 为什么不复用导航项：导航项只覆盖侧栏 5 项，但文档标题还要覆盖**不在侧栏**的页面
+ * （题目详情、导出中心）与**维护子页**（/manage/* 四个具体页）。
+ * 前缀按**由长到短**排列，`find` 首个命中即为最具体匹配（`manage/stats` 不会退化成 `manage`）。
+ */
+export const ROUTE_TITLES: ReadonlyArray<{ prefix: string; title: string }> = [
+  { prefix: 'manage/knowledge', title: '知识点复核' },
+  { prefix: 'manage/formula-review', title: '公式复核' },
+  { prefix: 'manage/sources', title: '来源文件' },
+  { prefix: 'manage/stats', title: '题库统计' },
+  { prefix: 'manage', title: '数据维护' },
+  { prefix: 'question', title: '题目详情' },
+  { prefix: 'import', title: '导入试卷' },
+  { prefix: 'builder', title: '组卷工作台' },
+  { prefix: 'search', title: '找题' },
+  { prefix: 'export', title: '导出中心' },
+  { prefix: 'settings', title: '系统设置' },
+]
+
+/** 归一化路径：去掉首尾斜杠，便于「完整路径 / 分段前缀」比较。 */
+function normalizePath(pathname: string): string {
+  return pathname.replace(/^\/+/, '').replace(/\/+$/, '')
+}
+
+/**
  * 由路由路径推导**文档标题**（P5-3：路由变化时同步 `document.title`）。
  *
- * 为什么：单页应用切换路由时 `<title>` 不变，读屏用户与多标签浏览者无法判断当前在哪一页。
- * 本函数是**纯函数、无副作用**，导出以便单测（`documentTitleForPath` 的不变量：
- * 已知路由 → 「页面名 · 初中物理题库」；题目详情 → 固定文案；未知 → 基础标题）。
+ * 本函数是**纯函数、无副作用**，导出以便单测（不变量：已知路由 → 「页面名 · 初中物理题库」；
+ * 维护子页显示具体标题，如「公式复核 · 初中物理题库」；未知 → 基础标题）。
+ * 标题来源是**独立的路由标题表** `ROUTE_TITLES`，不依赖导航项。
  */
 export function documentTitleForPath(pathname: string): string {
-  const clean = pathname.replace(/^\/+/, '')
-  if (clean.startsWith('question/')) return '题目详情 · 初中物理题库'
-  const hit = NAV_ITEMS.find((it) => clean === it.path || clean.startsWith(`${it.path}/`))
-  return hit ? `${hit.label} · 初中物理题库` : BASE_TITLE
+  const clean = normalizePath(pathname)
+  const hit = ROUTE_TITLES.find((r) => clean === r.prefix || clean.startsWith(`${r.prefix}/`))
+  return hit ? `${hit.title} · 初中物理题库` : BASE_TITLE
+}
+
+/**
+ * 由 pathname 派生**当前应高亮的导航项 path**（B1 硬性要求 5）。
+ *
+ * 规则：
+ * - `/builder` → 组卷工作台；`/export` → 组卷工作台（导出是全屏预览辅助页）；
+ * - `/search`、`/question/:id` → 找题；
+ * - `/manage`、`/manage/*` → 数据维护；
+ * - `/settings` → 设置。
+ *
+ * 匹配用**完整路径或分段前缀**（`clean === path || clean.startsWith(path + '/')`），
+ * 避免 `/search-other` 被 `/search` 误选中（必须命中 `/search/` 才算分段前缀）。
+ */
+export function selectedNavPathFor(pathname: string): string | null {
+  const clean = normalizePath(pathname)
+  if (clean === 'question' || clean.startsWith('question/')) return 'search'
+  if (clean === 'export' || clean.startsWith('export/')) return 'builder'
+  // 取最长匹配（如 manage/* 归到 manage），保证层级路径归到最近的导航项。
+  const hit = NAV_ITEMS.map((i) => i.path)
+    .filter((p) => clean === p || clean.startsWith(`${p}/`))
+    .sort((a, b) => b.length - a.length)[0]
+  return hit ?? null
 }
 
 /**
@@ -134,8 +192,9 @@ export function documentTitleForPath(pathname: string): string {
  */
 function NavListButton({ item, onNavigate }: { item: NavItem; onNavigate: (path: string) => void }) {
   const location = useLocation()
-  // 用前缀匹配：治理页位于 /manage/* 子路径下，访问子路由时父项也应保持高亮。
-  const selected = location.pathname.startsWith(`/${item.path}`)
+  // 选中态由 pathname 派生（`selectedNavPathFor` 处理 /question/:id→找题、/export→组卷、
+  // /manage/*→数据维护，并用「完整路径 / 分段前缀」避免 /search-other 误选）。
+  const selected = selectedNavPathFor(location.pathname) === item.path
   return (
     // P5-3：`aria-current="page"` 明确告诉读屏用户「当前就在这一页」，
     // 仅靠视觉高亮（selected）对读屏用户不可见。
@@ -147,6 +206,66 @@ function NavListButton({ item, onNavigate }: { item: NavItem; onNavigate: (path:
         secondaryTypographyProps={{ variant: 'caption', noWrap: true }}
       />
     </ListItemButton>
+  )
+}
+
+/** 分组标题的统一样式（非交互元素，不进 Tab 序列）。 */
+const GROUP_SUBHEADER_SX = {
+  bgcolor: 'transparent',
+  color: 'text.secondary',
+  fontSize: 12,
+  fontWeight: 600,
+  lineHeight: 2,
+  mt: 1,
+} as const
+
+/**
+ * 低频可折叠分组（方案 §2.1）。
+ *
+ * - 默认关闭：折叠态下不挂载子项（`Collapse` 的 `unmountOnExit`），减少侧栏噪音；
+ * - 触发器是真实的 `ListItemButton`，带 `aria-expanded`（开合状态）与
+ *   `aria-controls`（指向折叠区 id），读屏可感知；
+ * - 直接访问 `/manage/*` 时由父组件自动展开（见 `App` 里的 `useEffect`）并高亮子项。
+ *
+ * 触发器的可访问名用 `aria-label` 与子项区分（两者可见文字同为「数据维护」），
+ * 避免读屏/测试把「展开分组」和「进入数据维护」当成同一个控件。
+ */
+function CollapsibleNavGroup({
+  group,
+  open,
+  regionId,
+  onToggle,
+  onNavigate,
+}: {
+  group: NavGroup
+  open: boolean
+  regionId: string
+  onToggle: () => void
+  onNavigate: (path: string) => void
+}) {
+  return (
+    <List>
+      <ListItemButton
+        aria-expanded={open}
+        aria-controls={regionId}
+        aria-label={`${open ? '收起' : '展开'}${group.label}分组`}
+        onClick={onToggle}
+      >
+        <ListItemIcon sx={{ minWidth: 40 }}>{open ? <ExpandLessIcon /> : <ExpandMoreIcon />}</ListItemIcon>
+        <ListItemText
+          primary={group.label}
+          secondary={open ? '收起维护页入口' : '展开维护页入口'}
+          secondaryTypographyProps={{ variant: 'caption', noWrap: true }}
+        />
+      </ListItemButton>
+      <Collapse in={open} id={regionId} timeout="auto" unmountOnExit>
+        <List disablePadding>
+          {group.items.map((item) => (
+            <NavListButton key={item.path} item={item} onNavigate={onNavigate} />
+          ))}
+        </List>
+      </Collapse>
+    </List>
   )
 }
 
@@ -180,13 +299,22 @@ function HealthBanner() {
 
 export default function App() {
   const location = useLocation()
-  const navigate = useNavigate()
+  // 统一导航入口：自动在「支持 View Transition 且未开启减少动效」时加页面过渡。
+  const navigate = useAppNavigate()
   const qc = useQueryClient()
   const theme = useTheme()
   // P1-1 响应式：窄屏（<md，即 <900px）时侧栏改为临时抽屉（汉堡菜单开合），
   // 避免 232px 固定侧栏挤占内容区。桌面（≥md）保持常驻侧栏。
   const isNarrowNav = useMediaQuery(theme.breakpoints.down('md'))
   const [navOpen, setNavOpen] = useState(false)
+
+  // B1：低频「数据维护」分组默认折叠；当路由落在 /manage/* 时自动展开，
+  // 让深链 / 刷新 / 前进后退都能看到并高亮「数据维护」子项。
+  const [manageGroupOpen, setManageGroupOpen] = useState(false)
+  const onManageRoute = selectedNavPathFor(location.pathname) === 'manage'
+  useEffect(() => {
+    if (onManageRoute) setManageGroupOpen(true)
+  }, [onManageRoute])
 
   // P5-3：路由变化时同步 document.title，让浏览器标签页 / 读屏播报当前页名。
   useEffect(() => {
@@ -329,35 +457,35 @@ export default function App() {
         }}
       >
         <Toolbar variant="dense" />
-        {/* 分组导航：分组名用 ListSubheader 呈现（非交互元素，不进 Tab 序列）；
-            系统设置用 mt:auto 顶到底部，与日常/治理两组视觉分离。
+        {/* 分组导航（B1）：高频「日常」直接列出；低频「数据维护」默认折叠，点击展开。
+            设置项用 mt:auto 顶到底部，与两组视觉分离。
             P5-3：整块侧栏用 `<nav aria-label="主导航">` 承载，读屏用户可按地标快速跳转。 */}
         <Box component="nav" aria-label="主导航" sx={{ overflow: 'auto', flexGrow: 1, display: 'flex', flexDirection: 'column' }}>
-          {NAV_GROUPS.map((group) => (
-            <List
-              key={group.label}
-              subheader={
-                <ListSubheader
-                  component="div"
-                  disableSticky
-                  sx={{
-                    bgcolor: 'transparent',
-                    color: 'text.secondary',
-                    fontSize: 12,
-                    fontWeight: 600,
-                    lineHeight: 2,
-                    mt: 1,
-                  }}
-                >
-                  {group.label}
-                </ListSubheader>
-              }
-            >
-              {group.items.map((item) => (
-                <NavListButton key={item.path} item={item} onNavigate={handleNavigate} />
-              ))}
-            </List>
-          ))}
+          {NAV_GROUPS.map((group) =>
+            group.collapsible ? (
+              <CollapsibleNavGroup
+                key={group.label}
+                group={group}
+                open={manageGroupOpen}
+                regionId="nav-manage-region"
+                onToggle={() => setManageGroupOpen((o) => !o)}
+                onNavigate={handleNavigate}
+              />
+            ) : (
+              <List
+                key={group.label}
+                subheader={
+                  <ListSubheader component="div" disableSticky sx={GROUP_SUBHEADER_SX}>
+                    {group.label}
+                  </ListSubheader>
+                }
+              >
+                {group.items.map((item) => (
+                  <NavListButton key={item.path} item={item} onNavigate={handleNavigate} />
+                ))}
+              </List>
+            ),
+          )}
           <List sx={{ mt: 'auto' }}>
             <NavListButton item={SETTINGS_ITEM} onNavigate={handleNavigate} />
           </List>
@@ -443,7 +571,12 @@ export default function App() {
               外层保留 ErrorBoundary：懒加载 chunk 拉取失败（动态 import reject）会作为
               渲染错误冒泡到它，走项目既有的错误 UI，而不是卡在加载态。 */}
           <Suspense fallback={<LoadingState label="页面加载中…" />}>
-            <Outlet />
+            {/* 页面切换过渡的锚点（实施方案 §5）：只给**页面内容**做淡入淡出，
+                顶栏 / 侧栏 / 全局 Drawer 保持静止（root 过渡已关闭）。
+                用稳定 class 而非随机 key，避免动效导致页面重挂载。 */}
+            <div className="qb-route-content">
+              <Outlet />
+            </div>
           </Suspense>
         </ErrorBoundary>
       </Box>

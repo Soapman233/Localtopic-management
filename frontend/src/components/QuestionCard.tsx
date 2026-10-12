@@ -79,12 +79,12 @@ export function QuestionCard({
       style={style}
       variant="outlined"
       sx={{
-        mb: 1.5,
+        mb: 1,
         transition: 'box-shadow .15s, border-color .15s',
         '&:hover': { boxShadow: '0 4px 12px rgba(0,0,0,.10)', borderColor: 'primary.light' },
       }}
     >
-      <CardContent sx={{ pb: 1 }}>
+      <CardContent sx={{ px: 2, py: 1.25 }}>
         <Stack direction="row" spacing={1} alignItems="center" flexWrap="wrap" sx={{ mb: 0.75 }} useFlexGap>
           {selectable && (
             <Checkbox
@@ -134,7 +134,7 @@ export function QuestionCard({
           {previewText(item)}
         </Typography>
       </CardContent>
-      <CardActions sx={{ px: 2, pb: 1.5, pt: 0, flexWrap: 'wrap', gap: 0.5 }}>
+      <CardActions sx={{ px: 2, pb: 1, pt: 0, flexWrap: 'wrap', gap: 0.5 }}>
         {hasAnswer !== undefined && <AnswerBadge hasAnswer={hasAnswer} />}
         {hasAnalysis !== undefined && <AnalysisBadge hasAnalysis={hasAnalysis} />}
         <DifficultyBadge difficulty={item.difficulty} onAnnotate={onAnnotate ? () => onAnnotate(item) : undefined} />

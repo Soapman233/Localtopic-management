@@ -195,8 +195,8 @@ export function QuestionEditor({
       </Stack>
 
       <Alert severity="warning" sx={{ mb: 2 }}>
-        年级 / 教材属于<strong>来源文件级</strong>字段：修改一道题的年级会影响该来源文件下的全部题目。
-        为避免误伤，本题编辑页不提供年级/教材修改入口（请在「来源文件」页按文件级操作）。
+        年级 / 教材属于<strong>来源文件级</strong>字段：改一道题会影响该来源文件下的全部题目，
+        故本题编辑页不提供修改入口（请在「来源文件」页按文件级操作）。
         <Box sx={{ mt: 0.5 }} component="span">
           当前：年级 {question.src_grade || '待补充'}；教材 {question.src_textbook || '待补充'}；来源{' '}
           {question.src_file || '—'}

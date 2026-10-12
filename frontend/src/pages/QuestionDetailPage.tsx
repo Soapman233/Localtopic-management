@@ -3,6 +3,9 @@
  * 覆盖需求：P0-4（题干 KaTeX 渲染 / 公式列表 / 图片 / 标签 / 答案 / 解析 / 来源定位）、
  * P0-5（只读版本历史，无回滚按钮）、P1-1~P1-5（在线编辑题干/答案/解析/元数据/公式）、
  * P1-4（难度标注）、P1-11（自动留版）。
+ *
+ * B2 §3.4：改**单栏 720 居中**；顶部只留主要状态；题干/图片/答案/解析纵排；
+ * 公式与来源定位收进默认关闭的「更多信息」；历史入口折叠。编辑与历史仍可达。
  */
 import { useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
@@ -11,6 +14,7 @@ import {
   Box,
   Button,
   Chip,
+  Collapse,
   Dialog,
   DialogActions,
   DialogContent,
@@ -24,6 +28,7 @@ import {
 } from '@mui/material'
 import ArrowBackIcon from '@mui/icons-material/ArrowBack'
 import EditIcon from '@mui/icons-material/Edit'
+import ExpandMoreIcon from '@mui/icons-material/ExpandMore'
 import { useNavigate, useParams } from 'react-router-dom'
 import {
   getQuestion,
@@ -44,16 +49,32 @@ import { qk } from '../api/queryKeys'
 import { describeMentionScope } from '../lib/glossary'
 import { usePermissionGuard } from '../hooks/usePermission'
 
-/** 单条公式展示块（点击可查看 latex 源码）。 */
+/** 公式状态代码 → 中文（非 OK 状态不再直接暴露原始码，见 §3.4）。 */
+const FORMULA_STATUS_LABEL: Record<string, string> = {
+  UNSUPPORTED: '公式不支持',
+  EMPTY: '未提取到内容',
+  FAIL: '转换失败',
+}
+
+/** 非 OK 状态的中文标签；OK / 空状态返回 null（不渲染徽章）。 */
+function formulaStatusLabel(status?: string | null): string | null {
+  if (!status || status === 'OK') return null
+  return FORMULA_STATUS_LABEL[status] ?? '公式状态待核对'
+}
+
+/** 单条公式展示块（fid 退为次级定位信息）。 */
 function FormulaRow({ formula }: { formula: Formula }) {
+  const statusLabel = formulaStatusLabel(formula.status)
   return (
     <Stack direction="row" spacing={1} alignItems="center" sx={{ p: 1, border: '1px solid', borderColor: 'divider', borderRadius: 1 }}>
-      <Chip size="small" label={formula.fid} variant="outlined" />
+      <Typography variant="caption" color="text.secondary" sx={{ flexShrink: 0, fontFamily: 'monospace' }}>
+        {formula.fid}
+      </Typography>
       <Box sx={{ flex: 1, minWidth: 0, overflowX: 'auto' }}>
         <KatexFormula latex={formula.latex} />
       </Box>
-      {formula.status && formula.status !== 'OK' && (
-        <Chip size="small" color="warning" label={formula.status} title={formula.preview ?? undefined} />
+      {statusLabel && (
+        <Chip size="small" color="warning" label={statusLabel} title={formula.preview ?? undefined} />
       )}
       {formula.needs_review ? <ReviewBadge /> : null}
     </Stack>
@@ -71,6 +92,9 @@ export default function QuestionDetailPage() {
   const [annotateOpen, setAnnotateOpen] = useState(false)
   const [level, setLevel] = useState<string>('中')
   const [saveMsg, setSaveMsg] = useState<string | null>(null)
+  // B2 §3.4：公式/来源与历史默认折叠，按需展开。
+  const [moreOpen, setMoreOpen] = useState(false)
+  const [historyOpen, setHistoryOpen] = useState(false)
 
   const qQuery = useQuery({
     queryKey: qk.question(questionId),
@@ -141,19 +165,29 @@ export default function QuestionDetailPage() {
   const hasAnswer = Boolean(q.answer && q.answer.trim())
   const hasAnalysis = Boolean(q.analysis && q.analysis.trim())
   const needsReviewCount = (q.formulas ?? []).filter((f) => f.needs_review).length
+  // 未知字形 / 非 OK 状态的公式数量——必须留在顶部，不能随「更多信息」一起藏掉。
+  const abnormalFormulaCount = (q.formulas ?? []).filter((f) => formulaStatusLabel(f.status)).length
 
   return (
-    <Box sx={{ maxWidth: 1100 }}>
+    <Box sx={{ maxWidth: 720, mx: 'auto' }}>
       <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 2 }} flexWrap="wrap" useFlexGap>
         <Button startIcon={<ArrowBackIcon />} onClick={() => navigate(-1)}>
           返回
         </Button>
         <Typography variant="h6" component="h1">题 {q.number || q.id}</Typography>
         {q.qtype && <Chip size="small" label={q.qtype} variant="outlined" />}
-        <AnswerBadge hasAnswer={hasAnswer} />
-        <AnalysisBadge hasAnalysis={hasAnalysis} />
+        {/* 顶部只保留两个主要状态：难度（含「未标注」入口）与待复核风险。 */}
         <DifficultyBadge difficulty={q.difficulty} onAnnotate={() => setAnnotateOpen(true)} />
         {needsReviewCount > 0 && <ReviewBadge count={needsReviewCount} />}
+        {abnormalFormulaCount > 0 && (
+          <Chip
+            size="small"
+            color="warning"
+            variant="outlined"
+            label={`公式异常 ${abnormalFormulaCount}`}
+            title="存在非 OK 状态的公式，展开「更多信息」查看详情"
+          />
+        )}
         <Box sx={{ flex: 1 }} />
         {!editing && (
           <Button variant="contained" startIcon={<EditIcon />} onClick={() => setEditing(true)}>
@@ -201,44 +235,33 @@ export default function QuestionDetailPage() {
                       component="img"
                       src={img.id != null ? mediaUrl(q.id, img.id) : (img.media_path ?? '')}
                       alt={`题图 ${i + 1}`}
-                      sx={{ maxWidth: 280, maxHeight: 220, border: '1px solid', borderColor: 'divider', borderRadius: 1 }}
+                      sx={{ maxWidth: '100%', height: 'auto', maxHeight: 220, border: '1px solid', borderColor: 'divider', borderRadius: 1 }}
                     />
                   ))}
                 </Stack>
               </Box>
             )}
 
-            {(q.formulas ?? []).length > 0 && (
-              <Box sx={{ mb: 2 }}>
-                <Typography variant="subtitle2" component="h2" color="text.secondary" gutterBottom>
-                  公式列表（{q.formulas!.length} 条）
-                </Typography>
-                <Stack spacing={1}>
-                  {q.formulas!.map((f) => (
-                    <FormulaRow key={f.fid} formula={f} />
-                  ))}
-                </Stack>
-              </Box>
-            )}
-
-            <Stack direction="row" spacing={3} flexWrap="wrap" sx={{ mb: 2 }}>
-              <Box sx={{ flex: 1, minWidth: 240 }}>
-                <Typography variant="subtitle2" component="h2" color="text.secondary" gutterBottom>
-                  答案
-                </Typography>
-                <Box sx={{ p: 1.5, bgcolor: 'action.hover', borderRadius: 1 }}>
-                  <FormulaText text={q.answer || '（本题库中无答案）'} formulas={q.formulas} />
-                </Box>
-              </Box>
-              <Box sx={{ flex: 1, minWidth: 240 }}>
-                <Typography variant="subtitle2" component="h2" color="text.secondary" gutterBottom>
-                  解析
-                </Typography>
-                <Box sx={{ p: 1.5, bgcolor: 'action.hover', borderRadius: 1 }}>
-                  <FormulaText text={q.analysis || '（本题库中无解析）'} formulas={q.formulas} />
-                </Box>
-              </Box>
+            {/* 答案 / 解析：状态徽章就近放在各自标题旁，正文纵排。 */}
+            <Stack direction="row" spacing={1} alignItems="center" sx={{ mb: 0.5 }}>
+              <Typography variant="subtitle2" component="h2" color="text.secondary">
+                答案
+              </Typography>
+              <AnswerBadge hasAnswer={hasAnswer} />
             </Stack>
+            <Box sx={{ p: 1.5, bgcolor: 'action.hover', borderRadius: 1, mb: 2 }}>
+              <FormulaText text={q.answer || '（本题库中无答案）'} formulas={q.formulas} />
+            </Box>
+
+            <Stack direction="row" spacing={1} alignItems="center" sx={{ mb: 0.5 }}>
+              <Typography variant="subtitle2" component="h2" color="text.secondary">
+                解析
+              </Typography>
+              <AnalysisBadge hasAnalysis={hasAnalysis} />
+            </Stack>
+            <Box sx={{ p: 1.5, bgcolor: 'action.hover', borderRadius: 1, mb: 2 }}>
+              <FormulaText text={q.analysis || '（本题库中无解析）'} formulas={q.formulas} />
+            </Box>
 
             <Typography variant="subtitle2" component="h2" color="text.secondary" gutterBottom>
               知识点标签（三态）
@@ -260,23 +283,74 @@ export default function QuestionDetailPage() {
               ))}
             </Stack>
 
+            {/* 来源摘要：默认只显示文件名（完整定位进「更多信息」）。 */}
+            <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+              来源文件：{q.src_file || '—'}
+            </Typography>
+
             <Divider sx={{ my: 1.5 }} />
-            <Typography variant="subtitle2" component="h2" color="text.secondary" gutterBottom>
-              来源定位
-            </Typography>
-            <Typography variant="body2" color="text.secondary">
-              来源文件：{q.src_file || '—'}；学段 {q.src_stage || '待补充'}；学科 {q.src_subject || '待补充'}；
-              年级 {q.src_grade || '待补充'}；教材 {q.src_textbook || '待补充'}；章节 {q.chapter || '待补充'}
-            </Typography>
+
+            <Button
+              onClick={() => setMoreOpen((v) => !v)}
+              aria-expanded={moreOpen}
+              aria-controls="question-more-info"
+              endIcon={
+                <ExpandMoreIcon
+                  sx={{ transform: moreOpen ? 'rotate(180deg)' : 'none', transition: 'transform .15s' }}
+                />
+              }
+              sx={{ color: 'text.secondary', textTransform: 'none' }}
+            >
+              更多信息（公式、来源定位）
+            </Button>
+            <Collapse in={moreOpen} timeout="auto" unmountOnExit>
+              <Box id="question-more-info" sx={{ pt: 1.5 }}>
+                <Typography variant="subtitle2" component="h3" color="text.secondary" gutterBottom>
+                  公式列表（{(q.formulas ?? []).length} 条）
+                </Typography>
+                {(q.formulas ?? []).length === 0 ? (
+                  <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                    本题无公式。
+                  </Typography>
+                ) : (
+                  <Stack spacing={1} sx={{ mb: 2 }}>
+                    {q.formulas!.map((f) => (
+                      <FormulaRow key={f.fid} formula={f} />
+                    ))}
+                  </Stack>
+                )}
+                <Typography variant="subtitle2" component="h3" color="text.secondary" gutterBottom>
+                  来源定位
+                </Typography>
+                <Typography variant="body2" color="text.secondary">
+                  来源文件：{q.src_file || '—'}；学段 {q.src_stage || '待补充'}；学科 {q.src_subject || '待补充'}；
+                  年级 {q.src_grade || '待补充'}；教材 {q.src_textbook || '待补充'}；章节 {q.chapter || '待补充'}
+                </Typography>
+              </Box>
+            </Collapse>
           </>
         )}
       </Paper>
 
-      <Paper variant="outlined" sx={{ p: 2.5 }}>
-        <Typography variant="subtitle1" component="h2" gutterBottom>
+      <Paper variant="outlined" sx={{ p: 2 }}>
+        <Button
+          onClick={() => setHistoryOpen((v) => !v)}
+          aria-expanded={historyOpen}
+          aria-controls="question-history"
+          endIcon={
+            <ExpandMoreIcon
+              sx={{ transform: historyOpen ? 'rotate(180deg)' : 'none', transition: 'transform .15s' }}
+            />
+          }
+          sx={{ textTransform: 'none', color: 'text.primary' }}
+        >
           版本历史（只读）
-        </Typography>
-        <VersionHistory questionId={q.id} versions={q.versions} />
+        </Button>
+        <Collapse in={historyOpen} timeout="auto" unmountOnExit>
+          <Box id="question-history" sx={{ pt: 1 }}>
+            <VersionHistory questionId={q.id} versions={q.versions} />
+          </Box>
+        </Collapse>
       </Paper>
 
       {/* 难度标注 */}

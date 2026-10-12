@@ -3,7 +3,7 @@
  * 覆盖需求：P0-1（关键词检索 + 分页）、P0-2（左侧固定筛选栏）、P0-3（结果卡 + 状态徽章）、
  * P0-13（数据状态可见性：覆盖率提示 + 待补充桶 + 徽章）、P1-6（严格模式）、P1-4（难度标注入口）。
  */
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import {
   Alert,
@@ -21,13 +21,13 @@ import {
   TextField,
   Typography,
 } from '@mui/material'
-import { useNavigate } from 'react-router-dom'
 import { FilterSidebar } from '../components/FilterSidebar'
 import { CoverageBanner } from '../components/CoverageBanner'
 import { GradeGapNotice } from '../components/GradeGapNotice'
 import { QuestionCard } from '../components/QuestionCard'
 import { EmptyState } from '../components/EmptyState'
 import { ErrorState } from '../components/ErrorState'
+import AnimatedList from '../components/AnimatedList'
 import { useCoverageQuery, useFacetsQuery, useSearchQuery } from '../hooks/useSearch'
 import { addQuestions, createPaper, listPapers } from '../api/papers'
 import { setDifficulty } from '../api/questions'
@@ -36,11 +36,43 @@ import { usePaperStore } from '../store/paperStore'
 import { useUiStore } from '../store/uiStore'
 import { useSettingsStore } from '../store/settingsStore'
 import { notify } from '../lib/feedback'
+import { isDebugMode } from '../lib/glossary'
+import { useAppNavigate } from '../lib/navigation'
 import { usePermissionGuard } from '../hooks/usePermission'
 import { useQuestionFilters } from '../hooks/useQuestionFilters'
 import { qk } from '../api/queryKeys'
 
 const PAGE_SIZE = 20
+
+/**
+ * 列表动效开关（B2 §5）：**只播「同一页内的小幅增删」**。
+ *
+ * 以下情况一律关闭，避免把「换一页」变成缓慢位移，反而更难用：
+ *  1. 首批加载——还没有上一帧可比（`prev` 为空）；
+ *  2. 整页翻页——`page` 变化；
+ *  3. 大量结果替换——增删条目超过阈值。
+ */
+const LIST_ANIMATION_MAX_DELTA = 3
+
+function useListAnimationEnabled(itemIds: number[], page: number): boolean {
+  const [enabled, setEnabled] = useState(false)
+  const prev = useRef<{ ids: number[]; page: number } | null>(null)
+  useEffect(() => {
+    const p = prev.current
+    let next = false
+    if (p && p.ids.length > 0 && itemIds.length > 0 && p.page === page) {
+      const before = new Set(p.ids)
+      const after = new Set(itemIds)
+      let delta = 0
+      for (const id of after) if (!before.has(id)) delta += 1
+      for (const id of before) if (!after.has(id)) delta += 1
+      next = delta > 0 && delta <= LIST_ANIMATION_MAX_DELTA
+    }
+    prev.current = { ids: itemIds, page }
+    setEnabled(next)
+  }, [itemIds, page])
+  return enabled
+}
 
 /** 难度标注对话框（P1-4 单题入口）。 */
 function DifficultyDialog({
@@ -163,7 +195,8 @@ function PickPaperDialog({
 
 /** P1 检索页。 */
 export default function SearchPage() {
-  const navigate = useNavigate()
+  // 明确页面跳转走统一导航 helper（带 View Transition 增强，reduce / 不支持时自动降级）。
+  const appNavigate = useAppNavigate()
   const qc = useQueryClient()
   const { currentPaperId, targetSectionId, setCurrentPaperId } = usePaperStore()
   const { coverageDismissed, setCoverageDismissed, strictKp, setStrictKp } = useUiStore()
@@ -248,6 +281,9 @@ export default function SearchPage() {
 
   const total = searchQ.data?.total ?? 0
   const items = searchQ.data?.items ?? []
+  // 题卡列表的稳定 ID 序列（引用随数据变化，避免每次渲染都重算动效开关）。
+  const itemIds = useMemo(() => items.map((i) => i.id), [items])
+  const listAnimationEnabled = useListAnimationEnabled(itemIds, page)
   const pageCount = Math.max(1, Math.ceil(total / PAGE_SIZE))
   // /api/search 现已下发 per-item 的 has_answer / has_analysis（B2 已修），结果卡正常展示
   // 答案/解析徽章；此判断仅作防御性兜底——若后端某次未下发，则不展示徽章（绝不猜成「无答案」）。
@@ -255,18 +291,17 @@ export default function SearchPage() {
 
   return (
     <Box>
-      <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 2 }} flexWrap="wrap" useFlexGap>
+      <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 1.5 }} flexWrap="wrap" useFlexGap>
         <Typography variant="h6" component="h1" sx={{ flexShrink: 0 }}>
           检索题库
         </Typography>
         <TextField
           size="small"
-          placeholder="搜索题干关键词（中文双字切分）"
+          placeholder="搜索题干关键词"
           value={keywordInput}
           onChange={(e) => setKeywordInput(e.target.value)}
           sx={{ minWidth: 320, flex: 1 }}
         />
-        {strictKp && <Alert severity="info" sx={{ py: 0 }}>已启用「仅看已确认知识点」严格模式</Alert>}
       </Stack>
 
       <CoverageBanner
@@ -279,16 +314,16 @@ export default function SearchPage() {
       {addedPaperId != null && (
         <Alert
           severity="success"
-          sx={{ mb: 1 }}
+          sx={{ mb: 1, py: 0.25, alignItems: 'center' }}
           onClose={() => setAddedPaperId(null)}
           action={
             <Button
               color="inherit"
               size="small"
-              onClick={() => navigate('/builder')}
+              onClick={() => appNavigate('/builder')}
               data-testid="go-to-paper"
             >
-              已加入 · 去看看试卷 →
+              查看试卷
             </Button>
           }
         >
@@ -329,11 +364,19 @@ export default function SearchPage() {
           />
 
           {!answerStatusAvailable && items.length > 0 && (
-            <Alert severity="info" sx={{ mb: 1, py: 0.25 }}>
-              未能从 <code>/api/search</code> 获取 <code>has_answer / has_analysis</code> 标志，
-              结果卡暂不展示答案/解析徽章（避免误标为「无答案」）。
-              可用左侧「仅看有答案 / 仅看有解析」按内容筛选。
-            </Alert>
+            isDebugMode() ? (
+              // 技术细节只在 debug 模式暴露（§3.3 / §4-#5）。
+              <Alert severity="info" sx={{ mb: 1, py: 0.25 }}>
+                未能从 <code>/api/search</code> 获取 <code>has_answer / has_analysis</code> 标志，
+                结果卡暂不展示答案/解析徽章（避免误标为「无答案」）。
+                可用左侧「仅看有答案 / 仅看有解析」按内容筛选。
+              </Alert>
+            ) : (
+              <Alert severity="info" sx={{ mb: 1, py: 0.25 }}>
+                答案信息暂不可用：本题库暂无法判断题目是否含答案/解析。
+                可用左侧「仅看有答案 / 仅看有解析」按内容筛选。
+              </Alert>
+            )
           )}
 
           {searchQ.isError && (
@@ -356,50 +399,57 @@ export default function SearchPage() {
             />
           )}
 
-          {/* P1-3：批量加题工具条（勾选多题一次加入） */}
-          {items.length > 0 && (
-            <Alert
-              severity="info"
-              sx={{ mb: 1, py: 0.25 }}
-              icon={false}
-              action={
-                <Stack direction="row" spacing={1} alignItems="center">
-                  <Button
-                    size="small"
-                    variant="contained"
-                    disabled={selectedIds.size === 0 || addMutation.isPending}
-                    onClick={handleAddSelected}
-                    data-testid="add-selected"
-                  >
-                    加入所选（{selectedIds.size}）
-                  </Button>
-                  <Button
-                    size="small"
-                    disabled={selectedIds.size === 0 || addMutation.isPending}
-                    onClick={() => setSelectedIds(new Set())}
-                  >
-                    清空
-                  </Button>
-                </Stack>
-              }
-            >
-              勾选多题可一次加入当前试卷{targetSectionId ? '（目标大题已选）' : ''}。
-            </Alert>
-          )}
+          {/* P1-3：批量加题工具条——仅在勾选后出现（B2 §3.3），避免常驻占掉首屏。
+              外层用 AnimatedList 只过渡工具条的显隐（同页小幅增删）。 */}
+          <AnimatedList>
+            {items.length > 0 && selectedIds.size > 0 && (
+              <Alert
+                severity="info"
+                sx={{ mb: 1, py: 0.25 }}
+                icon={false}
+                action={
+                  <Stack direction="row" spacing={1} alignItems="center">
+                    <Button
+                      size="small"
+                      variant="contained"
+                      disabled={addMutation.isPending}
+                      onClick={handleAddSelected}
+                      data-testid="add-selected"
+                    >
+                      加入所选（{selectedIds.size}）
+                    </Button>
+                    <Button
+                      size="small"
+                      disabled={addMutation.isPending}
+                      onClick={() => setSelectedIds(new Set())}
+                    >
+                      清空
+                    </Button>
+                  </Stack>
+                }
+              >
+                勾选多题可一次加入当前试卷{targetSectionId ? '（目标大题已选）' : ''}。
+              </Alert>
+            )}
+          </AnimatedList>
 
-          {items.map((item) => (
-            <QuestionCard
-              key={item.id}
-              item={item}
-              onAdd={handleAdd}
-              onDetail={(it) => navigate(`/question/${it.id}`)}
-              onAnnotate={(it) => setAnnotateTarget(it)}
-              selectable
-              selected={selectedIds.has(item.id)}
-              onSelectChange={toggleSelect}
-              adding={addMutation.isPending && (addMutation.variables?.questionIds ?? []).includes(item.id)}
-            />
-          ))}
+          {/* B2 §5：题卡列表用稳定外层容器包裹，直接子项以 item.id 为 key。
+              仅「同页少量增删」时播放动效；首批加载 / 整页翻页 / 大量结果替换关闭。 */}
+          <AnimatedList enabled={listAnimationEnabled}>
+            {items.map((item) => (
+              <QuestionCard
+                key={item.id}
+                item={item}
+                onAdd={handleAdd}
+                onDetail={(it) => appNavigate(`/question/${it.id}`)}
+                onAnnotate={(it) => setAnnotateTarget(it)}
+                selectable
+                selected={selectedIds.has(item.id)}
+                onSelectChange={toggleSelect}
+                adding={addMutation.isPending && (addMutation.variables?.questionIds ?? []).includes(item.id)}
+              />
+            ))}
+          </AnimatedList>
 
           {pageCount > 1 && (
             <Stack alignItems="center" sx={{ mt: 2 }}>

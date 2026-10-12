@@ -3,7 +3,14 @@
  * 覆盖需求：
  * - P1-8：总览卡 + 各维度分布（题型 / 章节 / 答案覆盖 / 公式状态…）；
  * - PRD 5.5：答案 / 解析覆盖率；PRD 5.4：待复核公式「已处理 / 待处理」进度。
+ *
+ * B4 渐进披露（方案 §3.8）：本页作为「数据维护」Tab 子页嵌入。
+ * - 标题层级：父页 h1「数据维护」；本页标题 h2；内部区块 h3（子面板 h4）。
+ * - 首屏突出「题数 / 来源数 / 待处理数」，公式 / 图片 / 标签退为次级数据。
+ * - 每个分布默认 Top5，可展开显示接口返回的全部行；标题旁显示实际项数。
+ * - 数据口径、取数接口一律不变，只调整表现层。
  */
+import { useState } from 'react'
 import type { ReactNode } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import {
@@ -22,6 +29,21 @@ import { qk } from '../api/queryKeys'
 import { EmptyState } from '../components/EmptyState'
 import { ErrorState } from '../components/ErrorState'
 import { LoadingState } from '../components/LoadingState'
+
+/** 状态代码 → 中文（含 OK；未知值明确「待核对」，不冒充正常）。 */
+const STATUS_ZH: Record<string, string> = {
+  OK: '正常',
+  UNSUPPORTED: '不支持',
+  EMPTY: '未提取到内容',
+  FAIL: '转换失败',
+}
+
+/** 状态代码转中文；未知 / 空值不伪装成正常。 */
+function statusText(code: string | null | undefined): string {
+  const k = (code ?? '').trim()
+  if (!k) return '（未标注）'
+  return STATUS_ZH[k] ?? `待核对（${k}）`
+}
 
 /** 总览卡。 */
 function StatCard({
@@ -74,33 +96,54 @@ function CoverageRow({ label, bucket }: { label: string; bucket?: CoverageBucket
   )
 }
 
-/** 分布列表（横向条形）。 */
+/** 分布列表（横向条形）：默认 Top5，可展开显示全部；条形尺度始终按完整 rows 计算。 */
 function DistributionList({ title, rows, onItemClick }: {
   title: string
   rows: CountRow[]
   onItemClick?: (key: string) => void
 }) {
+  const [expanded, setExpanded] = useState(false)
   const max = rows.reduce((m, r) => Math.max(m, r.count), 0) || 1
+  const shown = expanded ? rows : rows.slice(0, 5)
   return (
     <Paper variant="outlined" sx={{ p: 2, flex: '1 1 320px', minWidth: 280 }}>
-      <Typography variant="subtitle2" component="h2" gutterBottom>
-        {title}
-      </Typography>
+      <Stack direction="row" alignItems="baseline" spacing={1} sx={{ mb: 1 }} flexWrap="wrap" useFlexGap>
+        <Typography variant="subtitle2" component="h3">
+          {title}
+        </Typography>
+        <Typography variant="caption" color="text.secondary">
+          {rows.length} 项
+        </Typography>
+      </Stack>
       {rows.length === 0 && <EmptyState dense title="该维度暂无数据" />}
       <Stack spacing={0.75}>
-        {rows.slice(0, 12).map((r, i) => {
+        {shown.map((r, i) => {
           const key = r.key ?? '（空）'
           return (
             <Box key={`${key}-${i}`}>
-              <Stack direction="row" justifyContent="space-between">
-                <Typography
-                  variant="body2"
-                  sx={{ cursor: onItemClick ? 'pointer' : 'default' }}
-                  onClick={() => onItemClick?.(key)}
-                >
-                  {key}
-                </Typography>
-                <Typography variant="body2" color="text.secondary">
+              <Stack direction="row" justifyContent="space-between" alignItems="center" spacing={1}>
+                {onItemClick ? (
+                  <Button
+                    size="small"
+                    variant="text"
+                    onClick={() => onItemClick(key)}
+                    aria-label={`查看「${key}」的题目`}
+                    sx={{
+                      p: 0,
+                      minWidth: 0,
+                      textTransform: 'none',
+                      fontWeight: 400,
+                      color: 'text.primary',
+                      justifyContent: 'flex-start',
+                      textAlign: 'left',
+                    }}
+                  >
+                    {key}
+                  </Button>
+                ) : (
+                  <Typography variant="body2">{key}</Typography>
+                )}
+                <Typography variant="body2" color="text.secondary" sx={{ flexShrink: 0 }}>
                   {r.count.toLocaleString('zh-CN')}
                 </Typography>
               </Stack>
@@ -113,6 +156,11 @@ function DistributionList({ title, rows, onItemClick }: {
           )
         })}
       </Stack>
+      {rows.length > 5 && (
+        <Button size="small" sx={{ mt: 1 }} onClick={() => setExpanded((v) => !v)} aria-expanded={expanded}>
+          {expanded ? '收起' : `展开全部 ${rows.length} 项`}
+        </Button>
+      )}
     </Paper>
   )
 }
@@ -125,7 +173,7 @@ export default function StatsPage() {
   if (statsQ.isLoading) {
     return (
       <Box>
-        <Typography variant="h6" component="h1" gutterBottom>
+        <Typography variant="h6" component="h2" gutterBottom>
           题库统计
         </Typography>
         <LoadingState label="正在加载统计…" />
@@ -135,7 +183,7 @@ export default function StatsPage() {
   if (statsQ.isError) {
     return (
       <Box>
-        <Typography variant="h6" component="h1" gutterBottom>
+        <Typography variant="h6" component="h2" gutterBottom>
           题库统计
         </Typography>
         <ErrorState error={statsQ.error} title="加载统计失败" onRetry={() => statsQ.refetch()} />
@@ -148,24 +196,18 @@ export default function StatsPage() {
   const ans = s.answer_coverage
   const reviewTotal = s.review?.total ?? 0
   const reviewPct = reviewTotal > 0 ? Math.round((100 * (s.review?.resolved ?? 0)) / reviewTotal) : 0
+  const difficultyUnlabeledPct = 100 - (env.difficulty?.pct ?? 0)
 
   return (
     <Box>
-      <Typography variant="h6" component="h1" gutterBottom>
+      <Typography variant="h6" component="h2" gutterBottom>
         题库统计
       </Typography>
 
-      {/* 总览卡 */}
+      {/* 总览卡：题数 / 来源数 / 待处理数优先，其余为次级数据 */}
       <Stack direction="row" spacing={1.5} flexWrap="wrap" useFlexGap sx={{ mb: 2 }}>
         <StatCard label="题目总数" value={s.questions.toLocaleString('zh-CN')} />
         <StatCard label="来源文件" value={s.sources.toLocaleString('zh-CN')} />
-        <StatCard
-          label="公式"
-          value={s.formulas.toLocaleString('zh-CN')}
-          hint={`OK ${s.formulas_ok.toLocaleString('zh-CN')}`}
-        />
-        <StatCard label="图片" value={s.images.toLocaleString('zh-CN')} />
-        <StatCard label="标签" value={s.labels.toLocaleString('zh-CN')} />
         <StatCard
           label="待复核公式"
           value={s.review_open.toLocaleString('zh-CN')}
@@ -176,19 +218,29 @@ export default function StatsPage() {
             </Button>
           }
         />
+        <StatCard
+          label="公式"
+          value={s.formulas.toLocaleString('zh-CN')}
+          hint={`OK ${s.formulas_ok.toLocaleString('zh-CN')}`}
+        />
+        <StatCard label="图片" value={s.images.toLocaleString('zh-CN')} />
+        <StatCard label="标签" value={s.labels.toLocaleString('zh-CN')} />
       </Stack>
 
+      <Typography variant="subtitle1" component="h3" sx={{ mb: 1 }}>
+        数据状态
+      </Typography>
       <Stack direction="row" spacing={2} flexWrap="wrap" useFlexGap sx={{ mb: 2 }}>
         {/* 覆盖率 */}
         <Paper variant="outlined" sx={{ p: 2, flex: '1 1 380px', minWidth: 320 }}>
-          <Typography variant="subtitle2" component="h2" gutterBottom>
+          <Typography variant="subtitle2" component="h4" gutterBottom>
             元数据 / 内容覆盖率
           </Typography>
           <CoverageRow label="年级" bucket={env.grade} />
           <CoverageRow label="教材" bucket={env.textbook} />
           <CoverageRow label="章节" bucket={env.chapter} />
           <CoverageRow label="题型" bucket={env.qtype} />
-          <CoverageRow label="难度（100% 未标注）" bucket={env.difficulty} />
+          <CoverageRow label={`难度（未标注 ${difficultyUnlabeledPct}%）`} bucket={env.difficulty} />
           <CoverageRow label="知识点（搜索线索）" bucket={env.knowledge} />
           <CoverageRow
             label="答案"
@@ -206,7 +258,7 @@ export default function StatsPage() {
 
         {/* 复核进度 + 知识点状态 */}
         <Paper variant="outlined" sx={{ p: 2, flex: '1 1 380px', minWidth: 320 }}>
-          <Typography variant="subtitle2" component="h2" gutterBottom>
+          <Typography variant="subtitle2" component="h4" gutterBottom>
             待复核公式清零进度
           </Typography>
           <Stack direction="row" justifyContent="space-between">
@@ -220,11 +272,14 @@ export default function StatsPage() {
           <LinearProgress variant="determinate" value={reviewPct} sx={{ mt: 1, height: 8, borderRadius: 4 }} />
           <Stack direction="row" spacing={1} sx={{ mt: 1 }} flexWrap="wrap" useFlexGap>
             {Object.entries(s.review?.by_status ?? {}).map(([k, v]) => (
-              <Chip key={k} size="small" color="warning" variant="outlined" label={`${k} ${v}`} />
+              <Chip key={k} size="small" color="warning" variant="outlined" label={`${statusText(k)} ${v}`} />
             ))}
           </Stack>
+          <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 0.5 }}>
+            处理进度仅表示「是否已看过」，不代表公式内容已核对正确。
+          </Typography>
 
-          <Typography variant="subtitle2" component="h2" sx={{ mt: 2 }} gutterBottom>
+          <Typography variant="subtitle2" component="h4" sx={{ mt: 2 }} gutterBottom>
             知识点复核状态
           </Typography>
           <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
@@ -238,7 +293,7 @@ export default function StatsPage() {
         </Paper>
       </Stack>
 
-      {/* 各维度分布 */}
+      {/* 各维度分布：默认 Top5，可展开全部 */}
       <Stack direction="row" spacing={2} flexWrap="wrap" useFlexGap>
         <DistributionList title="题型分布" rows={s.by_qtype} onItemClick={() => navigate('/search')} />
         <DistributionList title="年级分布" rows={s.by_grade} onItemClick={() => navigate('/search')} />
@@ -247,9 +302,9 @@ export default function StatsPage() {
         <DistributionList title="学科分布" rows={s.by_subject} onItemClick={() => navigate('/search')} />
         <DistributionList
           title="公式状态分布"
-          rows={s.formula_status.map((f) => ({ key: f.status ?? '（空）', count: f.count }))}
+          rows={s.formula_status.map((f) => ({ key: statusText(f.status), count: f.count }))}
         />
-        <DistributionList title="高频章节（Top 20）" rows={s.top_chapters} onItemClick={() => navigate('/search')} />
+        <DistributionList title="高频章节" rows={s.top_chapters} onItemClick={() => navigate('/search')} />
       </Stack>
     </Box>
   )

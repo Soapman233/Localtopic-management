@@ -65,6 +65,12 @@ export default defineConfig({
           if (id.endsWith('.css')) return undefined
           if (id.includes('@mui') || id.includes('@emotion')) return 'vendor-mui'
           if (id.includes('katex')) return 'vendor-katex'
+          /*
+           * AutoAnimate **必须独立分包**：若落进 `vendor-misc`（既有首屏预加载组），
+           * 会把动效库塞进首屏请求，违背「入口与首屏体积不增长」的门禁。
+           * 单独成块后它只随使用它的懒加载页面下载。
+           */
+          if (id.includes('auto-animate')) return 'vendor-motion'
           if (id.includes('@tanstack') || id.includes('zustand') || id.includes('@dnd-kit')) {
             return 'vendor-data'
           }

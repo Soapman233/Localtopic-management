@@ -28,9 +28,16 @@ function makeCoverage(): CoverageSummary {
 }
 
 describe('CoverageBanner', () => {
-  it('渲染标题与各维度覆盖率（千分位 / 百分比）', () => {
+  it('渲染紧凑标题与一行说明', () => {
     renderWithTheme(<CoverageBanner coverage={makeCoverage()} dismissed={false} onDismiss={vi.fn()} />)
-    expect(screen.getByText('数据覆盖率提示')).toBeInTheDocument()
+    expect(screen.getByText('数据完整度')).toBeInTheDocument()
+    expect(screen.getByText(/暂不能按难度筛选/)).toBeInTheDocument()
+  })
+
+  it('明细默认折叠，展开后可见各维度覆盖率（千分位 / 百分比）', () => {
+    renderWithTheme(<CoverageBanner coverage={makeCoverage()} dismissed={false} onDismiss={vi.fn()} />)
+    // 折叠态：明细容器存在但收起（aria-expanded=false）。
+    expect(screen.getByRole('button', { name: /查看明细/ })).toHaveAttribute('aria-expanded', 'false')
     expect(screen.getByText('年级')).toBeInTheDocument()
     expect(screen.getByText('17%（1,342/7,945）')).toBeInTheDocument()
     expect(screen.getByText('待复核公式')).toBeInTheDocument()

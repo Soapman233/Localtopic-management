@@ -108,9 +108,12 @@ describe('App 外壳无障碍语义', () => {
     expect(screen.getByText('找题').closest('[aria-current]')).toBeNull()
   })
 
-  it('切换到另一路由后，aria-current 随之迁移', () => {
+  it('切换到维护路由后，aria-current 迁移到「数据维护」', () => {
     renderApp('/manage/stats')
-    expect(screen.getByText('题库统计').closest('[aria-current="page"]')).not.toBeNull()
+    // 维护子页归到侧栏「数据维护」项（B1 后四个维护页不再各自占据侧栏）。
+    const current = document.querySelector('[aria-current="page"]')
+    expect(current).not.toBeNull()
+    expect(current).toHaveTextContent('数据维护')
     expect(screen.getByText('组卷工作台').closest('[aria-current]')).toBeNull()
   })
 })

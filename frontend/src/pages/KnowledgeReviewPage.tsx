@@ -8,6 +8,12 @@
  *
  * 关键约束（PRD Q6）：**批量否决/确认必须先显示影响条数并要求二次确认**。本页通过
  * ``/api/labels/decision/preview`` 预检影响条数，再以 ``confirm=true`` 提交。
+ *
+ * B4 渐进披露（方案 §3.5）：本页作为「数据维护」Tab 子页嵌入。
+ * - 标题层级：父页 h1；本页标题 h2；内部区块 h3。
+ * - 口径说明默认收成一行 + 「口径说明」折叠；CSV 收进「批量处理」菜单。
+ * - 标签按待复核降序，可只看有待复核；未选择时给出待复核最多的前五个标签。
+ * - 取数、预检、提交逻辑一律不变。
  */
 import { useMemo, useRef, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
@@ -16,13 +22,18 @@ import {
   Box,
   Button,
   Chip,
+  Collapse,
   Divider,
+  FormControlLabel,
   List,
   ListItemButton,
   ListItemText,
+  Menu,
+  MenuItem,
   Pagination,
   Paper,
   Stack,
+  Switch,
   TextField,
   Typography,
 } from '@mui/material'
@@ -65,6 +76,9 @@ export default function KnowledgeReviewPage() {
   const [itemStatus, setItemStatus] = useState<string>('待复核')
   const [page, setPage] = useState(1)
   const [labelFilter, setLabelFilter] = useState('')
+  const [onlyPending, setOnlyPending] = useState(false)
+  const [helpOpen, setHelpOpen] = useState(false)
+  const [menuAnchor, setMenuAnchor] = useState<null | HTMLElement>(null)
   const [toast, setToast] = useState<{ kind: 'success' | 'error'; text: string } | null>(null)
   const [importResult, setImportResult] = useState<LabelImportResult | null>(null)
 
@@ -122,11 +136,24 @@ export default function KnowledgeReviewPage() {
   })
 
   const counts = summaryQ.data?.counts ?? {}
+  // 标签按待复核降序；可只看「有待复核」。
   const labels = useMemo(() => {
     const all = summaryQ.data?.summary ?? []
     const kw = labelFilter.trim()
-    return kw ? all.filter((l) => l.label_name.includes(kw)) : all
-  }, [summaryQ.data, labelFilter])
+    const filtered = kw ? all.filter((l) => l.label_name.includes(kw)) : all
+    const sorted = [...filtered].sort((a, b) => b.pending - a.pending)
+    return onlyPending ? sorted.filter((l) => l.pending > 0) : sorted
+  }, [summaryQ.data, labelFilter, onlyPending])
+
+  // 未选择标签时给出「待复核最多」的前五个，点击直接进入。
+  const topPending = useMemo(
+    () =>
+      [...(summaryQ.data?.summary ?? [])]
+        .filter((l) => l.pending > 0)
+        .sort((a, b) => b.pending - a.pending)
+        .slice(0, 5),
+    [summaryQ.data],
+  )
 
   /** 打开批量确认：先预检影响条数（只读，不写库）。 */
   const openBatch = async (decision: string) => {
@@ -146,7 +173,7 @@ export default function KnowledgeReviewPage() {
   return (
     <Box>
       <Stack direction="row" alignItems="center" spacing={2} sx={{ mb: 1 }} flexWrap="wrap" useFlexGap>
-        <Typography variant="h6" component="h1">知识点复核</Typography>
+        <Typography variant="h6" component="h2">知识点复核</Typography>
         <Chip size="small" color="warning" variant="outlined" label={`待复核 ${(counts['待复核'] ?? 0).toLocaleString('zh-CN')}`} />
         <Chip size="small" color="success" variant="outlined" label={`已确认 ${(counts['已确认'] ?? 0).toLocaleString('zh-CN')}`} />
         <Chip size="small" label={`已否决 ${(counts['已否决'] ?? 0).toLocaleString('zh-CN')}`} />
@@ -155,25 +182,38 @@ export default function KnowledgeReviewPage() {
           size="small"
           variant="outlined"
           startIcon={<FileDownloadIcon />}
-          href={exportReviewUrl('待复核')}
-          download
+          onClick={(e) => setMenuAnchor(e.currentTarget)}
+          aria-haspopup="menu"
+          aria-expanded={menuAnchor !== null}
         >
-          导出待复核 CSV
+          批量处理
         </Button>
-        <Button
-          size="small"
-          variant="outlined"
-          startIcon={<FileUploadIcon />}
-          disabled={importMut.isPending}
-          onClick={() => fileRef.current?.click()}
-        >
-          导入复核 CSV
-        </Button>
+        <Menu anchorEl={menuAnchor} open={menuAnchor !== null} onClose={() => setMenuAnchor(null)}>
+          <MenuItem
+            component="a"
+            href={exportReviewUrl('待复核')}
+            download
+            onClick={() => setMenuAnchor(null)}
+          >
+            导出待复核 CSV
+          </MenuItem>
+          <MenuItem
+            disabled={importMut.isPending}
+            onClick={() => {
+              setMenuAnchor(null)
+              fileRef.current?.click()
+            }}
+          >
+            <FileUploadIcon fontSize="small" style={{ marginRight: 8 }} />
+            导入复核 CSV
+          </MenuItem>
+        </Menu>
         <input
           ref={fileRef}
           type="file"
           accept=".csv,text/csv"
           style={{ display: 'none' }}
+          aria-label="选择要导入的复核 CSV 文件"
           onChange={(e) => {
             const f = e.target.files?.[0]
             if (f) importMut.mutate(f)
@@ -182,16 +222,34 @@ export default function KnowledgeReviewPage() {
         />
       </Stack>
 
-      <Alert severity="info" sx={{ mb: 1 }}>
-        知识点为「<strong>提及</strong>」口径：系统自动识别题干中<strong>出现过</strong>的知识词，
-        <strong>不代表</strong>本题在<strong>考查</strong>它（平均 4.26 个/题，可能误标）。
-        例如一道「原子结构」题因选项出现「太阳系」被打上「太阳系」标签。
-      </Alert>
-      <Alert severity="warning" sx={{ mb: 2 }}>
-        严格模式「仅看已确认知识点」开关在<Button size="small" onClick={() => navigate('/search')}>检索页</Button>
-        （对应 <code>--kp-confirmed-only</code>），<strong>默认关闭</strong>——否则复核完成前检索不可用。
-        当前已确认 {(counts['已确认'] ?? 0).toLocaleString('zh-CN')} / 待复核 {(counts['待复核'] ?? 0).toLocaleString('zh-CN')}。
-      </Alert>
+      {/* 口径说明收成一行；详细说明（含严格模式入口）按需展开 */}
+      <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 1 }} flexWrap="wrap" useFlexGap>
+        <Typography variant="body2" color="text.secondary" sx={{ flex: 1, minWidth: 220 }}>
+          知识点为「提及」口径：题干中出现过的知识词，不代表本题在考查它，可能有误标。
+        </Typography>
+        <Button
+          size="small"
+          onClick={() => setHelpOpen((v) => !v)}
+          aria-expanded={helpOpen}
+          aria-controls="knowledge-help"
+        >
+          {helpOpen ? '收起说明' : '口径说明'}
+        </Button>
+      </Stack>
+      <Collapse in={helpOpen} id="knowledge-help">
+        <Alert severity="info" sx={{ mb: 2 }}>
+          <Typography variant="body2" component="div" sx={{ mb: 0.5 }}>
+            系统自动识别题干中<strong>出现过</strong>的知识词，<strong>不代表</strong>本题在<strong>考查</strong>它
+            （平均 4.26 个/题，可能误标）。例如一道「原子结构」题因选项出现「太阳系」被打上「太阳系」标签。
+          </Typography>
+          <Typography variant="body2" component="div">
+            严格模式「仅看已确认知识点」开关在
+            <Button size="small" onClick={() => navigate('/search')}>检索页</Button>
+            ，<strong>默认关闭</strong>——否则复核完成前检索不可用。
+            当前已确认 {(counts['已确认'] ?? 0).toLocaleString('zh-CN')} / 待复核 {(counts['待复核'] ?? 0).toLocaleString('zh-CN')}。
+          </Typography>
+        </Alert>
+      </Collapse>
 
       {toast && (
         <Alert severity={toast.kind} sx={{ mb: 1 }} onClose={() => setToast(null)}>
@@ -217,10 +275,23 @@ export default function KnowledgeReviewPage() {
               placeholder="筛选标签名…"
               value={labelFilter}
               onChange={(e) => setLabelFilter(e.target.value)}
+              inputProps={{ 'aria-label': '按标签名筛选' }}
             />
-            <Typography variant="caption" color="text.secondary">
-              共 {labels.length} 个标签（点击查看逐条）
-            </Typography>
+            <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mt: 0.5 }}>
+              <Typography variant="caption" color="text.secondary">
+                共 {labels.length} 个标签（点击查看逐条）
+              </Typography>
+              <FormControlLabel
+                control={
+                  <Switch
+                    size="small"
+                    checked={onlyPending}
+                    onChange={(e) => setOnlyPending(e.target.checked)}
+                  />
+                }
+                label={<Typography variant="caption">仅看有待复核</Typography>}
+              />
+            </Stack>
           </Box>
           <Divider />
           <List dense sx={{ overflow: 'auto', flex: 1 }}>
@@ -239,6 +310,17 @@ export default function KnowledgeReviewPage() {
                 />
               </Box>
             )}
+            {!summaryQ.isLoading && !summaryQ.isError && labels.length === 0 && (
+              <Box sx={{ p: 2 }}>
+                <EmptyState
+                  dense
+                  title="没有匹配的标签"
+                  description={onlyPending ? '当前没有「有待复核」的标签。' : '换个关键词试试。'}
+                  actionLabel={onlyPending ? '显示全部标签' : undefined}
+                  onAction={() => setOnlyPending(false)}
+                />
+              </Box>
+            )}
             {labels.map((l) => (
               <ListItemButton
                 key={l.label_id}
@@ -250,7 +332,7 @@ export default function KnowledgeReviewPage() {
               >
                 <ListItemText
                   primary={l.label_name}
-                  secondary={`命中 ${l.total.toLocaleString('zh-CN')} 题`}
+                  secondary={`关联 ${l.total.toLocaleString('zh-CN')} 条`}
                 />
                 <Stack direction="row" spacing={0.5}>
                   {l.pending > 0 && <Chip size="small" color="warning" label={l.pending} />}
@@ -262,22 +344,50 @@ export default function KnowledgeReviewPage() {
           </List>
         </Paper>
 
-        {/* 右：逐条复核 */}
+        {/* 右：逐条复核 / 未选择时的入口 */}
         <Box sx={{ flex: 1, minWidth: 0 }}>
           {!selected ? (
-            <EmptyState
-              title="请选择一个知识点标签"
-              description="从左侧选择一个标签，查看其逐条关联并确认 / 否决。"
-            />
+            <Paper variant="outlined" sx={{ p: 2 }}>
+              <Typography variant="subtitle1" component="h3" gutterBottom>
+                待复核最多的标签
+              </Typography>
+              {topPending.length === 0 ? (
+                <EmptyState
+                  title="请选择一个知识点标签"
+                  description="从左侧选择一个标签，查看其逐条关联并确认 / 否决。"
+                />
+              ) : (
+                <List dense>
+                  {topPending.map((l) => (
+                    <ListItemButton
+                      key={l.label_id}
+                      onClick={() => {
+                        setSelected(l.label_name)
+                        setPage(1)
+                      }}
+                    >
+                      <ListItemText
+                        primary={l.label_name}
+                        secondary={`关联 ${l.total.toLocaleString('zh-CN')} 条`}
+                      />
+                      <Chip size="small" color="warning" label={`待复核 ${l.pending}`} />
+                    </ListItemButton>
+                  ))}
+                </List>
+              )}
+              <Typography variant="caption" color="text.secondary">
+                也可从左侧完整列表选择任意标签。
+              </Typography>
+            </Paper>
           ) : (
             <Paper variant="outlined" sx={{ p: 2 }}>
               <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 1 }} flexWrap="wrap" useFlexGap>
-                <Typography variant="subtitle1" component="h2" fontWeight={600}>
+                <Typography variant="subtitle1" component="h3" fontWeight={600}>
                   {selected}
                 </Typography>
                 {selectedRow && (
                   <Typography variant="body2" color="text.secondary">
-                    命中 {selectedRow.total} · 待复核 {selectedRow.pending} · 已确认 {selectedRow.confirmed} · 已否决 {selectedRow.rejected}
+                    关联 {selectedRow.total} · 待复核 {selectedRow.pending} · 已确认 {selectedRow.confirmed} · 已否决 {selectedRow.rejected}
                   </Typography>
                 )}
                 <Box sx={{ flex: 1 }} />
@@ -303,7 +413,7 @@ export default function KnowledgeReviewPage() {
                 </Button>
               </Stack>
 
-              <Stack direction="row" spacing={1} sx={{ mb: 1 }}>
+              <Stack direction="row" spacing={1} sx={{ mb: 1 }} role="group" aria-label="逐条复核状态">
                 {STATUS_TABS.map((t) => (
                   <Chip
                     key={t.key}

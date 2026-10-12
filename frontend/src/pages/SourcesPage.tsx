@@ -15,6 +15,7 @@ import {
   Box,
   Button,
   Chip,
+  Collapse,
   Dialog,
   DialogActions,
   DialogContent,
@@ -37,7 +38,6 @@ import { useNavigate } from 'react-router-dom'
 import { getSource, getSourceImpact, listSources, updateSourceMetadata } from '../api/sources'
 import type { SourceDetail, SourceFileMeta, SourceRow } from '../api/types'
 import { ConfirmDialog } from '../components/ConfirmDialog'
-import { MissingBadge } from '../components/StatusBadges'
 import { EmptyState } from '../components/EmptyState'
 import { ErrorState } from '../components/ErrorState'
 import { LoadingState } from '../components/LoadingState'
@@ -69,6 +69,8 @@ function SourceDetailDialog({
   const [grade, setGrade] = useState('')
   const [textbook, setTextbook] = useState('')
   const [inited, setInited] = useState(false)
+  // 绝对路径属低频信息，默认收起（B4 渐进披露 §3.7）。
+  const [pathOpen, setPathOpen] = useState(false)
   // 文件级元数据编辑的二次确认状态。
   const [confirmState, setConfirmState] = useState<{
     patch: { grade?: string; textbook?: string }
@@ -163,9 +165,20 @@ function SourceDetailDialog({
                 {src.subject && <Chip size="small" variant="outlined" label={src.subject} />}
                 {src.imported_at && <Chip size="small" variant="outlined" label={`导入 ${src.imported_at}`} />}
               </Stack>
-              <Typography variant="caption" color="text.secondary" sx={{ display: 'block', wordBreak: 'break-all' }}>
-                路径：{src.path ?? '（未知）'}
-              </Typography>
+              <Button
+                size="small"
+                sx={{ mt: 0.5 }}
+                onClick={() => setPathOpen((v) => !v)}
+                aria-expanded={pathOpen}
+                aria-controls="source-detail-path"
+              >
+                {pathOpen ? '收起文件位置' : '查看文件位置'}
+              </Button>
+              <Collapse in={pathOpen} id="source-detail-path">
+                <Typography variant="caption" color="text.secondary" sx={{ display: 'block', wordBreak: 'break-all' }}>
+                  文件位置：{src.path ?? '（未知）'}
+                </Typography>
+              </Collapse>
 
               {/* 该来源内的覆盖率 */}
               <Typography variant="subtitle2" component="h3" sx={{ mt: 2 }}>
@@ -299,7 +312,7 @@ export default function SourcesPage() {
   return (
     <Box>
       <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 1 }} flexWrap="wrap" useFlexGap>
-        <Typography variant="h6" component="h1">来源文件管理</Typography>
+        <Typography variant="h6" component="h2">来源文件管理</Typography>
         <Chip size="small" label={`文件 ${totalFiles}`} />
         <Chip
           size="small"
@@ -351,6 +364,23 @@ export default function SourcesPage() {
       {sourcesQ.data && (
         <TableContainer component={Paper} variant="outlined">
           <Table size="small" stickyHeader>
+            {/* 表格 caption：为读屏提供整体说明，视觉隐藏（避免重复噪声）。 */}
+            <Box
+              component="caption"
+              sx={{
+                position: 'absolute',
+                width: '1px',
+                height: '1px',
+                p: 0,
+                m: '-1px',
+                overflow: 'hidden',
+                clip: 'rect(0, 0, 0, 0)',
+                whiteSpace: 'nowrap',
+                border: 0,
+              }}
+            >
+              来源文件列表：文件名、学段/学科、年级、教材、题量、公式与元数据状态
+            </Box>
             <TableHead>
               <TableRow>
                 <TableCell>文件名</TableCell>
@@ -378,10 +408,18 @@ export default function SourcesPage() {
                       {[r.stage, r.subject].filter(Boolean).join(' / ') || '—'}
                     </TableCell>
                     <TableCell>
-                      {gMissing ? <MissingBadge /> : r.grade}
+                      {gMissing ? (
+                        <Box component="span" aria-label="年级元数据缺失" title="年级元数据缺失">—</Box>
+                      ) : (
+                        r.grade
+                      )}
                     </TableCell>
                     <TableCell>
-                      {tMissing ? <MissingBadge /> : r.textbook}
+                      {tMissing ? (
+                        <Box component="span" aria-label="教材元数据缺失" title="教材元数据缺失">—</Box>
+                      ) : (
+                        r.textbook
+                      )}
                     </TableCell>
                     <TableCell align="right">{r.questions_count}</TableCell>
                     <TableCell align="right">{r.formulas_count}</TableCell>

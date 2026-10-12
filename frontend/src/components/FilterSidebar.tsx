@@ -11,8 +11,8 @@ import {
   Alert,
   Box,
   Chip,
-  Divider,
   FormControlLabel,
+  IconButton,
   Skeleton,
   Stack,
   Switch,
@@ -20,6 +20,7 @@ import {
   Typography,
 } from '@mui/material'
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore'
+import HelpOutlineIcon from '@mui/icons-material/HelpOutline'
 import type { CoverageBucket, FacetDimension, FacetsData } from '../api/types'
 import type { SearchParams } from '../api/search'
 
@@ -103,7 +104,15 @@ export function FilterSidebar({
     <Box sx={{ width: 248, flexShrink: 0 }}>
       <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mb: 1 }}>
         {/* P5-3：筛选栏面板小标题，显式降为 <div>，避免与页面 h1 形成 h1→h6 跳级（视觉不变）。 */}
-        <Typography variant="subtitle2" component="div">筛选</Typography>
+        <Stack direction="row" spacing={0.5} alignItems="center">
+          <Typography variant="subtitle2" component="div">筛选</Typography>
+          {/* B2 §3.3：口径说明退到帮助，不再占据筛选栏底部一整块文字。 */}
+          <Tooltip title="默认不预选任何筛选条件（= 全库）；缺失元数据单列「待补充」桶，避免系统性漏题。">
+            <IconButton size="small" aria-label="筛选说明" sx={{ p: 0.25 }}>
+              <HelpOutlineIcon sx={{ fontSize: 16 }} />
+            </IconButton>
+          </Tooltip>
+        </Stack>
         <Chip size="small" variant="outlined" label="重置" onClick={onReset} />
       </Stack>
 
@@ -187,7 +196,18 @@ export function FilterSidebar({
       <Accordion defaultExpanded disableGutters elevation={0}
         sx={{ '&:before': { display: 'none' }, border: '1px solid', borderColor: 'divider', borderRadius: 1, mb: 1 }}>
         <AccordionSummary expandIcon={<ExpandMoreIcon />}>
-          <Typography variant="body2" fontWeight={600}>知识点（搜索线索）</Typography>
+          <Stack direction="row" spacing={0.5} alignItems="center" sx={{ minWidth: 0 }}>
+            <Typography variant="body2" fontWeight={600}>知识点（搜索线索）</Typography>
+            {/* B2 §3.3：严格模式状态移到知识点筛选旁（不再占据页面顶部提示条）。 */}
+            {strictKp && (
+              <Chip
+                size="small"
+                color="primary"
+                label="严格模式"
+                sx={{ height: 20, fontSize: 11 }}
+              />
+            )}
+          </Stack>
         </AccordionSummary>
         <AccordionDetails sx={{ pt: 0 }}>
           <Typography variant="caption" color="text.secondary" display="block" sx={{ mb: 1 }}>
@@ -262,11 +282,18 @@ export function FilterSidebar({
               ) : (
                 <>
                   {['grade', 'textbook', 'chapter'].includes(dim.key) && cov && cov.n < cov.total && (
-                    <Typography variant="caption" color="warning.main" display="block" sx={{ mb: 1 }}>
-                      {dim.label}覆盖率 {cov.pct}%；按具体{dim.label}筛选会漏掉
-                      {(cov.total - cov.n).toLocaleString('zh-CN')} 道未标注题。
-                      可选「全部」配合关键词查找，或选「待补充」。
-                    </Typography>
+                    // B2 §3.3：漏题事实（数值）保留可见，冗长解释退到帮助。
+                    <Stack direction="row" spacing={0.5} alignItems="center" sx={{ mb: 1 }}>
+                      <Typography variant="caption" color="warning.main">
+                        {dim.label}覆盖率 {cov.pct}%，按它筛选会漏掉
+                        {(cov.total - cov.n).toLocaleString('zh-CN')} 道未标注题
+                      </Typography>
+                      <Tooltip title="未标注的题仍可被关键词检索命中；可先用关键词查找，或选「待补充」逐题补充。">
+                        <IconButton size="small" aria-label={`${dim.label}覆盖率说明`} sx={{ p: 0.25 }}>
+                          <HelpOutlineIcon sx={{ fontSize: 14 }} />
+                        </IconButton>
+                      </Tooltip>
+                    </Stack>
                   )}
                   {loading && <Skeleton variant="rounded" height={28} />}
                   {!loading && (
@@ -317,11 +344,6 @@ export function FilterSidebar({
           </Accordion>
         )
       })}
-
-      <Divider sx={{ my: 1 }} />
-      <Typography variant="caption" color="text.secondary">
-        默认不预选任何筛选条件（= 全库）；缺失元数据单列「待补充」桶，避免系统性漏题。
-      </Typography>
     </Box>
   )
 }

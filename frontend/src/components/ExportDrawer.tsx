@@ -48,7 +48,6 @@ import { describeEnvFailure, useExportGate, type EnvFailure } from '../hooks/use
 import {
   GLOSSARY,
   describeExportGate,
-  describeExportGateAction,
   describeJobTimeout,
   describePreviewRetention,
   describePreviewReused,
@@ -148,7 +147,8 @@ function ExportDrawerForPaper(props: ExportDrawerProps) {
         {exportDataQ.isFetching && <Alert severity="info">正在检查当前锁定内容…</Alert>}
         {exportDataQ.isError && <Alert severity="error" action={<Button onClick={refreshDiagnostics}>重试</Button>}>内容检查失败：{(exportDataQ.error as Error).message}</Alert>}
         {exportDataQ.data && <ExportDiagnosticsPanel paperId={paperId} data={exportDataQ.data} onRevised={id => { props.onRevised?.(id); usePaperStore.getState().setCurrentPaperId(id); onClose() }} />}
-        {/* 门禁状态徽标（三态文案与导出中心同源；锁定态**就地给出可执行动作**） */}
+        {/* 门禁状态徽标（三态文案与导出中心同源）。**唯一预览动作**放在下方设置行，
+            此处不再重复放「生成预览」按钮（§2.4：抽屉内一个预览动作 + 一个导出动作）。 */}
         <Stack direction="row" spacing={1} alignItems="center" flexWrap="wrap" useFlexGap sx={{ mb: 0.5 }}>
           {gateState === 'degraded' ? (
             <Chip size="small" color="warning" variant="outlined" label={describeExportGate('degraded')} />
@@ -156,19 +156,6 @@ function ExportDrawerForPaper(props: ExportDrawerProps) {
             <Chip size="small" color="success" variant="outlined" label={describeExportGate('ready')} />
           ) : (
             <Chip size="small" color="default" variant="outlined" label={describeExportGate('locked')} />
-          )}
-          {/* 锁定态：直接把「生成预览」按钮摆在门禁提示旁，老师无需自己找预览入口。 */}
-          {gateState === 'locked' && (
-            <Button
-              size="small"
-              variant="contained"
-              startIcon={<RefreshIcon />}
-              disabled={previewing || !contentAllowed}
-              onClick={() => runPreview()}
-              data-testid="gate-generate-preview"
-            >
-              {describeExportGateAction('locked')}
-            </Button>
           )}
           {previewCached && <Chip size="small" color="success" variant="outlined" label={describePreviewReused()} />}
         </Stack>

@@ -36,6 +36,7 @@ import {
 } from './livePreview/blocks'
 import { computeLayout, type LayoutModel, type TemplateName } from './livePreview/spec'
 import { LoadingState } from './LoadingState'
+import { isDebugMode } from '../lib/glossary'
 import { usePagination } from './livePreview/usePagination'
 import { PageView } from './livePreview/PageView'
 import {
@@ -142,7 +143,11 @@ function QuestionChrome({
 }
 
 export function LivePreviewPanel(props: LivePreviewPanelProps) {
-  const { paperId, data, editable = false, template: templateProp, scale = 1, debug = false } = props
+  const { paperId, data, editable = false, template: templateProp, scale = 1, debug } = props
+
+  // 统一有效 debug 值（§B0）：显式 prop 优先；未传时读 `isDebugMode()`（支持 `?debug=1`）。
+  // 显式 `debug={false}`（如抽屉的降级结构预览）仍关闭调试。
+  const debugMode = debug ?? isDebugMode()
 
   // P1-6：深色模式下给「非纸张 chrome」加 `lp-dark` 类（纸张本身保持白底黑字）。
   const dark = useTheme().palette.mode === 'dark'
@@ -305,7 +310,7 @@ export function LivePreviewPanel(props: LivePreviewPanelProps) {
           model={model}
           pageNumber={i + 1}
           totalPages={pages.length}
-          debug={debug}
+          debug={debugMode}
           editable={editable}
           scale={scale}
           renderQuestionChrome={editable ? renderQuestionChrome : undefined}
@@ -316,7 +321,10 @@ export function LivePreviewPanel(props: LivePreviewPanelProps) {
 
   return (
     <Box className={`lp-doc${dark ? ' lp-dark' : ''}`}>
-      {/* 顶部工具栏 */}
+      {/* 顶部工具栏（§3.1 紧凑）：默认只保留「约 N 页」「N 题」；
+          模板 / 版本 / 答案模式 / 测量耗时属诊断信息，仅在 debug 下显示（§B0#2）。
+          ⚠️ 此处**不得**接入 AnimatedList：面板内含 `.lp-measure` 测量层与 `transform: scale()` 纸面，
+             且题目块由 DnD 控制 transform（见 §5 禁止清单）。 */}
       <Stack direction="row" spacing={1} alignItems="center" flexWrap="wrap" useFlexGap sx={{ mb: 1 }}>
         <Tooltip title={overflowTip}>
           <Chip
@@ -326,15 +334,19 @@ export function LivePreviewPanel(props: LivePreviewPanelProps) {
             label={pageCountLabel}
           />
         </Tooltip>
-        <Chip size="small" variant="outlined" label={`模板 ${template}`} />
-        <Chip size="small" variant="outlined" label={data.layout_revision} />
-        <Chip size="small" variant="outlined" label={data.answer_mode || '—'} />
         <Chip size="small" variant="outlined" label={`${totalQuestions} 题`} />
         {!ready && <LoadingState dense size={14} label="正在测量（等待字体与图片）…" />}
-        {ready && (
-          <Typography variant="caption" color="text.secondary">
-            测量 {ms.toFixed(2)}ms · 重排 v{version}
-          </Typography>
+        {debugMode && (
+          <>
+            <Chip size="small" variant="outlined" label={`模板 ${template}`} />
+            <Chip size="small" variant="outlined" label={data.layout_revision} />
+            <Chip size="small" variant="outlined" label={data.answer_mode || '—'} />
+            {ready && (
+              <Typography variant="caption" color="text.secondary">
+                测量 {ms.toFixed(2)}ms · 重排 v{version}
+              </Typography>
+            )}
+          </>
         )}
       </Stack>
 

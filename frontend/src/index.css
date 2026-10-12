@@ -37,6 +37,38 @@ body {
   padding: 2px 0;
 }
 
+/* 页面切换过渡（View Transitions API，实施方案 §5）
+ *
+ * 只给**页面内容容器**做淡入淡出（120ms），**不做整壳动画**：
+ * AppBar / 侧栏 / 全局 Drawer 保持静止，否则切换页面时整个界面都在晃，反而更晕。
+ *
+ * 时长与缓动取自 Material 3 的「短时长 / 标准缓动」档位。 */
+.qb-route-content {
+  view-transition-name: route-content;
+}
+::view-transition-old(route-content) {
+  animation: qb-route-out 120ms cubic-bezier(0.4, 0, 1, 1) both;
+}
+::view-transition-new(route-content) {
+  animation: qb-route-in 120ms cubic-bezier(0.2, 0, 0, 1) both;
+}
+@keyframes qb-route-out {
+  to {
+    opacity: 0;
+  }
+}
+@keyframes qb-route-in {
+  from {
+    opacity: 0;
+  }
+}
+
+/* root 过渡关闭：整壳不动 */
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation: none;
+}
+
 /* 减少动效（P5-3，WCAG SC 2.3.3 / 技能第 4 节）：
    用户在系统里开启「减少动态效果」后，收敛过渡与动画时长（保留极短时长而非 0，
    避免依赖 transitionend 的逻辑被永久挂起），并关闭平滑滚动。 */
@@ -48,5 +80,11 @@ body {
     animation-iteration-count: 1 !important;
     transition-duration: 0.001ms !important;
     scroll-behavior: auto !important;
+  }
+
+  /* 页面切换过渡同样关闭（`useAppNavigate` 也会退回普通 navigate，双保险） */
+  ::view-transition-old(route-content),
+  ::view-transition-new(route-content) {
+    animation: none;
   }
 }

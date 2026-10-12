@@ -7,17 +7,29 @@
  *
  * 说明：``review_queue.preview`` 为源 DOCX 包内的预览媒体路径（如 ``media/image17.wmf``），
  * 后端提供源图直链并转换为 PNG；转换失败时显示明确提示与修复入口。
+ *
+ * B4 渐进披露（方案 §3.6）：本页作为「数据维护」Tab 子页嵌入。
+ * - 标题层级：父页 h1；本页标题 h2；内部区块 h3。
+ * - 计数与处理进度合成一行；左侧短列表 + 右侧当前项详情，仅挂载当前详情。
+ * - 当前项题干默认四行，可按需展开完整文本。
+ * - kind / part / 原始技术原因进入调试折叠层；标记已处理与「内容正确」分开表达。
+ * - 取数、resolve 提交逻辑一律不变。
  */
 import { useMemo, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
+  Accordion,
+  AccordionDetails,
+  AccordionSummary,
   Alert,
   Box,
   Button,
   Chip,
-  Divider,
   FormControlLabel,
   LinearProgress,
+  List,
+  ListItemButton,
+  ListItemText,
   Pagination,
   Paper,
   Stack,
@@ -28,6 +40,7 @@ import {
 } from '@mui/material'
 import CheckIcon from '@mui/icons-material/Check'
 import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutline'
+import ExpandMoreIcon from '@mui/icons-material/ExpandMore'
 import OpenInNewIcon from '@mui/icons-material/OpenInNew'
 import ReplayIcon from '@mui/icons-material/Replay'
 import { useNavigate } from 'react-router-dom'
@@ -70,6 +83,142 @@ const STATUS_HINT: Record<string, string> = {
   FAIL: '公式转换失败，请对照来源试卷核对内容后，在详情页修正 LaTeX。',
 }
 
+/** 当前复核项详情（仅挂载当前项；技术字段收进调试折叠层）。 */
+function ReviewDetail({
+  item,
+  onJump,
+  onResolve,
+  resolving,
+}: {
+  item: ReviewItem
+  onJump: (questionId: number) => void
+  onResolve: (rqId: number, resolved: boolean) => void
+  resolving: boolean
+}) {
+  const [textExpanded, setTextExpanded] = useState(false)
+  const [debugOpen, setDebugOpen] = useState(false)
+  const questionText = item.question_text || '（题干缺失）'
+  const canExpand = questionText.length > 100
+
+  return (
+    <Paper variant="outlined" sx={{ p: 2 }}>
+      <Stack direction="row" spacing={1} alignItems="center" flexWrap="wrap" useFlexGap>
+        <Chip
+          size="small"
+          color={item.resolved ? 'success' : 'warning'}
+          label={STATUS_LABEL[item.status ?? ''] ?? item.status ?? '未知'}
+        />
+        {item.resolved === 1 && <Chip size="small" variant="outlined" label="已处理" />}
+        <Chip
+          size="small"
+          variant="outlined"
+          label={`题 ${item.number ?? item.question_id}`}
+          onClick={() => item.question_id && onJump(item.question_id)}
+          sx={{ cursor: item.question_id ? 'pointer' : 'default' }}
+        />
+        {item.chapter && <Chip size="small" variant="outlined" label={`章节 ${item.chapter}`} />}
+      </Stack>
+      <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 0.5 }}>
+        来源：{item.file_name ?? '（未知）'}
+      </Typography>
+
+      <Box sx={{ mt: 1.5 }}>
+        <Typography variant="subtitle2" component="h3" gutterBottom>
+          题干
+        </Typography>
+        <Typography
+          variant="body2"
+          sx={
+            textExpanded
+              ? { whiteSpace: 'pre-wrap' }
+              : {
+                  display: '-webkit-box',
+                  WebkitLineClamp: 4,
+                  WebkitBoxOrient: 'vertical',
+                  overflow: 'hidden',
+                  whiteSpace: 'pre-wrap',
+                }
+          }
+        >
+          {questionText}
+        </Typography>
+        {canExpand && (
+          <Button size="small" onClick={() => setTextExpanded((v) => !v)} aria-expanded={textExpanded}>
+            {textExpanded ? '收起题干' : '展开完整题干'}
+          </Button>
+        )}
+      </Box>
+
+      {item.latex && (
+        <Box sx={{ mt: 1 }}>
+          <Typography variant="subtitle2" component="h3" gutterBottom>
+            当前公式 {item.fid}
+          </Typography>
+          <KatexFormula latex={item.latex} />
+        </Box>
+      )}
+      <ReviewPreview key={`${item.id}:${item.preview_url}`} item={item} />
+
+      <Stack direction="row" spacing={1} sx={{ mt: 1.5 }} flexWrap="wrap" useFlexGap alignItems="center">
+        {item.question_id && (
+          <Button size="small" startIcon={<OpenInNewIcon />} onClick={() => onJump(item.question_id as number)}>
+            跳到该题修公式
+          </Button>
+        )}
+        <Box sx={{ flex: 1 }} />
+        {item.resolved ? (
+          <Button
+            size="small"
+            startIcon={<ReplayIcon />}
+            disabled={resolving}
+            onClick={() => onResolve(item.id, false)}
+          >
+            恢复待处理
+          </Button>
+        ) : (
+          <Button
+            size="small"
+            variant="contained"
+            startIcon={<CheckIcon />}
+            disabled={resolving}
+            onClick={() => onResolve(item.id, true)}
+          >
+            标记已处理
+          </Button>
+        )}
+      </Stack>
+      <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 0.5 }}>
+        「标记已处理」仅表示已看过该项，不代表公式内容已核对正确。
+      </Typography>
+
+      <Accordion
+        expanded={debugOpen}
+        onChange={(_e, v) => setDebugOpen(v)}
+        disableGutters
+        elevation={0}
+        sx={{ mt: 1, bgcolor: 'transparent', '&:before': { display: 'none' } }}
+      >
+        <AccordionSummary expandIcon={<ExpandMoreIcon />} sx={{ px: 0, minHeight: 0 }}>
+          <Typography variant="caption" color="text.secondary">
+            技术信息（调试）
+          </Typography>
+        </AccordionSummary>
+        <AccordionDetails sx={{ px: 0 }}>
+          <Stack spacing={0.5}>
+            {item.fid && <Typography variant="caption" color="text.secondary">fid：{item.fid}</Typography>}
+            {item.kind && <Typography variant="caption" color="text.secondary">kind：{item.kind}</Typography>}
+            {item.part && <Typography variant="caption" color="text.secondary">部件：{item.part}</Typography>}
+            {item.reason && <Typography variant="caption" color="text.secondary">原因：{item.reason}</Typography>}
+            {!item.fid && !item.kind && !item.part && !item.reason && (
+              <Typography variant="caption" color="text.secondary">无附加技术字段。</Typography>
+            )}
+          </Stack>
+        </AccordionDetails>
+      </Accordion>
+    </Paper>
+  )
+}
+
 /** P6 待复核公式队列页。 */
 export default function FormulaReviewPage() {
   const navigate = useNavigate()
@@ -78,6 +227,7 @@ export default function FormulaReviewPage() {
   const [tab, setTab] = useState<string>('UNSUPPORTED')
   const [showResolved, setShowResolved] = useState(false)
   const [page, setPage] = useState(1)
+  const [selectedId, setSelectedId] = useState<number | null>(null)
   const [toast, setToast] = useState<{ kind: 'success' | 'error'; text: string } | null>(null)
 
   const summaryQ = useQuery({
@@ -126,32 +276,40 @@ export default function FormulaReviewPage() {
   const itemTotal = listQ.data?.total ?? 0
   const pageCount = Math.max(1, Math.ceil(itemTotal / PAGE_SIZE))
 
+  // 当前详情由「选中项」派生：切 tab / 分页 / 已处理开关时清理失效选中，避免旧详情串用。
+  const current = items.find((i) => i.id === selectedId) ?? items[0] ?? null
+
+  /** 切换筛选条件时清空选中，让详情回落到新列表首项。 */
+  const resetSelection = () => setSelectedId(null)
+
+  const allEmpty = total === 0
+  const emptyTitle = showResolved
+    ? '暂无已处理项'
+    : allEmpty
+      ? '队列已清零'
+      : '该分类暂无待处理项'
+  const emptyDescription = showResolved
+    ? '还没有被标记为已处理的复核项。'
+    : allEmpty
+      ? '该状态下没有待处理项，公式队列已清零。'
+      : '该分类下没有待处理项，可切换到其他分类查看。'
+
   return (
     <Box>
       <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 1 }} flexWrap="wrap" useFlexGap>
-        <Typography variant="h6" component="h1">待复核公式队列</Typography>
+        <Typography variant="h6" component="h2">待复核公式队列</Typography>
         <Chip size="small" color="warning" label={`待处理 ${(summary?.open ?? 0).toLocaleString('zh-CN')}`} />
         <Chip size="small" color="success" variant="outlined" label={`已处理 ${(summary?.resolved ?? 0).toLocaleString('zh-CN')}`} />
         <Chip size="small" variant="outlined" label={`总计 ${total.toLocaleString('zh-CN')}`} />
+        <Box sx={{ flex: 1 }} />
+        <Typography variant="body2" color="text.secondary">
+          处理进度 {resolvedPct}%（{summary?.resolved ?? 0}/{total}）
+        </Typography>
       </Stack>
-
-      <Alert severity="info" sx={{ mb: 2 }}>
-        非 OK 公式<strong>可见但不阻塞</strong>主链路：它影响公式正确性（报告定为「中」级），
-        请逐条核对后处理，无法确认的项目保持待处理；三类转换状态分 tab 呈现。
-      </Alert>
-
-      {/* 处理进度不代表内容核对通过 */}
-      <Paper variant="outlined" sx={{ p: 2, mb: 2 }}>
-        <Stack direction="row" justifyContent="space-between" alignItems="center">
-          <Typography variant="body2" color="text.secondary">
-            处理进度：已处理 {summary?.resolved ?? 0} / 共 {total}
-          </Typography>
-          <Typography variant="body2" fontWeight={600}>
-            {resolvedPct}%
-          </Typography>
-        </Stack>
-        <LinearProgress variant="determinate" value={resolvedPct} sx={{ mt: 1, height: 8, borderRadius: 4 }} />
-      </Paper>
+      <LinearProgress variant="determinate" value={resolvedPct} sx={{ mb: 0.5, height: 8, borderRadius: 4 }} />
+      <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 2 }}>
+        非 OK 公式「可见但不阻塞」主链路；处理进度仅表示已看过，不代表公式内容已核对正确。
+      </Typography>
 
       {toast && (
         <Alert severity={toast.kind} sx={{ mb: 1 }} onClose={() => setToast(null)}>
@@ -161,7 +319,7 @@ export default function FormulaReviewPage() {
 
       <Paper variant="outlined" sx={{ p: 2 }}>
         <Stack direction="row" alignItems="center" sx={{ mb: 1 }} flexWrap="wrap" useFlexGap>
-          <Tabs value={tab} onChange={(_e, v) => { setTab(v); setPage(1) }}>
+          <Tabs value={tab} onChange={(_e, v) => { setTab(v); setPage(1); resetSelection() }}>
             {tabs.map((t) => (
               <Tab
                 key={t.key}
@@ -180,7 +338,7 @@ export default function FormulaReviewPage() {
             control={
               <Switch
                 checked={showResolved}
-                onChange={(e) => { setShowResolved(e.target.checked); setPage(1) }}
+                onChange={(e) => { setShowResolved(e.target.checked); setPage(1); resetSelection() }}
               />
             }
             label="显示已处理"
@@ -200,94 +358,55 @@ export default function FormulaReviewPage() {
         {!listQ.isLoading && !listQ.isError && items.length === 0 && (
           <EmptyState
             icon={<CheckCircleOutlineIcon sx={{ fontSize: 44 }} color="success" />}
-            title={showResolved ? '暂无已处理项' : '队列已清零'}
-            description={
-              showResolved
-                ? '还没有被标记为已处理的复核项。'
-                : '该状态下没有待处理项，公式队列已清零。'
-            }
+            title={emptyTitle}
+            description={emptyDescription}
           />
         )}
 
-        <Stack divider={<Divider flexItem />} spacing={0}>
-          {items.map((it: ReviewItem) => (
-            <Box key={it.id} sx={{ py: 1.5 }}>
-              <Stack direction="row" spacing={1} alignItems="center" flexWrap="wrap" useFlexGap>
-                <Chip
-                  size="small"
-                  color={it.resolved ? 'success' : 'warning'}
-                  label={STATUS_LABEL[it.status ?? ''] ?? it.status ?? '未知'}
-                />
-                {it.resolved === 1 && <Chip size="small" variant="outlined" label="已处理" />}
-                <Chip
-                  size="small"
-                  variant="outlined"
-                  label={`题 ${it.number ?? it.question_id}`}
-                  onClick={() => it.question_id && navigate(`/question/${it.question_id}`)}
-                  sx={{ cursor: it.question_id ? 'pointer' : 'default' }}
-                />
-                {it.kind && <Chip size="small" variant="outlined" label={`kind: ${it.kind}`} />}
-                {it.chapter && <Chip size="small" variant="outlined" label={`章节 ${it.chapter}`} />}
-                <Box sx={{ flex: 1 }} />
-                {it.question_id && (
-                  <Button
-                    size="small"
-                    startIcon={<OpenInNewIcon />}
-                    onClick={() => navigate(`/question/${it.question_id}`)}
+        {!listQ.isLoading && !listQ.isError && items.length > 0 && (
+          <Box sx={{ display: 'flex', gap: 2, alignItems: 'flex-start' }}>
+            {/* 左：短列表 */}
+            <Paper variant="outlined" sx={{ width: 300, flexShrink: 0, maxHeight: '68vh', display: 'flex', flexDirection: 'column' }}>
+              <List dense sx={{ overflow: 'auto', flex: 1 }}>
+                {items.map((it: ReviewItem) => (
+                  <ListItemButton
+                    key={it.id}
+                    selected={current?.id === it.id}
+                    onClick={() => setSelectedId(it.id)}
                   >
-                    跳到该题修公式
-                  </Button>
-                )}
-                {it.resolved ? (
-                  <Button
-                    size="small"
-                    startIcon={<ReplayIcon />}
-                    disabled={resolveMut.isPending}
-                    onClick={() => resolveMut.mutate({ rqId: it.id, resolved: false })}
-                  >
-                    恢复待处理
-                  </Button>
-                ) : (
-                  <Button
-                    size="small"
-                    variant="contained"
-                    startIcon={<CheckIcon />}
-                    disabled={resolveMut.isPending}
-                    onClick={() => resolveMut.mutate({ rqId: it.id, resolved: true })}
-                  >
-                    标记已处理
-                  </Button>
-                )}
-              </Stack>
+                    <ListItemText
+                      primary={`题 ${it.number ?? it.question_id ?? '—'}`}
+                      secondary={STATUS_LABEL[it.status ?? ''] ?? it.status ?? '未知'}
+                    />
+                    {it.resolved === 1 && <Chip size="small" variant="outlined" label="已处理" />}
+                  </ListItemButton>
+                ))}
+              </List>
+            </Paper>
 
-              <Stack direction="row" spacing={2} sx={{ mt: 0.5 }} flexWrap="wrap" useFlexGap>
-                <Typography variant="caption" color="text.secondary">
-                  来源：{it.file_name ?? '（未知）'}
-                </Typography>
-                {it.reason && (
-                  <Typography variant="caption" color="text.secondary">
-                    原因：{it.reason}
-                  </Typography>
-                )}
-                {it.part && (
-                  <Typography variant="caption" color="text.secondary">
-                    部件：{it.part}
-                  </Typography>
-                )}
-              </Stack>
-
-              <Typography variant="body2" sx={{ mt: 1, whiteSpace: 'pre-wrap' }}>
-                题干：{it.question_text || '（题干缺失）'}
-              </Typography>
-              {it.latex && <Box sx={{ mt: 1 }}>当前公式 {it.fid}：<KatexFormula latex={it.latex} /></Box>}
-              <ReviewPreview key={`${it.id}:${it.preview_url}`} item={it} />
+            {/* 右：当前项详情（仅挂载当前项） */}
+            <Box sx={{ flex: 1, minWidth: 0 }}>
+              {current && (
+                <ReviewDetail
+                  key={current.id}
+                  item={current}
+                  onJump={(qid) => navigate(`/question/${qid}`)}
+                  onResolve={(rqId, resolved) => resolveMut.mutate({ rqId, resolved })}
+                  resolving={resolveMut.isPending}
+                />
+              )}
             </Box>
-          ))}
-        </Stack>
+          </Box>
+        )}
 
         {pageCount > 1 && (
           <Stack alignItems="center" sx={{ mt: 2 }}>
-            <Pagination page={page} count={pageCount} onChange={(_e, p) => setPage(p)} color="primary" />
+            <Pagination
+              page={page}
+              count={pageCount}
+              onChange={(_e, p) => { setPage(p); resetSelection() }}
+              color="primary"
+            />
           </Stack>
         )}
       </Paper>

@@ -16,10 +16,10 @@ import {
   Alert,
   Box,
   Button,
+  Chip,
   CircularProgress,
   Divider,
   Drawer,
-  List,
   ListItemButton,
   ListItemText,
   Pagination,
@@ -46,13 +46,14 @@ import {
   type DragEndEvent,
 } from '@dnd-kit/core'
 import { sortableKeyboardCoordinates } from '@dnd-kit/sortable'
-import { useNavigate } from 'react-router-dom'
+import { useLocation, useNavigate } from 'react-router-dom'
 import { FilterSidebar } from '../components/FilterSidebar'
 import { QuestionCard } from '../components/QuestionCard'
 import { ConfirmDialog } from '../components/ConfirmDialog'
 import { PaperPanel, type PaperActions } from '../components/PaperPanel'
 import { LivePreviewPanel } from '../components/LivePreviewPanel'
 import { ExportDrawer } from '../components/ExportDrawer'
+import AnimatedList from '../components/AnimatedList'
 import { EmptyState } from '../components/EmptyState'
 import { ErrorState } from '../components/ErrorState'
 import { LoadingState } from '../components/LoadingState'
@@ -171,7 +172,10 @@ export default function PaperBuilderPage() {
   const [error, setError] = useState<string | null>(null)
   const [errorDiagnostics, setErrorDiagnostics] = useState<ExportDiagnostics | null>(null)
   const [exportOpen, setExportOpen] = useState(false)
+  const [diagOpen, setDiagOpen] = useState(false)
   const [undo, setUndo] = useState<{ msg: string; run: () => void } | null>(null)
+  // 试卷管理抽屉列表的增删动效（§5）：**首批加载不播放**，仅在加载完成后的少量增删时启用。
+  const [papersLoadedOnce, setPapersLoadedOnce] = useState(false)
   // 删除试卷二次确认（P0-1）：单击不再直接 force 删除，必须先确认（显示将删除的题数）。
   const [confirmDeletePaper, setConfirmDeletePaper] = useState<{ id: number; title: string; itemCount: number } | null>(null)
 
@@ -183,10 +187,20 @@ export default function PaperBuilderPage() {
   // 「紧凑」= 视口不足以同时舒适容纳「筛选栏(248) + 题目列表 + 右栏」。
   // 实测题卡宽度：1366→338px、1280→281px、1440→386px、1920→716px。
   // 这里给老师一个**可收回 264px**（筛选栏 248 + 间距 16）的开关；
-  // 默认**保持展开**——不改变既有默认行为，只在需要更宽结果区时手动收起。
+  // 紧凑视口首次默认收起（§3.1），宽屏保持常驻——不改变既有宽屏默认行为。
   const compact = useMediaQuery('(max-width:1439px)')
   const [rightOpen, setRightOpen] = useState(false)
-  const [filtersOpen, setFiltersOpen] = useState(true)
+  // §3.1：紧凑视口（<1440）**首次默认收起**筛选，把宽度让给题目列表；宽屏（≥1440）继续常驻。
+  // 之后由顶部「筛选」按钮手动开合（用户选择优先，不再被媒体查询覆盖）。
+  //
+  // ★ 1366×768 双栏判定（可复算，避免"看起来没问题"）：
+  //  1. `narrow` = MUI `down('lg')` = max-width:1199.95px → 1366 为 **false** ⇒ 右栏内联、双栏成立；
+  //  2. 可用内容宽 = 1366 − 侧栏 232（App DRAWER_WIDTH）− main 内边距 2×24 = **1086px**；
+  //  3. 右栏（排版视图）= clamp(360px, 34vw, 640px) = 34vw = **464px**；
+  //     左栏 = 1086 − 16(gap) − 464 = **606px** > 0；
+  //  4. 所有 flex 子项均为 `minWidth:0` / `flexShrink:0`，固定宽合计 232+48+16+464 = 760 < 1366
+  //     ⇒ `documentElement.scrollWidth <= clientWidth`，**不产生横向溢出**。
+  const [filtersOpen, setFiltersOpen] = useState(!compact)
 
   // 检索条件状态（关键词防抖 / URL 同步 / query 与 facets 参数）——与检索页共用同一实现（§1.6）。
   const {
@@ -221,6 +235,25 @@ export default function PaperBuilderPage() {
   useEffect(() => {
     usePaperStore.getState().validateTargetSection((paperQ.data?.sections ?? []).map((s) => s.id))
   }, [paperQ.data])
+
+  // 试卷列表加载完成后再启用增删动效（§5「首批加载关闭」）。
+  useEffect(() => {
+    if (!papersQ.isLoading && papersQ.data) setPapersLoadedOnce(true)
+  }, [papersQ.isLoading, papersQ.data])
+
+  // §2.4：导出辅助页（`/export`）返回时携带一次性路由 state `{ openExportForPaperId: X }`。
+  // 消费后：① 选中 X；② 清除目标大题；③ 打开 X 的导出抽屉；④ `replace` 清除该 state（保留查询参数）。
+  // 用 `key={paperId}` 的抽屉保证卷 A 的局部状态不会串到卷 B。
+  const location = useLocation()
+  useEffect(() => {
+    const state = location.state as { openExportForPaperId?: number } | null
+    const targetId = state?.openExportForPaperId
+    if (targetId == null) return
+    setCurrentPaperId(targetId)
+    setTargetSectionId(null)
+    setExportOpen(true)
+    navigate(`${location.pathname}${location.search}`, { replace: true, state: null })
+  }, [location, navigate, setCurrentPaperId, setTargetSectionId])
 
   const paperId = currentPaperId
   const mut = usePaperMutations(paperId, e => {
@@ -370,6 +403,11 @@ export default function PaperBuilderPage() {
   const items = searchQ.data?.items ?? []
   const pageCount = Math.max(1, Math.ceil(total / PAGE_SIZE))
 
+  // 右栏内容检查状态（§3.1）：通过用小状态；阻断显示「需处理 N 项」按钮展开原诊断。
+  // ⚠️ 收起诊断**只改变展示**，不改变 `diagnostics.export_allowed` 判定（导出门禁不变）。
+  const diag = exportDataQ.data?.diagnostics
+  const contentBlocked = Boolean(diag && !diag.export_allowed)
+
   // 右栏内容（宽屏内联；窄屏放进右侧抽屉，P1-1）。抽成变量避免重复 JSX。
   const rightPanel = (
     <Box
@@ -388,34 +426,68 @@ export default function PaperBuilderPage() {
         flexDirection: 'column',
       }}
     >
-      <ToggleButtonGroup
-        size="small"
-        exclusive
-        value={builderView}
-        onChange={(_e, v: 'layout' | 'list' | null) => v && setBuilderView(v)}
-        sx={{ mb: 1, alignSelf: 'flex-start' }}
-      >
-        <ToggleButton value="layout" data-testid="view-layout">排版</ToggleButton>
-        <ToggleButton value="list" data-testid="view-list">清单</ToggleButton>
-      </ToggleButtonGroup>
+      {/* 右栏一行（§3.1）：排版/清单 + 内容检查状态；「约 N 页」由 LivePreviewPanel 工具条给出。 */}
+      <Stack direction="row" spacing={1} alignItems="center" flexWrap="wrap" useFlexGap sx={{ mb: 1 }}>
+        <ToggleButtonGroup
+          size="small"
+          exclusive
+          value={builderView}
+          onChange={(_e, v: 'layout' | 'list' | null) => v && setBuilderView(v)}
+        >
+          <ToggleButton value="layout" data-testid="view-layout">排版</ToggleButton>
+          <ToggleButton value="list" data-testid="view-list">清单</ToggleButton>
+        </ToggleButtonGroup>
+        <Box sx={{ flex: 1 }} />
+        {exportDataQ.isFetching ? (
+          <Chip size="small" variant="outlined" label="正在检查内容…" />
+        ) : diag ? (
+          contentBlocked ? (
+            <Button
+              size="small"
+              color="error"
+              variant="outlined"
+              onClick={() => setDiagOpen((o) => !o)}
+              aria-expanded={diagOpen}
+              aria-controls="builder-diagnostics"
+              data-testid="builder-content-blocked"
+            >
+              需处理 {diag.blocker_count} 项
+            </Button>
+          ) : diag.warning_count > 0 ? (
+            <Button
+              size="small"
+              color="warning"
+              variant="outlined"
+              onClick={() => setDiagOpen((o) => !o)}
+              aria-expanded={diagOpen}
+              aria-controls="builder-diagnostics"
+            >
+              {diag.warning_count} 条提示
+            </Button>
+          ) : (
+            <Chip size="small" color="success" variant="outlined" label="内容检查通过" />
+          )
+        ) : exportDataQ.isError ? (
+          <Chip size="small" color="error" variant="outlined" label="内容检查失败" />
+        ) : null}
+      </Stack>
 
-      {exportDataQ.isFetching && <Typography variant="caption">正在检查内容…</Typography>}
-      {exportDataQ.isError && <Alert severity="error" action={<Button onClick={() => exportDataQ.refetch()}>重试</Button>}>内容检查失败：{(exportDataQ.error as Error).message}</Alert>}
-      {paperId != null && exportDataQ.data && <Box sx={{ maxHeight: '35vh', overflow: 'auto' }}><ExportDiagnosticsPanel paperId={paperId} data={exportDataQ.data} onRevised={() => setExportOpen(false)} /></Box>}
+      {/* 内容检查失败：保留既有错误契约（含重试）。 */}
+      {exportDataQ.isError && (
+        <Alert severity="error" sx={{ mb: 1 }} action={<Button onClick={() => exportDataQ.refetch()}>重试</Button>}>
+          内容检查失败：{(exportDataQ.error as Error).message}
+        </Alert>
+      )}
+
+      {/* 诊断展开层：仅阻断 / 有提示时按需展开，收回常驻纵向空间。 */}
+      {paperId != null && exportDataQ.data && diagOpen && (
+        <Box id="builder-diagnostics" sx={{ maxHeight: '35vh', overflow: 'auto', mb: 1 }}>
+          <ExportDiagnosticsPanel paperId={paperId} data={exportDataQ.data} onRevised={() => setExportOpen(false)} />
+        </Box>
+      )}
+
       {builderView === 'layout' ? (
         <Box sx={{ flex: 1, minHeight: 0, overflow: 'auto' }}>
-          {/* 常驻轻提示（§5-Q8③） */}
-          <Alert
-            severity="info"
-            sx={{ mb: 1, py: 0.25 }}
-            action={
-              <Button size="small" color="inherit" onClick={() => setBuilderView('list')} data-testid="switch-to-list">
-                切到清单视图
-              </Button>
-            }
-          >
-            需要批量调序 / 批量设分？切到「清单视图」更快。
-          </Alert>
           {paperId == null ? (
             <EmptyState
               title="还没有试卷"
@@ -454,7 +526,6 @@ export default function PaperBuilderPage() {
           targetSectionId={targetSectionId}
           onTargetSectionChange={setTargetSectionId}
           onOpenDrawer={() => setDrawerOpen(true)}
-          onGoExport={() => paperId != null && setExportOpen(true)}
           onOpenDetail={(qid) => navigate(`/question/${qid}`)}
         />
       )}
@@ -660,36 +731,44 @@ export default function PaperBuilderPage() {
           {papersQ.isError && (
             <ErrorState dense error={papersQ.error} title="加载失败" onRetry={() => papersQ.refetch()} />
           )}
-          <List dense>
+          {/* §5：试卷列表增删动效（AutoAnimate）。**首批加载关闭**（enabled 于加载完成后才置真），
+              仅对新建 / 删除的少量增删播放；此节点**不**受 DnD transform 或纸面缩放影响（安全接入点）。 */}
+          <AnimatedList
+            enabled={papersLoadedOnce}
+            role="list"
+            style={{ margin: 0, padding: 0, listStyle: 'none' }}
+          >
             {(papersQ.data ?? []).map((p) => (
-              <ListItemButton
-                key={p.id}
-                selected={p.id === currentPaperId}
-                onClick={() => {
-                  setCurrentPaperId(p.id)
-                  setTargetSectionId(null)
-                  setDrawerOpen(false)
-                }}
-              >
-                <ListItemText
-                  primary={p.title}
-                  secondary={`${p.item_count ?? 0} 题 · ${p.total_score ?? 0} 分${(p.unscored_count ?? 0) > 0 ? ` · 未设分 ${p.unscored_count}` : ''}`}
-                />
-                <Button
-                  size="small"
-                  color="error"
-                  disabled={!canDeletePaper}
-                  onClick={(e) => {
-                    e.stopPropagation()
-                    // P0-1：先确认（显示将删除的题数），不再单击即 force 删除。
-                    setConfirmDeletePaper({ id: p.id, title: p.title, itemCount: p.item_count ?? 0 })
+              <Box component="li" key={p.id} style={{ listStyle: 'none' }}>
+                <ListItemButton
+                  dense
+                  selected={p.id === currentPaperId}
+                  onClick={() => {
+                    setCurrentPaperId(p.id)
+                    setTargetSectionId(null)
+                    setDrawerOpen(false)
                   }}
                 >
-                  删除
-                </Button>
-              </ListItemButton>
+                  <ListItemText
+                    primary={p.title}
+                    secondary={`${p.item_count ?? 0} 题 · ${p.total_score ?? 0} 分${(p.unscored_count ?? 0) > 0 ? ` · 未设分 ${p.unscored_count}` : ''}`}
+                  />
+                  <Button
+                    size="small"
+                    color="error"
+                    disabled={!canDeletePaper}
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      // P0-1：先确认（显示将删除的题数），不再单击即 force 删除。
+                      setConfirmDeletePaper({ id: p.id, title: p.title, itemCount: p.item_count ?? 0 })
+                    }}
+                  >
+                    删除
+                  </Button>
+                </ListItemButton>
+              </Box>
             ))}
-          </List>
+          </AnimatedList>
           {(papersQ.data ?? []).length === 0 && !papersQ.isLoading && !papersQ.isError && (
             <EmptyState dense title="还没有试卷" description="在上方输入标题新建一份试卷。" />
           )}
