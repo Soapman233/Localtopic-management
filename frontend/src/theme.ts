@@ -1,4 +1,4 @@
-import { alpha, createTheme } from '@mui/material/styles'
+import { alpha, createTheme, type Theme } from '@mui/material/styles'
 
 // ── M3 动效令牌的类型补充 ──────────────────────────────────────────────────────
 // MUI 的 `transitions.duration` / `easing` 只声明了 M2 档位键（shortest…leavingScreen /
@@ -336,12 +336,29 @@ export function buildTheme(preferences?: { primary?: string; dark?: boolean }) {
       },
     },
     /**
-     * 未覆写各 variant 的字号：MUI 默认值已与 tokens.fontSize 对齐，
-     * 覆写会改变构建产出的 CSS（如 1.25rem → 20px），违背「视觉零变化」的要求。
+     * 排版（层次分明）：**只调字重/字距/行高，不改字号**。
+     * 此前这里刻意「零覆写」是为了视觉零变化；本轮应用户要求做视觉升级，故解除，
+     * 但字号仍不动——字号牵动大量紧凑布局（工具条、表格行高），收益低、风险高。
+     *
+     * - 标题 600 + 轻微负字距：层级更清晰（现代主流做法，大字号配负字距更紧凑精致）；
+     * - 正文行高 1.6–1.7：题干、说明等长文更易读；
+     * - `button.textTransform: 'none'`：现代 Web 惯例，去掉全大写（中文无大小写，
+     *   但英文标签如 DOCX / CSV 会被强行变形，且中文按钮两侧会被加出多余间距）。
      */
     typography: {
       fontFamily:
         "-apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', Roboto, Arial, sans-serif",
+      h1: { fontWeight: 600, letterSpacing: '-0.015em' },
+      h2: { fontWeight: 600, letterSpacing: '-0.01em' },
+      h3: { fontWeight: 600, letterSpacing: '-0.01em' },
+      h4: { fontWeight: 600 },
+      h5: { fontWeight: 600 },
+      h6: { fontWeight: 600 },
+      subtitle1: { fontWeight: 500, lineHeight: 1.5 },
+      subtitle2: { fontWeight: 500, lineHeight: 1.5 },
+      body1: { lineHeight: 1.7 },
+      body2: { lineHeight: 1.6 },
+      button: { textTransform: 'none', fontWeight: 500 },
     },
     components: {
       MuiButton: {
@@ -352,21 +369,27 @@ export function buildTheme(preferences?: { primary?: string; dark?: boolean }) {
         defaultProps: { disableElevation: true },
         styleOverrides: {
           /**
-           * 补回**键盘焦点指示**（L3 键盘 e2e 发现的真实缺陷）。
+           * **M3 标志性形状：胶囊（full = 999px）**。这是 Material 3 与现代 Google
+           * 产品（Gmail / Drive / Gemini）最可辨识的按钮语言，视觉收益最大的一条。
            *
-           * 根因：MUI `Button` 的焦点样式是 `&.Mui-focusVisible { boxShadow: shadows[6] }`
-           * （见 `@mui/material/Button/Button.js:114`），但 `disableElevation: true` 走的分支是
-           * `&.Mui-focusVisible { boxShadow: 'none' }`（同文件 :176）——**把焦点指示抹掉了**；
-           * 而 `ButtonBase` 又设了 `outline: 0`（`ButtonBase.js:51`）。
-           * 两者叠加 ⇒ **所有 MUI Button 的键盘焦点完全不可见**（实测 `outline: none 0px`、背景与阴影无变化）。
+           * 同时 `textTransform: 'none'`（见 typography.button 注释）。
            *
-           * 这里补一个明确的焦点环。用 `outline` 而非 `box-shadow`：不受 disableElevation 影响，
-           * 且不占据布局空间（`outlineOffset` 让它稍微外扩，视觉更清晰）。
+           * 加过渡：hover 时的底色/描边变化走 M3 短时长，不再瞬变。
            *
-           * ⚠️ 本规则是 M3 升级的**硬约束**：任何对 `disableElevation` / 阴影的改动都必须保留它。
+           * ⚠️ 焦点环是**硬约束**（见下），胶囊形状不得影响它。
            */
           root: ({ theme }) => ({
+            borderRadius: 999,
+            transition: theme.transitions.create(
+              ['background-color', 'border-color', 'box-shadow', 'color'],
+              { duration: theme.transitions.duration.short, easing: theme.transitions.easing.standard },
+            ),
             '&.Mui-focusVisible': {
+              // 🔴 焦点环（硬约束）：MUI Button 在 `disableElevation: true` 分支会把
+              //    `&.Mui-focusVisible { boxShadow }` 设为 none，而 ButtonBase 又 `outline: 0`
+              //    ——两者叠加会让**所有按钮的键盘焦点完全不可见**（键盘 e2e 实测）。
+              //    故必须用 `outline`（不受 disableElevation 影响、不占布局）补回。
+              //    任何对 disableElevation / 阴影的改动都必须保留它。
               outline: `2px solid ${theme.palette.primary.main}`,
               outlineOffset: 2,
             },
@@ -374,27 +397,54 @@ export function buildTheme(preferences?: { primary?: string; dark?: boolean }) {
         },
       },
       /**
-       * M3 不引入 surface tint（表面色调叠加）：它会改变 Paper 的**实际渲染色**，
-       * 而对比度门禁是按纯 `#FFFFFF` / `#1E1E1E` 计算的，叠加后实际文字对比度会低于门禁保证值。
-       * 故保持 `backgroundImage: 'none'`（同时去掉 MUI 深色模式的默认 overlay），
-       * M3 的「高度」改由上面减淡的 level-1 阴影 + 下面卡片的 1px 描边表达。
-       */
-      MuiPaper: { styleOverrides: { root: { backgroundImage: 'none' } } },
-      /**
-       * M3 tonal elevation 的「可辨识边界」落点。
-       *
-       * M3 的 **outlined card** 本就是「1px 描边、无高度」，本应用主流卡片（`QuestionCard` 等）
-       * 正是 `variant="outlined"`，已符合 M3，故**不动**；只给默认（elevation）卡片补 1px 描边，
-       * 让它在减淡阴影后仍与页面底色 `#F5F6F8` 有明确分界。
-       * 描边用 `palette.divider`，浅色/深色模式各自取到合适的半透明灰（深色下是白 12%），
-       * 且全局 `box-sizing: border-box`（CssBaseline）下不改变盒模型尺寸。
+       * M3 卡片（tonal elevation 的「可辨识边界」落点）：
+       * outlined 卡本就是「1px 描边、无高度」（主流卡片如 QuestionCard 即是），不动；
+       * 默认（elevation）卡片补 1px 描边，让它在减淡阴影后仍与页面底色有明确分界。
+       * 描边用 `palette.divider`（浅/深模式各取合适的半透明灰），不引入新颜色、不影响对比度门禁。
        */
       MuiCard: {
         styleOverrides: {
-          root: ({ ownerState, theme }: { ownerState: { variant?: string }; theme: { palette: { divider: string } } }) =>
-            ownerState.variant === 'outlined' ? {} : { border: `1px solid ${theme.palette.divider}` },
+          /**
+           * M3 卡片圆角用 **medium-plus（16dp）**——比基础 12 更大一级，卡片作为
+           * 「内容容器」理应比控件更圆润，这是现代卡片式设计（Notion/Linear/Gmail）的共识。
+           * 加过渡：hover 时的描边/阴影变化不再瞬变。
+           */
+          root: ({
+            ownerState,
+            theme,
+          }: {
+            ownerState: { variant?: string }
+            theme: Theme
+          }) => ({
+            borderRadius: 16,
+            transition: theme.transitions.create(['border-color', 'box-shadow'], {
+              duration: theme.transitions.duration.short,
+              easing: theme.transitions.easing.standard,
+            }),
+            ...(ownerState.variant === 'outlined'
+              ? {}
+              : { border: `1px solid ${theme.palette.divider}` }),
+          }),
         },
       },
+      /**
+       * 其余部件的圆角统一到 M3 档位，避免「卡片很圆、输入框很方」的割裂感：
+       * Paper.rounded 16 / Dialog 24（M3 extra-large 档）/ Alert 与输入框 12 / Tooltip 8。
+       */
+      MuiPaper: {
+        styleOverrides: {
+          root: { backgroundImage: 'none' },
+          rounded: { borderRadius: 16 },
+        },
+      },
+      MuiDialog: { styleOverrides: { paper: { borderRadius: 24 } } },
+      MuiAlert: { styleOverrides: { root: { borderRadius: 12 } } },
+      MuiOutlinedInput: { styleOverrides: { root: { borderRadius: 12 } } },
+      MuiTooltip: {
+        styleOverrides: { tooltip: { borderRadius: 8, fontSize: '0.75rem', padding: '6px 10px' } },
+      },
+      /** 表头加粗：扫描表格时先看到列含义（纯字重，无新增底色，不影响对比度）。 */
+      MuiTableCell: { styleOverrides: { head: { fontWeight: 600 } } },
       /**
        * M3 **状态层（state layer）**：用「内容色」按 8%（hover）/ 12%（focus / pressed）叠加，
        * 取代 M2 的 `action.hover`（仅 4%）。用 `text.primary` 而非主色：M3 的导航/列表项状态层

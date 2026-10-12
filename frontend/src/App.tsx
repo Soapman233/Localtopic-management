@@ -556,7 +556,13 @@ export default function App() {
         id="main-content"
         role="main"
         tabIndex={-1}
-        sx={{ flexGrow: 1, minWidth: 0, p: { xs: 1.5, md: 3 }, '&:focus': { outline: 'none' } }}
+        sx={{
+          flexGrow: 1,
+          minWidth: 0,
+          // 留白：桌面 32px、移动 16px。移动端宁窄勿宽——内容列太窄反而难读。
+          p: { xs: 2, sm: 3, md: 4 },
+          '&:focus': { outline: 'none' },
+        }}
       >
         <Toolbar variant="dense" />
         <HealthBanner />
