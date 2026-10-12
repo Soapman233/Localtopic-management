@@ -106,9 +106,12 @@
 - ⚠️ 视觉回归**不要用 sha256** 判断基线被换（同代码两次采集字节不一致）→ 一律用像素阈值（mean_diff / pct_gt32）。
 - 上线就绪度：单人本地基本就绪；10 人团队远未就绪（只绑 `127.0.0.1`、桥接串行、数据分发未定义、无监控/备份 SOP）。文档 `deliverables/上线就绪度评估-2026-10-11.md`。
 
-## 9. 仓库与 Git 现状（2026-10-12）
-- 远程 `git@github.com:Soapman233/Localtopic-management.git`；本地 `D:/Open-source project/Localtopic-management` 与 `origin/main` 同步于 `338583f`。
-- **误合并**：`6efac2c`（PR #1）把 `workbuddy/main-14dd9452` 的**便携化 / 自研导出**研究线合进 main，引入 **60 个文件**：`bank/latex2omml.py`、`bank/docx_writer.py`、`tests/test_latex2omml.py`、`tests/test_docx_writer.py`、`tools/md2pdf/md2pdf.py`、5 个 `spike/` 目录、29 份文档（`deliverables/` 20 + `outputs/handoff/` 9），并改 `.gitignore` + 2 个 memory 文件。
-- 合并后 main 自己的 13 个提交只动了 3 个文件（`2026-10-11.md`、`deliverables/gstack/*`）。
-- 该分支 tip `596c25c` **未合入 main**（12 个提交：导出引擎切 native、DOCX 导入 API、导入试卷页、便携打包等）。
+## 9. 仓库与 Git（2026-10-12：误合并已撤销）
+- 远程 `git@github.com:Soapman233/Localtopic-management.git`；本地与 `origin/main` 一致于 `e99390b`。
+- **误合并已撤销**：`6efac2c`（PR #1）曾把 `workbuddy/main-14dd9452` 的**便携化 / 自研导出**研究线合进 main（60 个文件：`bank/latex2omml.py`、`bank/docx_writer.py`、2 个测试、`tools/md2pdf/`、5 个 `spike/` 目录、29 份文档，并改 `.gitignore` + 2 个 memory 文件）。
+  → 2026-10-12 以 `git revert -m 1 6efac2c`（`e99390b`）**整体撤销**，未改写历史；`MEMORY.md` 冲突取 `--ours`（保留压缩版）；`2026-10-11.md` 移除合并带入的 166 行日志。
+  验证：`git diff 0ac33aa HEAD` 只剩 gstack 两文档 + 2 个 memory 文件。备份分支 `backup/pre-revert-2026-10-12`（**仅本地**，指向 `338583f`）。
+- 该分支 tip `596c25c` **从未合入 main**（12 个提交：导出引擎切 native、DOCX 导入 API、导入试卷页、便携打包等仍留在分支上）。
 - worktree：`C:/Users/SOAP/WorkBuddy/Worktrees/Localtopic-management/main-14dd9452`。
+- ⚠️ **测试基数口径**：后端 main 自身 **436** 项（撤销前含合并带入的 31 项 = 467）。**基数下降须逐项归因，不能只看数字是否相等。**
+- ⚠️ 用户报障时的前提可能是错的：曾称"按本地文件夹清理"，但本地与远程同提交。**先核实前提再动手。**
