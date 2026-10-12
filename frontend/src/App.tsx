@@ -403,7 +403,10 @@ export default function App() {
       </Box>
       <AppBar
         position="fixed"
-        sx={{ zIndex: (t) => t.zIndex.drawer + 1, bgcolor: 'primary.main' }}
+        // 底色/描边/文字色由主题的 `MuiAppBar` 统一接管（纸面白 + 底部分隔线）。
+        // 原先在此硬写 `bgcolor: 'primary.main'`，会让顶栏成为全页最重的色块，
+        // 与「内容为主角」的定位相悖，故移除。
+        sx={{ zIndex: (t) => t.zIndex.drawer + 1 }}
       >
         <Toolbar variant="dense" sx={{ gap: 1 }}>
           {isNarrowNav && (

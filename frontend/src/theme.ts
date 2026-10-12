@@ -453,13 +453,40 @@ export function buildTheme(preferences?: { primary?: string; dark?: boolean }) {
       MuiListItemButton: {
         styleOverrides: {
           root: ({ theme }) => ({
+            /**
+             * 导航项胶囊化 + 左右留边（截图里的标志性做法）：
+             * 选中项是一枚**圆角胶囊**，而不是通栏色块——通栏会让侧栏显得「糊成一片」。
+             * `mx` 留出 8px 让胶囊与侧栏边缘脱开，视觉更透气。
+             */
+            borderRadius: 10,
+            marginLeft: 8,
+            marginRight: 8,
+            width: 'calc(100% - 16px)',
             '&:hover': {
               backgroundColor: alpha(theme.palette.text.primary, 0.08),
               // 与 MUI 一致：触屏设备不保留 hover 底色，避免点按后「粘住」
               '@media (hover: none)': { backgroundColor: 'transparent' },
             },
             '&.Mui-focusVisible': { backgroundColor: alpha(theme.palette.text.primary, 0.12) },
-            '&.Mui-selected': { backgroundColor: alpha(theme.palette.primary.main, 0.12) },
+            /**
+             * 选中态：淡主色底 + **左侧 3px 主色强调条**（用 `::before` 绝对定位，
+             * 不占布局空间）。左侧强调条能在「同色系淡底」之上提供**非颜色**的定位线索，
+             * 对色觉障碍用户更友好。
+             */
+            '&.Mui-selected': {
+              backgroundColor: alpha(theme.palette.primary.main, 0.12),
+              position: 'relative',
+              '&::before': {
+                content: '""',
+                position: 'absolute',
+                left: 0,
+                top: '20%',
+                bottom: '20%',
+                width: 3,
+                borderRadius: 2,
+                backgroundColor: theme.palette.primary.main,
+              },
+            },
             '&.Mui-selected:hover': { backgroundColor: alpha(theme.palette.primary.main, 0.16) },
           }),
         },
@@ -482,7 +509,7 @@ export function buildTheme(preferences?: { primary?: string; dark?: boolean }) {
            * 仅对 success/warning/error 生效；`default`/`primary` 等走 MUI 原逻辑（已达标）。
            */
           root: ({ ownerState }: { ownerState: { variant?: string; color?: string } }) => {
-            const base = { borderRadius: CHIP_RADIUS }
+            const base = { borderRadius: CHIP_RADIUS, fontWeight: 500 }
             if (ownerState.variant !== 'filled') return base
             const fill: Partial<Record<string, string>> = {
               success: tokens.success,
@@ -491,6 +518,50 @@ export function buildTheme(preferences?: { primary?: string; dark?: boolean }) {
             }
             const bg = ownerState.color ? fill[ownerState.color] : undefined
             return bg ? { ...base, backgroundColor: bg, color: ON_VIVID_FILL } : base
+          },
+        },
+      },
+
+      // ══════════════════════════════════════════════════════════════════════
+      // 应用外壳（App Shell）——对齐参考截图的设计语言
+      //
+      // 截图的共同点：**白色/浅灰表面 + 蓝色强调 + 清晰的分隔线**，
+      // 而不是「大面积品牌色铺满」。故顶栏由实心主色改为**纸面白 + 底部分隔线**：
+      // 内容区（大量表格/题干）是主角，顶栏不该与它抢视觉重量。
+      //
+      // ⚠️ 改顶栏底色会牵动对比度门禁里 `["onSolid","primary",4.5]`（白字 on 主色底）——
+      //    该配对描述的是**主按钮**，顶栏不再是主色底，配对本身仍成立（主色未变）。
+      // ══════════════════════════════════════════════════════════════════════
+      MuiAppBar: {
+        defaultProps: { elevation: 0, color: 'default' },
+        styleOverrides: {
+          root: ({ theme }: { theme: Theme }) => ({
+            backgroundColor: theme.palette.background.paper,
+            color: theme.palette.text.primary,
+            backgroundImage: 'none',
+            borderBottom: `1px solid ${theme.palette.divider}`,
+          }),
+        },
+      },
+      /** 侧栏用页面底色（浅灰），与白色内容区形成**柔和**分界，替代重阴影。 */
+      MuiDrawer: {
+        styleOverrides: {
+          paper: ({ theme }: { theme: Theme }) => ({
+            backgroundColor: theme.palette.background.default,
+            backgroundImage: 'none',
+            borderRight: `1px solid ${theme.palette.divider}`,
+          }),
+        },
+      },
+      /** 导航分组标题：小号、加字距、弱化——只做「区域标签」不抢注意力。 */
+      MuiListSubheader: {
+        styleOverrides: {
+          root: {
+            fontSize: '0.6875rem',
+            fontWeight: 600,
+            letterSpacing: '0.06em',
+            textTransform: 'uppercase',
+            lineHeight: 2.2,
           },
         },
       },
