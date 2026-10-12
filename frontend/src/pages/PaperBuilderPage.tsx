@@ -1,7 +1,7 @@
 /** P3 双栏组卷工作台（左题库 / 右试卷）。
  *
  * 覆盖需求：P0-6（双栏组卷）、P0-7（题序调整/移除/设分/大题分组）、P0-8（实时汇总 + 无答案预警）、
- * P0-9（试卷元数据）、P0-10（试卷列表抽屉）、P1-10（拖拽加入）、快照锁定语义的 UI 表达、
+ * P0-9（试卷元数据）、P0-10（全局试卷管理入口）、P1-10（拖拽加入）、快照锁定语义的 UI 表达、
  * **P3 右栏「排版 / 清单」双视图**（默认排版，记忆上次）、**排版视图内可编辑**
  * （拖拽调序 / 点分值改分 / ✕ 删除）、顶部试卷切换器 + 导出抽屉。
  *
@@ -10,18 +10,14 @@
  * **强制预览门禁（§5-Q3）**：任何组卷编辑动作（加/删/调序/设分/大题增删改移/刷新快照/改元数据）
  * 成功后都会 `useUiStore.invalidatePreview(paperId)` → **重新锁定导出**。漏一个即等于门禁失效。
  */
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   Alert,
   Box,
   Button,
   CircularProgress,
-  Divider,
   Drawer,
-  List,
-  ListItemButton,
-  ListItemText,
   Pagination,
   Snackbar,
   Stack,
@@ -46,10 +42,9 @@ import {
   type DragEndEvent,
 } from '@dnd-kit/core'
 import { sortableKeyboardCoordinates } from '@dnd-kit/sortable'
-import { useNavigate } from 'react-router-dom'
+import { useLocation, useNavigate } from 'react-router-dom'
 import { FilterSidebar } from '../components/FilterSidebar'
 import { QuestionCard } from '../components/QuestionCard'
-import { ConfirmDialog } from '../components/ConfirmDialog'
 import { PaperPanel, type PaperActions } from '../components/PaperPanel'
 import { LivePreviewPanel } from '../components/LivePreviewPanel'
 import { ExportDrawer } from '../components/ExportDrawer'
@@ -60,11 +55,8 @@ import { useFacetsQuery, useSearchQuery } from '../hooks/useSearch'
 import {
   addQuestions,
   addSection,
-  createPaper,
-  deletePaper,
   deleteSection,
   getPaper,
-  listPapers,
   moveQuestion,
   moveSection,
   patchPaper,
@@ -76,11 +68,9 @@ import {
 } from '../api/papers'
 import { ExportDiagnosticsPanel, IssueDetails } from '../components/livePreview/ExportDiagnostics'
 import { getExportData } from '../api/export'
-import { recreatePaperCopy } from '../api/paperRestore'
 import { usePaperStore } from '../store/paperStore'
-import { usePermission } from '../hooks/usePermission'
+import { usePaperLibraryStore } from '../store/paperLibraryStore'
 import { useUiStore } from '../store/uiStore'
-import { useSettingsStore } from '../store/settingsStore'
 import { useQuestionFilters } from '../hooks/useQuestionFilters'
 import { ErrorCode, errorCodeOf, errorDataOf } from '../api/errors'
 import type { ExportDiagnostics } from '../api/types'
@@ -160,20 +150,30 @@ function usePaperMutations(paperId: number | null, onError: (error: unknown) => 
 /** P3 双栏组卷工作台。 */
 export default function PaperBuilderPage() {
   const navigate = useNavigate()
-  const qc = useQueryClient()
+  const location = useLocation()
+  const openPaperLibrary = usePaperLibraryStore(s => s.openPaperLibrary)
+  // 先捕获回程意图，再运行会同步 URL 的筛选 hook；不能等 effect 才读 state。
+  // 以 location entry 为单位消费，StrictMode 重跑 effect 也不会重复打开。
+  const returnIntent = useRef<{ key: string; paperId: number | null; search: string; state: Record<string, unknown>; consumed: boolean } | null>(null)
+  const routeState = location.state as Record<string, unknown> | null
+  if (routeState && Object.prototype.hasOwnProperty.call(routeState, 'openExportForPaperId') && returnIntent.current?.key !== location.key) {
+    const requestedId = routeState.openExportForPaperId
+    returnIntent.current = {
+      key: location.key,
+      paperId: typeof requestedId === 'number' && Number.isSafeInteger(requestedId) && requestedId > 0 ? requestedId : null,
+      search: location.search,
+      state: routeState,
+      consumed: false,
+    }
+  }
   const theme = useTheme()
   const { currentPaperId, targetSectionId, setCurrentPaperId, setTargetSectionId } = usePaperStore()
   const { strictKp, setStrictKp, builderView, setBuilderView } = useUiStore()
 
-  const [drawerOpen, setDrawerOpen] = useState(false)
-  const [newTitle, setNewTitle] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [errorDiagnostics, setErrorDiagnostics] = useState<ExportDiagnostics | null>(null)
-  const [exportOpen, setExportOpen] = useState(false)
+  const [exportOpen, setExportOpen] = useState(() => returnIntent.current?.paperId != null)
   const [undo, setUndo] = useState<{ msg: string; run: () => void } | null>(null)
-  // 删除试卷二次确认（P0-1）：单击不再直接 force 删除，必须先确认（显示将删除的题数）。
-  const [confirmDeletePaper, setConfirmDeletePaper] = useState<{ id: number; title: string; itemCount: number } | null>(null)
-
   // P0-3 响应式（断点统一）：窄屏用 MUI 标准断点 `<lg`（<1200px）折叠右栏，
   // **不再用 1439 魔法值**——否则 1366×768（教师笔记本主流分辨率）会被误判为窄屏，
   // 把默认「排版」视图折进默认关闭的抽屉，与《流程重构设计》Q8「默认排版视图」直接冲突。
@@ -198,20 +198,42 @@ export default function PaperBuilderPage() {
     queryParams,
     facetsParams,
     reset: resetFilters,
-  } = useQuestionFilters({ pageSize: PAGE_SIZE })
+  } = useQuestionFilters({
+    pageSize: PAGE_SIZE,
+    // 仅本挂载捕获过回程意图时锁存保留策略；包括非法意图的清理，普通组卷沿用 B0。
+    preserveLocation: returnIntent.current != null,
+  })
 
+  // 注册在筛选同步之后，清掉已消费字段，同时保留此次完整查询串与其他路由 state。
+  useEffect(() => {
+    const intent = returnIntent.current
+    if (!intent || intent.consumed) return
+    intent.consumed = true
+    if (intent.paperId != null) {
+      setCurrentPaperId(intent.paperId)
+      setTargetSectionId(null)
+      setExportOpen(true)
+    } else {
+      // 非法意图不沿用之前已打开的抽屉，防止继续请求旧卷导出数据。
+      setExportOpen(false)
+    }
+    const { openExportForPaperId: _consumed, ...remainingState } = intent.state
+    navigate({ pathname: '/builder', search: intent.search }, {
+      replace: true,
+      state: Object.keys(remainingState).length ? remainingState : null,
+    })
+  }, [location.key, navigate, setCurrentPaperId, setTargetSectionId])
+
+  // 首次渲染就使用指定卷，避免全局旧卷 A 的查询及抽屉短暂出现；不存在的 X 明确报错。
+  const paperId = returnIntent.current && !returnIntent.current.consumed && returnIntent.current.paperId != null
+    ? returnIntent.current.paperId
+    : currentPaperId
   const searchQ = useSearchQuery(queryParams)
   const facetsQ = useFacetsQuery(facetsParams)
   const paperQ = useQuery({
-    queryKey: qk.paper(currentPaperId),
-    queryFn: () => getPaper(currentPaperId as number),
-    enabled: currentPaperId != null,
-  })
-  const papersQ = useQuery({
-    queryKey: qk.papers(),
-    queryFn: () => listPapers(),
-    // 顶部切换器始终需要列表；抽屉打开时复用同一份缓存。
-    enabled: true,
+    queryKey: qk.paper(paperId),
+    queryFn: () => getPaper(paperId as number),
+    enabled: paperId != null,
   })
 
   // L6：`targetSectionId` 是**持久化**的——目标大题被删除后，它仍可能指向一个不存在的 section id，
@@ -221,17 +243,12 @@ export default function PaperBuilderPage() {
     usePaperStore.getState().validateTargetSection((paperQ.data?.sections ?? []).map((s) => s.id))
   }, [paperQ.data])
 
-  const paperId = currentPaperId
   const mut = usePaperMutations(paperId, e => {
     setError((e as Error).message)
     setErrorDiagnostics(errorCodeOf(e) === ErrorCode.ExportContentBlocked
       ? (errorDataOf(e) as ExportDiagnostics)
       : null)
   })
-
-  // 阶段 4：只读账号禁用「删除试卷」（比"点了才被拒"更好的体验）。
-  // ⚠️ 前端禁用只是体验层，**真正的强制在后端**。
-  const canDeletePaper = usePermission('paper.delete')
 
   // 门禁状态（响应式订阅，供顶部提示 / 诊断）。
   const previewFresh = useUiStore((s) => (paperId != null ? s.previewFresh[paperId] ?? false : false))
@@ -243,45 +260,6 @@ export default function PaperBuilderPage() {
     queryKey: qk.exportData(paperId, answerModeForPreview, paperQ.data?.template),
     queryFn: () => getExportData(paperId as number, answerModeForPreview, paperQ.data?.template),
     enabled: paperId != null && paperQ.data != null,
-  })
-
-  const createMut = useMutation({
-    // P0-2：新建试卷套用设置页的「默认模板」（此前该设置无消费方）。
-    mutationFn: (title: string) => createPaper({ title, template: useSettingsStore.getState().defaultTemplate }),
-    onSuccess: (p) => {
-      qc.invalidateQueries({ queryKey: qk.papers() })
-      setCurrentPaperId(p.id)
-      setNewTitle('')
-    },
-    onError: (e) => setError((e as Error).message),
-  })
-  const deleteMut = useMutation({
-    // ★ 先抓取整卷快照（供撤销重建），再删除；删除成功后提供「撤销」入口。
-    mutationFn: async (id: number) => {
-      const full = await getPaper(id)
-      await deletePaper(id, true)
-      return full
-    },
-    onSuccess: (full, id) => {
-      qc.invalidateQueries({ queryKey: qk.papers() })
-      if (currentPaperId === id) setCurrentPaperId(null)
-      // 撤销 = 重建同内容副本（新试卷 id）。后端无恢复接口，故如实标注为「副本」。
-      setUndo({
-        msg: `已删除试卷「${full.title}」（${full.items.length} 题）`,
-        run: () => {
-          void (async () => {
-            try {
-              const copy = await recreatePaperCopy(full)
-              qc.invalidateQueries({ queryKey: qk.papers() })
-              setCurrentPaperId(copy.id)
-            } catch (e) {
-              setError(`撤销（重建副本）失败：${(e as Error).message}`)
-            }
-          })()
-        },
-      })
-    },
-    onError: (e) => setError((e as Error).message),
   })
 
   // P1-2：补 KeyboardSensor（空格拾起 / 方向键移动 / 空格放下），使拖拽调序键盘可达。
@@ -418,10 +396,12 @@ export default function PaperBuilderPage() {
           {paperId == null ? (
             <EmptyState
               title="还没有试卷"
-              description="点右上角「试卷列表」新建或选择一份试卷。"
-              actionLabel="打开试卷列表"
-              onAction={() => setDrawerOpen(true)}
+              description="点「试卷管理」新建或选择一份试卷。"
+              actionLabel="试卷管理"
+              onAction={openPaperLibrary}
             />
+          ) : paperQ.isError ? (
+            <ErrorState error={paperQ.error} title="指定试卷加载失败" onRetry={() => paperQ.refetch()} />
           ) : exportDataQ.isLoading ? (
             <LoadingState label="加载结构预览…" />
           ) : exportDataQ.isError ? (
@@ -452,8 +432,7 @@ export default function PaperBuilderPage() {
           actions={actions}
           targetSectionId={targetSectionId}
           onTargetSectionChange={setTargetSectionId}
-          onOpenDrawer={() => setDrawerOpen(true)}
-          onGoExport={() => paperId != null && setExportOpen(true)}
+          onOpenDrawer={openPaperLibrary}
           onOpenDetail={(qid) => navigate(`/question/${qid}`)}
         />
       )}
@@ -627,89 +606,6 @@ export default function PaperBuilderPage() {
           </Box>
         </Drawer>
       )}
-
-      {/* 试卷管理抽屉（P0-10：新建 / 删除 + 撤销）。
-          与全局「切换试卷」区分：这里多了**删除与撤销**，命名体现能力差异。 */}
-      <Drawer anchor="left" open={drawerOpen} onClose={() => setDrawerOpen(false)}
-        PaperProps={{ role: 'dialog', 'aria-labelledby': 'paper-manage-drawer-title' }}>
-        <Box sx={{ width: 320, p: 2 }}>
-          {/* 同上：避免被固定顶栏遮住标题与新建表单。 */}
-          <Toolbar variant="dense" />
-          <Typography id="paper-manage-drawer-title" variant="subtitle1" component="h2" gutterBottom>
-            试卷管理
-          </Typography>
-          <Stack direction="row" spacing={1} sx={{ mb: 1 }}>
-            <TextField
-              size="small"
-              label="新建试卷标题"
-              value={newTitle}
-              onChange={(e) => setNewTitle(e.target.value)}
-              fullWidth
-            />
-            <Button variant="contained" onClick={() => createMut.mutate(newTitle.trim() || '未命名试卷')}>
-              新建
-            </Button>
-          </Stack>
-          <Divider sx={{ my: 1 }} />
-          {papersQ.isLoading && <LoadingState dense label="加载中…" />}
-          {papersQ.isError && (
-            <ErrorState dense error={papersQ.error} title="加载失败" onRetry={() => papersQ.refetch()} />
-          )}
-          <List dense>
-            {(papersQ.data ?? []).map((p) => (
-              <ListItemButton
-                key={p.id}
-                selected={p.id === currentPaperId}
-                onClick={() => {
-                  setCurrentPaperId(p.id)
-                  setTargetSectionId(null)
-                  setDrawerOpen(false)
-                }}
-              >
-                <ListItemText
-                  primary={p.title}
-                  secondary={`${p.item_count ?? 0} 题 · ${p.total_score ?? 0} 分${(p.unscored_count ?? 0) > 0 ? ` · 未设分 ${p.unscored_count}` : ''}`}
-                />
-                <Button
-                  size="small"
-                  color="error"
-                  disabled={!canDeletePaper}
-                  onClick={(e) => {
-                    e.stopPropagation()
-                    // P0-1：先确认（显示将删除的题数），不再单击即 force 删除。
-                    setConfirmDeletePaper({ id: p.id, title: p.title, itemCount: p.item_count ?? 0 })
-                  }}
-                >
-                  删除
-                </Button>
-              </ListItemButton>
-            ))}
-          </List>
-          {(papersQ.data ?? []).length === 0 && !papersQ.isLoading && !papersQ.isError && (
-            <EmptyState dense title="还没有试卷" description="在上方输入标题新建一份试卷。" />
-          )}
-        </Box>
-      </Drawer>
-
-      {/* 删除试卷二次确认（P0-1）：显示将删除的题数；删除后可用「撤销」重建同内容副本 */}
-      <ConfirmDialog
-        open={confirmDeletePaper !== null}
-        title="删除试卷确认"
-        impactPrefix="将删除"
-        impactCount={confirmDeletePaper?.itemCount ?? 0}
-        impactLabel="道题"
-        confirmText="确认删除"
-        confirmColor="error"
-        loading={deleteMut.isPending}
-        onCancel={() => setConfirmDeletePaper(null)}
-        onConfirm={() => {
-          if (confirmDeletePaper) deleteMut.mutate(confirmDeletePaper.id)
-          setConfirmDeletePaper(null)
-        }}
-      >
-        将删除试卷「{confirmDeletePaper?.title}」及其 {confirmDeletePaper?.itemCount ?? 0} 道题（题目本身仍保留在题库中）。
-        删除后可在提示条上点「撤销」重建一份同内容副本（新试卷）；若错过提示则无法恢复。
-      </ConfirmDialog>
 
       {/* 导出抽屉（P2 组件；与导出页共用同一份 uiStore 门禁状态） */}
       {paperId != null && (

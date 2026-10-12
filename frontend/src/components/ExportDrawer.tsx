@@ -48,7 +48,6 @@ import { describeEnvFailure, useExportGate, type EnvFailure } from '../hooks/use
 import {
   GLOSSARY,
   describeExportGate,
-  describeExportGateAction,
   describeJobTimeout,
   describePreviewRetention,
   describePreviewReused,
@@ -145,6 +144,7 @@ function ExportDrawerForPaper(props: ExportDrawerProps) {
           </IconButton>
         </Stack>
 
+        {paperQ.isError && <ErrorState error={paperQ.error} title="指定试卷加载失败" onRetry={() => paperQ.refetch()} />}
         {exportDataQ.isFetching && <Alert severity="info">正在检查当前锁定内容…</Alert>}
         {exportDataQ.isError && <Alert severity="error" action={<Button onClick={refreshDiagnostics}>重试</Button>}>内容检查失败：{(exportDataQ.error as Error).message}</Alert>}
         {exportDataQ.data && <ExportDiagnosticsPanel paperId={paperId} data={exportDataQ.data} onRevised={id => { props.onRevised?.(id); usePaperStore.getState().setCurrentPaperId(id); onClose() }} />}
@@ -156,19 +156,6 @@ function ExportDrawerForPaper(props: ExportDrawerProps) {
             <Chip size="small" color="success" variant="outlined" label={describeExportGate('ready')} />
           ) : (
             <Chip size="small" color="default" variant="outlined" label={describeExportGate('locked')} />
-          )}
-          {/* 锁定态：直接把「生成预览」按钮摆在门禁提示旁，老师无需自己找预览入口。 */}
-          {gateState === 'locked' && (
-            <Button
-              size="small"
-              variant="contained"
-              startIcon={<RefreshIcon />}
-              disabled={previewing || !contentAllowed}
-              onClick={() => runPreview()}
-              data-testid="gate-generate-preview"
-            >
-              {describeExportGateAction('locked')}
-            </Button>
           )}
           {previewCached && <Chip size="small" color="success" variant="outlined" label={describePreviewReused()} />}
         </Stack>
@@ -318,7 +305,6 @@ function ExportDrawerForPaper(props: ExportDrawerProps) {
               <ErrorState
                 error={new Error(previewError)}
                 title="预览生成失败"
-                onRetry={() => runPreview()}
               />
             </Box>
           )}
@@ -345,8 +331,6 @@ function ExportDrawerForPaper(props: ExportDrawerProps) {
                     ? '生成后在此展示 A4 分页预览。'
                     : '请先处理上方阻断项，通过内容检查后可生成预览。'
                 }
-                actionLabel={contentAllowed ? GLOSSARY.generatePreview : undefined}
-                onAction={contentAllowed ? () => runPreview() : undefined}
               />
             )
           )}

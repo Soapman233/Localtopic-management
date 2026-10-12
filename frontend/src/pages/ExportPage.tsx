@@ -1,24 +1,14 @@
-/** P4 导出页（先预览再导出）。
- *
- * 覆盖需求：P0-11（导出预览：分页/卷头/题号重排/分值/答案区/无答案标注）、
- * P0-12（学生版/答案解析版/仅答案 × DOCX/PDF × 模板）、P2-6（导出历史记录：本页展示本次产物路径）。
- *
- * 两条预览路径：
- * 1. 「像素预览」：调 `/api/papers/{id}/preview` → 轮询作业 → 展示 `page_N.png`（与导出同一渲染器）；
- * 2. 「内容结构预览」：读 `/api/papers/{id}/export-data`，逐题列出题号/分值/题干/答案区/无答案标注。
- *
- * ★ R1 重构：像素预览 + 门禁 + 导出逻辑已抽到 `hooks/useExportGate.ts`，与导出抽屉共用
- *   **唯一实现**（此前导出页的环境失败判定漏了 `editor_sdk`，导致 DOCX 导出被永久锁死）。
+/** 全屏试卷预览辅助页。
+ * 保留双预览、答案模式、模板和只读诊断；导出提交及修订仅在工作台抽屉操作。
+ * useExportGate 的作业状态属于当前组件，不能在此承诺历史或抽屉的本次结果。
  */
 import { useMemo, useState } from 'react'
 import {
   Alert,
   Box,
   Button,
-  Checkbox,
   Chip,
   Divider,
-  FormControlLabel,
   MenuItem,
   Paper,
   Select,
@@ -28,25 +18,22 @@ import {
   Typography,
 } from '@mui/material'
 import PreviewIcon from '@mui/icons-material/Preview'
-import FileDownloadIcon from '@mui/icons-material/FileDownload'
 import WarningAmberIcon from '@mui/icons-material/WarningAmber'
 import ArrowBackIcon from '@mui/icons-material/ArrowBack'
-import { useNavigate, useSearchParams } from 'react-router-dom'
+import { useLocation, useNavigate, useSearchParams } from 'react-router-dom'
 import { LivePreviewPanel } from '../components/LivePreviewPanel'
 import { ExportDiagnosticsPanel } from '../components/livePreview/ExportDiagnostics'
 import { PreviewViewer } from '../components/PreviewViewer'
-import { ExportResultPanel } from '../components/ExportResultPanel'
 import { EmptyState } from '../components/EmptyState'
 import { ErrorState } from '../components/ErrorState'
 import { LoadingState } from '../components/LoadingState'
 import { ProgressStages } from '../components/ProgressStages'
 import { usePaperStore } from '../store/paperStore'
+import { usePaperLibraryStore } from '../store/paperLibraryStore'
 import { describeEnvFailure, useExportGate } from '../hooks/useExportGate'
 import {
   GLOSSARY,
   describeExportGate,
-  describeExportGateAction,
-  describeJobTimeout,
   describePreviewRetention,
   describePreviewReused,
   exportGateState,
@@ -57,15 +44,19 @@ const TEMPLATES = ['考试', '测验', '作业']
 
 /** P4 导出页。 */
 export default function ExportPage() {
-  const [params, setParams] = useSearchParams()
+  const [params] = useSearchParams()
   const { currentPaperId } = usePaperStore()
-  const paperId = Number(params.get('paper_id')) || currentPaperId || 0
-  return <PaperExportPage key={paperId} paperId={paperId} onRevised={id => setParams({ paper_id: String(id) })} />
+  const requested = params.has('paper_id') ? Number(params.get('paper_id')) : currentPaperId
+  // 指定卷非法或不存在时不能退回全局旧卷，避免预览及回程误用另一份试卷。
+  const paperId = typeof requested === 'number' && Number.isSafeInteger(requested) && requested > 0 ? requested : 0
+  return <PaperExportPage key={paperId} paperId={paperId} />
 }
 
-function PaperExportPage({ paperId, onRevised }: { paperId: number; onRevised: (id: number) => void }) {
+function PaperExportPage({ paperId }: { paperId: number }) {
   const [tab, setTab] = useState(0)
   const navigate = useNavigate()
+  const location = useLocation()
+  const openPaperLibrary = usePaperLibraryStore(s => s.openPaperLibrary)
 
   // 与导出抽屉**共用同一份门禁逻辑与 uiStore 状态**（§Q7）。
   const gate = useExportGate({ paperId, enabled: paperId > 0, autoPreview: false })
@@ -80,7 +71,6 @@ function PaperExportPage({ paperId, onRevised }: { paperId: number; onRevised: (
     degradedOk,
     unlocked,
     refreshDiagnostics,
-    confirmDegraded,
     previewPages,
     previewCached,
     previewing,
@@ -90,18 +80,6 @@ function PaperExportPage({ paperId, onRevised }: { paperId: number; onRevised: (
     runPreview,
     previewStages,
     previewStage,
-    exportMut,
-    exportJob,
-    exportResult,
-    exportDisabled,
-    exportHint,
-    exportFormats,
-    setExportFormats,
-    exportStages,
-    exportStage,
-    exportRunning,
-    exportElapsed,
-    exportTimedOut,
   } = gate
 
   // 门禁三态 key 与文案**唯一来源**：与导出抽屉共用 `exportGateState` + `describeExportGate`，
@@ -120,11 +98,13 @@ function PaperExportPage({ paperId, onRevised }: { paperId: number; onRevised: (
     return (
       <Box>
         <Typography variant="h6" component="h1" gutterBottom>
-          导出
+          试卷预览
         </Typography>
         <EmptyState
           title="尚未选择试卷"
-          description="请先在「组卷」页选择一份试卷，或从组卷页点击「导出」进入。"
+          description="请在「试卷管理」选择一份试卷。"
+          actionLabel="试卷管理"
+          onAction={openPaperLibrary}
         />
       </Box>
     )
@@ -142,7 +122,7 @@ function PaperExportPage({ paperId, onRevised }: { paperId: number; onRevised: (
     <Box sx={{ maxWidth: 1200 }}>
       <Stack direction="row" spacing={1} alignItems="center" flexWrap="wrap" useFlexGap sx={{ mb: 0.5 }}>
         <Typography variant="h6" component="h1">
-          导出中心 · {paperQ.data?.title ?? `试卷 #${paperId}`}
+          试卷预览 · {paperQ.data?.title ?? `试卷 #${paperId}`}
         </Typography>
         {/* 三态文案与导出抽屉**同源**（exportGateState + describeExportGate）。 */}
         {gateState === 'degraded' ? (
@@ -152,13 +132,13 @@ function PaperExportPage({ paperId, onRevised }: { paperId: number; onRevised: (
         ) : (
           <Chip size="small" variant="outlined" label={describeExportGate('locked')} />
         )}
-        {/* 单一入口原则：导出抽屉才是组卷流程里的**唯一**导出入口；本页定位「全屏预览 / 导出历史」。 */}
+        {/* 一次性回程意图由工作台消费；不通过会被筛选同步覆盖的查询参数触发导出。 */}
         <Box sx={{ flex: 1 }} />
         <Button
           size="small"
           variant="text"
           startIcon={<ArrowBackIcon />}
-          onClick={() => navigate('/builder')}
+          onClick={() => navigate({ pathname: '/builder', search: location.search }, { state: { ...(location.state ?? {}), openExportForPaperId: paperId } })}
           data-testid="back-to-builder"
         >
           回到组卷工作台
@@ -174,6 +154,7 @@ function PaperExportPage({ paperId, onRevised }: { paperId: number; onRevised: (
         </Stack>
       )}
 
+      {paperQ.isError && <ErrorState error={paperQ.error} title="指定试卷加载失败" onRetry={() => paperQ.refetch()} />}
       {exportDataQ.isFetching && <Alert severity="info">正在检查当前锁定内容…</Alert>}
       {exportDataQ.isError && (
         <ErrorState
@@ -182,17 +163,14 @@ function PaperExportPage({ paperId, onRevised }: { paperId: number; onRevised: (
           onRetry={refreshDiagnostics}
         />
       )}
-      {exportDataQ.data && <ExportDiagnosticsPanel paperId={paperId} data={exportDataQ.data} onRevised={onRevised} />}
+      {exportDataQ.data && <ExportDiagnosticsPanel paperId={paperId} data={exportDataQ.data} readOnly />}
       {envFail !== null && contentAllowed && (
         <Alert severity="warning" sx={{ mb: 1 }}>
-          当前环境无法生成像素预览（原因：{describeEnvFailure(envFail)}）。请查看下方结构预览后确认。
+          当前环境无法生成像素预览（原因：{describeEnvFailure(envFail)}）。请查看下方结构预览，回到工作台后进行导出确认。
           <Button onClick={() => setTab(1)}>查看当前结构预览</Button>
-          <Button disabled={tab !== 1 || degradedOk} onClick={() => { confirmDegraded(); setExportFormats({ pdf: false }) }}>
-            确认当前结构预览并允许DOCX导出
-          </Button>
         </Alert>
       )}
-      {/* 导出选项（P0-12） */}
+      {/* 预览模式及模板只影响当前预览，不写回试卷。 */}
       <Paper variant="outlined" sx={{ p: 2, mb: 2 }}>
         <Stack direction="row" spacing={2} flexWrap="wrap" useFlexGap alignItems="center">
           <Box>
@@ -219,15 +197,6 @@ function PaperExportPage({ paperId, onRevised }: { paperId: number; onRevised: (
               ))}
             </Select>
           </Box>
-          <Box>
-            <Typography variant="caption" color="text.secondary">
-              格式
-            </Typography>
-            <Stack direction="row">
-              <FormControlLabel control={<Checkbox size="small" checked={exportFormats.docx} onChange={(e) => setExportFormats({ docx: e.target.checked })} />} label="DOCX" />
-              <FormControlLabel control={<Checkbox size="small" checked={exportFormats.pdf} onChange={(e) => setExportFormats({ pdf: e.target.checked })} />} label="PDF" />
-            </Stack>
-          </Box>
           <Box sx={{ flex: 1 }} />
           <Button
             variant="outlined"
@@ -237,39 +206,8 @@ function PaperExportPage({ paperId, onRevised }: { paperId: number; onRevised: (
           >
             {previewPages.length > 0 ? GLOSSARY.regeneratePreview : GLOSSARY.generatePreview}
           </Button>
-          <Button
-            variant="contained"
-            startIcon={<FileDownloadIcon />}
-            disabled={exportDisabled}
-            onClick={() => exportMut.mutate()}
-            data-testid="export-page-export-button"
-          >
-            导出
-          </Button>
         </Stack>
-        {/* 锁定态：与抽屉同源的**可执行下一步**（生成预览）+「刷新即锁」解释。 */}
-        {gateState === 'locked' && (
-          <Stack direction="row" spacing={1} alignItems="center" flexWrap="wrap" useFlexGap sx={{ mt: 1 }}>
-            <Button
-              size="small"
-              variant="contained"
-              startIcon={<PreviewIcon />}
-              disabled={!contentAllowed || previewing}
-              onClick={runPreview}
-              data-testid="gate-generate-preview"
-            >
-              {describeExportGateAction('locked')}
-            </Button>
-            <Typography variant="caption" color="text.secondary">
-              {describePreviewRetention()}
-            </Typography>
-          </Stack>
-        )}
-        {exportHint && gateState !== 'locked' && (
-          <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 1 }}>
-            {exportHint}
-          </Typography>
-        )}
+        {gateState === 'locked' && <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 1 }}>{describePreviewRetention()}</Typography>}
         {paperQ.data?.answer_mode === '答案解析版' && noAnswerCount > 0 && (
           <Alert severity="warning" sx={{ mt: 1 }}>
             当前为「答案解析版」，但卷中有 {noAnswerCount} 题无答案；导出时这些题只会显示题干（库中无答案的题不会被硬造）。
@@ -298,7 +236,6 @@ function PaperExportPage({ paperId, onRevised }: { paperId: number; onRevised: (
                 <ErrorState
                   error={new Error(previewError)}
                   title="预览失败"
-                  onRetry={runPreview}
                 />
               </Box>
             )}
@@ -326,8 +263,6 @@ function PaperExportPage({ paperId, onRevised }: { paperId: number; onRevised: (
                 <EmptyState
                   title="还没有像素预览"
                   description="生成后在此展示 A4 分页预览（卷头 / 题号 / 分值 / 答案区）。"
-                  actionLabel={contentAllowed ? GLOSSARY.generatePreview : undefined}
-                  onAction={contentAllowed ? runPreview : undefined}
                 />
               )
             )}
@@ -359,36 +294,6 @@ function PaperExportPage({ paperId, onRevised }: { paperId: number; onRevised: (
           </Box>
         )}
       </Paper>
-
-      {/* 导出结果（P2-6 导出历史记录：本页展示本次产物） */}
-      {(exportMut.isError || exportJob.data?.status === 'error' || exportResult || exportRunning || exportMut.isPending || exportTimedOut) && (
-        <Paper variant="outlined" sx={{ p: 2, mt: 2 }}>
-          <Typography variant="subtitle2" component="h2" gutterBottom>
-            导出结果
-          </Typography>
-          {exportMut.isError && (
-            <ErrorState
-              error={exportMut.error}
-              title="导出请求失败"
-              onRetry={() => exportMut.mutate()}
-            />
-          )}
-          {exportJob.data?.status === 'error' && (
-            <ErrorState error={new Error(exportJob.data.error || '导出失败')} title="导出失败" />
-          )}
-          {(exportRunning || exportMut.isPending) && (
-            // L4：导出阶段（内容检查→渲染文档→写出 DOCX/PDF），**前端推断**，后端不上报阶段名。
-            <ProgressStages stages={exportStages} currentStage={exportStage} elapsedSec={exportElapsed} title="正在导出" />
-          )}
-          {exportTimedOut && (
-            // L5 接线：作业超时不再无限转圈，给出可重试出路。
-            <ErrorState error={new Error(describeJobTimeout())} title="导出超时" onRetry={() => exportMut.mutate()} />
-          )}
-          {exportResult && (
-            <ExportResultPanel result={exportResult} />
-          )}
-        </Paper>
-      )}
 
       <Divider sx={{ my: 2 }} />
       <Typography variant="caption" color="text.secondary">

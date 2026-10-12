@@ -208,15 +208,13 @@ test('recreatePaperCopy 按原大题/题序/分值/归属逐条重建（撤销�
 // 结构性回归护栏（无 DOM 环境；配合人工验收）
 // ---------------------------------------------------------------------------
 test('护栏：删除试卷必须经确认框（显示题数），不再单击 force 删除（P0-1）', () => {
-  const src = readSource('src/pages/PaperBuilderPage.tsx')
-  // 删除按钮打开确认框，而不是直接 mutate。
-  assert.match(src, /setConfirmDeletePaper\(\{ id: p\.id/)
-  // 真正删除只在确认回调里触发。
-  assert.match(src, /if \(confirmDeletePaper\) deleteMut\.mutate\(confirmDeletePaper\.id\)/)
-  // 确认框展示将删除的题数。
-  assert.match(src, /impactCount=\{confirmDeletePaper\?\.itemCount/)
-  // 抽屉里的删除按钮不再内联调用 deleteMut。
-  assert.doesNotMatch(src, /e\.stopPropagation\(\)\s*\n\s*deleteMut\.mutate\(p\.id\)/)
+  const src = readSource('src/components/PaperLibraryDrawer.tsx')
+  // 删除先读取整卷，按钮只启动读取；确认框才触发删除，题数来自整卷而非列表。
+  assert.match(src, /onClick=\{\(\) => readMut\.mutate\(paper\.id\)\}/)
+  assert.match(src, /onConfirm=\{\(\) => \{ if \(confirmation && !deleteMut\.isPending\) deleteMut\.mutate\(confirmation\)/)
+  assert.match(src, /impactCount=\{confirmation\?\.items\.length/)
+  assert.doesNotMatch(src, /onClick=\{\(\) => deleteMut\.mutate\(paper\.id\)/)
+
 })
 
 test('护栏：删除大题必须经确认框（P0-1）', () => {

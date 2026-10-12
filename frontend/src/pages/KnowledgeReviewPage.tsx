@@ -56,7 +56,10 @@ const STATUS_TABS: { key: string; label: string }[] = [
 ]
 
 /** P5 知识点复核页。 */
-export default function KnowledgeReviewPage() {
+/** 嵌入维护父页时主标题为 h2；独立使用保留 h1，不改变视觉排版。 */
+export default function KnowledgeReviewPage({ headingLevel = 1 }: { headingLevel?: 1 | 2 } = {}) {
+  const pageHeading = headingLevel === 1 ? 'h1' : 'h2'
+  const sectionHeading = headingLevel === 1 ? 'h2' : 'h3'
   const navigate = useNavigate()
   const qc = useQueryClient()
   const fileRef = useRef<HTMLInputElement>(null)
@@ -146,7 +149,7 @@ export default function KnowledgeReviewPage() {
   return (
     <Box>
       <Stack direction="row" alignItems="center" spacing={2} sx={{ mb: 1 }} flexWrap="wrap" useFlexGap>
-        <Typography variant="h6" component="h1">知识点复核</Typography>
+        <Typography variant="h6" component={pageHeading}>知识点复核</Typography>
         <Chip size="small" color="warning" variant="outlined" label={`待复核 ${(counts['待复核'] ?? 0).toLocaleString('zh-CN')}`} />
         <Chip size="small" color="success" variant="outlined" label={`已确认 ${(counts['已确认'] ?? 0).toLocaleString('zh-CN')}`} />
         <Chip size="small" label={`已否决 ${(counts['已否决'] ?? 0).toLocaleString('zh-CN')}`} />
@@ -272,7 +275,7 @@ export default function KnowledgeReviewPage() {
           ) : (
             <Paper variant="outlined" sx={{ p: 2 }}>
               <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 1 }} flexWrap="wrap" useFlexGap>
-                <Typography variant="subtitle1" component="h2" fontWeight={600}>
+                <Typography variant="subtitle1" component={sectionHeading} fontWeight={600}>
                   {selected}
                 </Typography>
                 {selectedRow && (

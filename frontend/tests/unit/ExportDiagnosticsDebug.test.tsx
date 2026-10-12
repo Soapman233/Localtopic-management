@@ -7,7 +7,7 @@
  *
  * 开启 debug（`?debug=1`）后，原始字段才出现在「给技术人员的信息」折叠区里。
  */
-import { describe, it, expect, afterEach } from 'vitest'
+import { describe, it, expect, afterEach, vi } from 'vitest'
 import type { ReactElement } from 'react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import type { ExportIssue, ExportPayload } from '../../src/api/types'
@@ -157,5 +157,23 @@ describe('ExportDiagnosticsPanel 默认不泄露技术字段（P0-1）', () => {
     expect(text).toContain('当前模式内容被阻断')
     expect(text).toContain('导出前需要处理的问题')
     expect(text).not.toContain('修订候选')
+  })
+})
+
+
+/** B1 只读辅助：保留结论与来源，但不挂载修订控件或产生写请求。 */
+describe('B1 诊断只读模式', () => {
+  it('readOnly 无候选按钮、Dialog及请求，默认模式仍保留候选入口', () => {
+    const request = vi.spyOn(globalThis, 'fetch')
+    const view = renderPanel(<ExportDiagnosticsPanel paperId={7} data={payload} readOnly />)
+    expect(view.container.textContent).toContain('当前模式内容被阻断')
+    expect(view.container.textContent).toContain('浮力单元测试.docx')
+    expect(view.container.querySelector('button')).toBeNull()
+    expect(document.querySelector('[role=dialog]')).toBeNull()
+    expect(request).not.toHaveBeenCalled()
+    view.unmount()
+    const editable = renderPanel(<ExportDiagnosticsPanel paperId={7} data={payload} />)
+    expect(editable.container.querySelector('button')).not.toBeNull()
+    request.mockRestore()
   })
 })

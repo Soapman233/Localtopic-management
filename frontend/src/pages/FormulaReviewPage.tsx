@@ -66,7 +66,9 @@ const STATUS_HINT: Record<string, string> = {
 }
 
 /** P6 待复核公式队列页。 */
-export default function FormulaReviewPage() {
+/** 嵌入维护父页时主标题为 h2；独立使用保留 h1，不改变视觉排版。 */
+export default function FormulaReviewPage({ headingLevel = 1 }: { headingLevel?: 1 | 2 } = {}) {
+  const pageHeading = headingLevel === 1 ? 'h1' : 'h2'
   const navigate = useNavigate()
   const qc = useQueryClient()
 
@@ -124,7 +126,7 @@ export default function FormulaReviewPage() {
   return (
     <Box>
       <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 1 }} flexWrap="wrap" useFlexGap>
-        <Typography variant="h6" component="h1">待复核公式队列</Typography>
+        <Typography variant="h6" component={pageHeading}>待复核公式队列</Typography>
         <Chip size="small" color="warning" label={`待处理 ${(summary?.open ?? 0).toLocaleString('zh-CN')}`} />
         <Chip size="small" color="success" variant="outlined" label={`已处理 ${(summary?.resolved ?? 0).toLocaleString('zh-CN')}`} />
         <Chip size="small" variant="outlined" label={`总计 ${total.toLocaleString('zh-CN')}`} />
@@ -156,7 +158,7 @@ export default function FormulaReviewPage() {
 
       <Paper variant="outlined" sx={{ p: 2 }}>
         <Stack direction="row" alignItems="center" sx={{ mb: 1 }} flexWrap="wrap" useFlexGap>
-          <Tabs value={tab} onChange={(_e, v) => { setTab(v); setPage(1) }}>
+          <Tabs aria-label="公式复核状态" value={tab} onChange={(_e, v) => { setTab(v); setPage(1) }}>
             {tabs.map((t) => (
               <Tab
                 key={t.key}

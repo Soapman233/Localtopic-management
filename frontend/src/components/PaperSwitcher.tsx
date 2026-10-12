@@ -4,7 +4,7 @@
  * 原仅出现在组卷工作台顶部，其它页面要换试卷必须先回组卷页；现提升到全局 `AppBar`，
  * 让**任意页面**都能一键切换 / 新建试卷。
  *  - 下拉一键切换当前试卷，每项显示「题数 · 总分 · 未设分」；
- *  - 保留「试卷列表」入口（新建 / 选择）。
+ *  - 保留「试卷管理」入口（新建 / 选择）。
  *
  * 仅承载 UI 选择，数据由父级（react-query）提供；**不缓存整卷内容**（沿用 paperStore 约定）。
  * 因宿主是深色 `primary.main` 顶栏，文本/描边统一用 `inherit`（白色）保证对比度。
@@ -14,7 +14,7 @@ import ListAltIcon from '@mui/icons-material/ListAlt'
 import type { Paper } from '../api/types'
 
 export interface PaperSwitcherProps {
-  /** 试卷列表（含题数 / 总分 / 未设分统计）。 */
+  /** 试卷管理（含题数 / 总分 / 未设分统计）。 */
   papers: Paper[]
   currentPaperId: number | null
   onSwitch: (id: number) => void
@@ -71,14 +71,14 @@ export function PaperSwitcher({ papers, currentPaperId, onSwitch, onOpenList, co
         </Box>
       )}
       {compact ? (
-        <IconButton size="small" color="inherit" aria-label="试卷列表" onClick={onOpenList} data-testid="open-paper-list">
+        <IconButton size="small" color="inherit" aria-label="试卷管理" onClick={onOpenList} data-testid="open-paper-list">
           <ListAltIcon fontSize="small" />
         </IconButton>
       ) : (
         <>
           <Box sx={{ flex: 1 }} />
           <Button size="small" color="inherit" startIcon={<ListAltIcon />} onClick={onOpenList}>
-            试卷列表
+            试卷管理
           </Button>
         </>
       )}

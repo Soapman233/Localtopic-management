@@ -273,7 +273,9 @@ function SourceDetailDialog({
 }
 
 /** P7 来源文件管理页。 */
-export default function SourcesPage() {
+/** 嵌入维护父页时主标题为 h2；独立使用保留 h1，不改变视觉排版。 */
+export default function SourcesPage({ headingLevel = 1 }: { headingLevel?: 1 | 2 } = {}) {
+  const pageHeading = headingLevel === 1 ? 'h1' : 'h2'
   const [keyword, setKeyword] = useState('')
   const [onlyMissing, setOnlyMissing] = useState(false)
   const [activeId, setActiveId] = useState<number | null>(null)
@@ -299,7 +301,7 @@ export default function SourcesPage() {
   return (
     <Box>
       <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 1 }} flexWrap="wrap" useFlexGap>
-        <Typography variant="h6" component="h1">来源文件管理</Typography>
+        <Typography variant="h6" component={pageHeading}>来源文件管理</Typography>
         <Chip size="small" label={`文件 ${totalFiles}`} />
         <Chip
           size="small"

@@ -76,15 +76,16 @@ function CoverageRow({ label, bucket }: { label: string; bucket?: CoverageBucket
 }
 
 /** 分布列表（横向条形）。 */
-function DistributionList({ title, rows, onItemClick }: {
+function DistributionList({ title, rows, onItemClick, headingLevel = 1 }: {
   title: string
+  headingLevel?: 1 | 2
   rows: CountRow[]
   onItemClick?: (key: string) => void
 }) {
   const max = rows.reduce((m, r) => Math.max(m, r.count), 0) || 1
   return (
     <Paper variant="outlined" sx={{ p: 2, flex: '1 1 320px', minWidth: 280 }}>
-      <Typography variant="subtitle2" component="h2" gutterBottom>
+      <Typography variant="subtitle2" component={headingLevel === 1 ? 'h2' : 'h3'} gutterBottom>
         {title}
       </Typography>
       {rows.length === 0 && <EmptyState dense title="该维度暂无数据" />}
@@ -119,14 +120,17 @@ function DistributionList({ title, rows, onItemClick }: {
 }
 
 /** P8 题库统计页。 */
-export default function StatsPage() {
+/** 嵌入维护父页时主标题为 h2；独立使用保留 h1，不改变视觉排版。 */
+export default function StatsPage({ headingLevel = 1 }: { headingLevel?: 1 | 2 } = {}) {
+  const pageHeading = headingLevel === 1 ? 'h1' : 'h2'
+  const sectionHeading = headingLevel === 1 ? 'h2' : 'h3'
   const navigate = useNavigate()
   const statsQ = useQuery({ queryKey: qk.stats(), queryFn: () => getStats() })
 
   if (statsQ.isLoading) {
     return (
       <Box>
-        <Typography variant="h6" component="h1" gutterBottom>
+        <Typography variant="h6" component={pageHeading} gutterBottom>
           题库统计
         </Typography>
         <LoadingState label="正在加载统计…" />
@@ -136,7 +140,7 @@ export default function StatsPage() {
   if (statsQ.isError) {
     return (
       <Box>
-        <Typography variant="h6" component="h1" gutterBottom>
+        <Typography variant="h6" component={pageHeading} gutterBottom>
           题库统计
         </Typography>
         <ErrorState error={statsQ.error} title="加载统计失败" onRetry={() => statsQ.refetch()} />
@@ -152,7 +156,7 @@ export default function StatsPage() {
 
   return (
     <Box>
-      <Typography variant="h6" component="h1" gutterBottom>
+      <Typography variant="h6" component={pageHeading} gutterBottom>
         题库统计
       </Typography>
 
@@ -182,7 +186,7 @@ export default function StatsPage() {
       <Stack direction="row" spacing={2} flexWrap="wrap" useFlexGap sx={{ mb: 2 }}>
         {/* 覆盖率 */}
         <Paper variant="outlined" sx={{ p: 2, flex: '1 1 380px', minWidth: 320 }}>
-          <Typography variant="subtitle2" component="h2" gutterBottom>
+          <Typography variant="subtitle2" component={sectionHeading} gutterBottom>
             元数据 / 内容覆盖率
           </Typography>
           <CoverageRow label="年级" bucket={env.grade} />
@@ -207,7 +211,7 @@ export default function StatsPage() {
 
         {/* 复核进度 + 知识点状态 */}
         <Paper variant="outlined" sx={{ p: 2, flex: '1 1 380px', minWidth: 320 }}>
-          <Typography variant="subtitle2" component="h2" gutterBottom>
+          <Typography variant="subtitle2" component={sectionHeading} gutterBottom>
             待复核公式清零进度
           </Typography>
           <Stack direction="row" justifyContent="space-between">
@@ -225,7 +229,7 @@ export default function StatsPage() {
             ))}
           </Stack>
 
-          <Typography variant="subtitle2" component="h2" sx={{ mt: 2 }} gutterBottom>
+          <Typography variant="subtitle2" component={sectionHeading} sx={{ mt: 2 }} gutterBottom>
             知识点复核状态
           </Typography>
           <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
@@ -241,16 +245,16 @@ export default function StatsPage() {
 
       {/* 各维度分布 */}
       <Stack direction="row" spacing={2} flexWrap="wrap" useFlexGap>
-        <DistributionList title="题型分布" rows={s.by_qtype} onItemClick={() => navigate('/search')} />
-        <DistributionList title="年级分布" rows={s.by_grade} onItemClick={() => navigate('/search')} />
-        <DistributionList title="教材分布" rows={s.by_textbook} onItemClick={() => navigate('/search')} />
-        <DistributionList title="学段分布" rows={s.by_stage} onItemClick={() => navigate('/search')} />
-        <DistributionList title="学科分布" rows={s.by_subject} onItemClick={() => navigate('/search')} />
-        <DistributionList
+        <DistributionList headingLevel={headingLevel} title="题型分布" rows={s.by_qtype} onItemClick={() => navigate('/search')} />
+        <DistributionList headingLevel={headingLevel} title="年级分布" rows={s.by_grade} onItemClick={() => navigate('/search')} />
+        <DistributionList headingLevel={headingLevel} title="教材分布" rows={s.by_textbook} onItemClick={() => navigate('/search')} />
+        <DistributionList headingLevel={headingLevel} title="学段分布" rows={s.by_stage} onItemClick={() => navigate('/search')} />
+        <DistributionList headingLevel={headingLevel} title="学科分布" rows={s.by_subject} onItemClick={() => navigate('/search')} />
+        <DistributionList headingLevel={headingLevel}
           title="公式状态分布"
           rows={s.formula_status.map((f) => ({ key: describeFormulaStatus(f.status), count: f.count }))}
         />
-        <DistributionList title="高频章节（Top 20）" rows={s.top_chapters} onItemClick={() => navigate('/search')} />
+        <DistributionList headingLevel={headingLevel} title="高频章节（Top 20）" rows={s.top_chapters} onItemClick={() => navigate('/search')} />
       </Stack>
     </Box>
   )

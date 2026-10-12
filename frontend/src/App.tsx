@@ -1,13 +1,12 @@
 import type { ReactNode } from 'react'
-import { Suspense, useEffect, useState } from 'react'
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { lazy, Suspense, useEffect, useState } from 'react'
+import { useQuery } from '@tanstack/react-query'
 import {
   AppBar,
   Alert,
   AlertTitle,
   Box,
-  Button,
-  Divider,
+  Collapse,
   Drawer,
   IconButton,
   List,
@@ -15,8 +14,6 @@ import {
   ListItemIcon,
   ListItemText,
   ListSubheader,
-  Stack,
-  TextField,
   Toolbar,
   Typography,
   useMediaQuery,
@@ -25,12 +22,7 @@ import {
 import MenuIcon from '@mui/icons-material/Menu'
 import SearchIcon from '@mui/icons-material/Search'
 import EditNoteIcon from '@mui/icons-material/EditNote'
-import DescriptionIcon from '@mui/icons-material/Description'
-import FileDownloadIcon from '@mui/icons-material/FileDownload'
 import ChecklistIcon from '@mui/icons-material/Checklist'
-import FunctionsIcon from '@mui/icons-material/Functions'
-import FolderIcon from '@mui/icons-material/Folder'
-import BarChartIcon from '@mui/icons-material/BarChart'
 import SettingsIcon from '@mui/icons-material/Settings'
 import { Outlet, useLocation, useNavigate } from 'react-router-dom'
 import api from './api/client'
@@ -39,11 +31,15 @@ import ErrorBoundary from './components/ErrorBoundary'
 import LoadingState from './components/LoadingState'
 import { PaperSwitcher } from './components/PaperSwitcher'
 import { SessionControls, SessionNotice } from './components/SessionControls'
-import { createPaper, listPapers } from './api/papers'
+import { listPapers } from './api/papers'
 import { usePaperStore } from './store/paperStore'
-import { useSettingsStore } from './store/settingsStore'
 import type { HealthData, Paper } from './api/types'
 
+import { usePaperLibraryStore } from './store/paperLibraryStore'
+import { documentTitleForPath, selectedNavPath } from './app/routeMetadata'
+export { BASE_TITLE, documentTitleForPath } from './app/routeMetadata'
+
+const PaperLibraryDrawer = lazy(() => import('./components/PaperLibraryDrawer'))
 const DRAWER_WIDTH = 232
 
 export interface NavItem {
@@ -59,69 +55,21 @@ export interface NavGroup {
   items: NavItem[]
 }
 
-/**
- * 侧栏导航分组（P0-4 / P1-6 信息架构重构）。
- *
- * 原来是一个 8 项扁平等权的 `NAV_ITEMS`，老师分不清"日常要用的"和"偶尔维护的"。
- * 现按**使用频率**拆成两组：
- * - 「日常备课」：老师每天都要用的高频页（组卷 / 找题 / 导出）；
- * - 「数据治理」：偶尔维护的低频页（知识点复核 / 公式复核 / 来源文件 / 统计）。
- *
- * 「系统设置」不属任何分组，固定在侧栏底部单独呈现（见 `SETTINGS_ITEM`）。
- */
+/** 日常入口与低频维护分组；业务路由集合独立保存在 router.tsx。 */
 export const NAV_GROUPS: NavGroup[] = [
-  {
-    label: '日常备课',
-    items: [
-      // 组卷工作台是老师最高频的动作，也是默认落地页（router.tsx 的 index/* 都指向 /builder）。
-      { path: 'builder', label: '组卷工作台', description: '边找题边组卷，左题库右试卷', icon: <EditNoteIcon /> },
-      { path: 'search', label: '找题', description: '关键词 + 筛选，批量找题', icon: <SearchIcon /> },
-      { path: 'export', label: '导出中心', description: '先预览，再导出 DOCX / PDF', icon: <FileDownloadIcon /> },
-    ],
-  },
-  {
-    label: '数据治理',
-    items: [
-      { path: 'manage/knowledge', label: '知识点复核', description: '按标签确认或否决知识点', icon: <ChecklistIcon /> },
-      { path: 'manage/formula-review', label: '公式复核', description: '处理待复核的公式', icon: <FunctionsIcon /> },
-      { path: 'manage/sources', label: '来源文件', description: '管理题目来源文件', icon: <FolderIcon /> },
-      { path: 'manage/stats', label: '题库统计', description: '查看题库总量与分布', icon: <BarChartIcon /> },
-    ],
-  },
+  { label: '日常', items: [
+    { path: 'builder', label: '组卷工作台', description: '边找题边组卷', icon: <EditNoteIcon /> },
+    { path: 'search', label: '找题', description: '检索题库', icon: <SearchIcon /> },
+  ] },
+  { label: '数据维护', items: [
+    { path: 'manage', label: '数据维护', description: '复核、来源与统计', icon: <ChecklistIcon /> },
+  ] },
 ]
-
-/** 系统设置：不归入任何分组，固定显示在侧栏底部。 */
+/** 设置固定在底部；说明保留为帮助信息，不占据导航第二行。 */
 export const SETTINGS_ITEM: NavItem = {
-  path: 'settings',
-  label: '系统设置',
-  description: '数据库路径、导出目录与偏好',
-  icon: <SettingsIcon />,
+  path: 'settings', label: '设置', description: '数据库路径、导出目录与偏好', icon: <SettingsIcon />,
 }
-
-/**
- * 扁平导航项（**向后兼容导出**）。
- *
- * `router.tsx` 依赖它构建路由子表，测试也用它做"路径唯一 / 无漏项"等不变量校验。
- * 顺序 = 各分组项顺序 + 末尾的系统设置。
- */
-export const NAV_ITEMS: NavItem[] = [...NAV_GROUPS.flatMap((g) => g.items), SETTINGS_ITEM]
-
-/** 站点基础标题（与 `index.html` 的 `<title>` 一致）。 */
-export const BASE_TITLE = '初中物理 · 题库与组卷'
-
-/**
- * 由路由路径推导**文档标题**（P5-3：路由变化时同步 `document.title`）。
- *
- * 为什么：单页应用切换路由时 `<title>` 不变，读屏用户与多标签浏览者无法判断当前在哪一页。
- * 本函数是**纯函数、无副作用**，导出以便单测（`documentTitleForPath` 的不变量：
- * 已知路由 → 「页面名 · 初中物理题库」；题目详情 → 固定文案；未知 → 基础标题）。
- */
-export function documentTitleForPath(pathname: string): string {
-  const clean = pathname.replace(/^\/+/, '')
-  if (clean.startsWith('question/')) return '题目详情 · 初中物理题库'
-  const hit = NAV_ITEMS.find((it) => clean === it.path || clean.startsWith(`${it.path}/`))
-  return hit ? `${hit.label} · 初中物理题库` : BASE_TITLE
-}
+export const NAV_ITEMS: NavItem[] = [...NAV_GROUPS.flatMap(g => g.items), SETTINGS_ITEM]
 
 /**
  * 单个侧栏导航按钮。
@@ -132,17 +80,13 @@ export function documentTitleForPath(pathname: string): string {
 function NavListButton({ item, onNavigate }: { item: NavItem; onNavigate: (path: string) => void }) {
   const location = useLocation()
   // 用前缀匹配：治理页位于 /manage/* 子路径下，访问子路由时父项也应保持高亮。
-  const selected = location.pathname.startsWith(`/${item.path}`)
+  const selected = selectedNavPath(location.pathname) === item.path
   return (
     // P5-3：`aria-current="page"` 明确告诉读屏用户「当前就在这一页」，
     // 仅靠视觉高亮（selected）对读屏用户不可见。
     <ListItemButton selected={selected} aria-current={selected ? 'page' : undefined} onClick={() => onNavigate(item.path)}>
       <ListItemIcon sx={{ minWidth: 40 }}>{item.icon}</ListItemIcon>
-      <ListItemText
-        primary={item.label}
-        secondary={item.description}
-        secondaryTypographyProps={{ variant: 'caption', noWrap: true }}
-      />
+      <ListItemText primary={item.label} />
     </ListItemButton>
   )
 }
@@ -178,12 +122,14 @@ function HealthBanner() {
 export default function App() {
   const location = useLocation()
   const navigate = useNavigate()
-  const qc = useQueryClient()
   const theme = useTheme()
   // P1-1 响应式：窄屏（<md，即 <900px）时侧栏改为临时抽屉（汉堡菜单开合），
   // 避免 232px 固定侧栏挤占内容区。桌面（≥md）保持常驻侧栏。
   const isNarrowNav = useMediaQuery(theme.breakpoints.down('md'))
   const [navOpen, setNavOpen] = useState(false)
+  const onMaintenancePath = selectedNavPath(location.pathname) === 'manage'
+  const [maintenanceOpen, setMaintenanceOpen] = useState(onMaintenancePath)
+  useEffect(() => { if (onMaintenancePath) setMaintenanceOpen(true) }, [onMaintenancePath])
 
   // P5-3：路由变化时同步 document.title，让浏览器标签页 / 读屏播报当前页名。
   useEffect(() => {
@@ -196,8 +142,10 @@ export default function App() {
   const currentPaperId = usePaperStore((s) => s.currentPaperId)
   const setCurrentPaperId = usePaperStore((s) => s.setCurrentPaperId)
   const setTargetSectionId = usePaperStore((s) => s.setTargetSectionId)
-  const [paperListOpen, setPaperListOpen] = useState(false)
-  const [newPaperTitle, setNewPaperTitle] = useState('')
+  const { open: paperListOpen, openPaperLibrary, closePaperLibrary } = usePaperLibraryStore()
+  // 初次打开才请求抽屉模块；之后保留实例以让关闭后的重建提示继续可用。
+  const [libraryLoaded, setLibraryLoaded] = useState(false)
+  useEffect(() => { if (paperListOpen) setLibraryLoaded(true) }, [paperListOpen])
   const papersQ = useQuery({ queryKey: qk.papers(), queryFn: () => listPapers() })
   // 防御性兜底：接口异常/契约变化时避免把非数组当列表（如后端错误体）。
   const papers: Paper[] = Array.isArray(papersQ.data) ? papersQ.data : []
@@ -206,19 +154,9 @@ export default function App() {
   const switchPaper = (id: number) => {
     setCurrentPaperId(id)
     setTargetSectionId(null)
-    setPaperListOpen(false)
+    closePaperLibrary()
     navigate('/builder')
   }
-
-  const createPaperMut = useMutation({
-    // 与组卷页一致：新建试卷套用设置页的「默认模板」。
-    mutationFn: (title: string) => createPaper({ title, template: useSettingsStore.getState().defaultTemplate }),
-    onSuccess: (p) => {
-      qc.invalidateQueries({ queryKey: qk.papers() })
-      switchPaper(p.id)
-      setNewPaperTitle('')
-    },
-  })
 
   /** 统一导航动作：跳转 +（窄屏时）收起临时抽屉。 */
   const handleNavigate = (path: string) => {
@@ -298,7 +236,7 @@ export default function App() {
             papers={papers}
             currentPaperId={currentPaperId}
             onSwitch={switchPaper}
-            onOpenList={() => setPaperListOpen(true)}
+            onOpenList={openPaperLibrary}
             compact={isNarrowNav}
           />
           {/* 阶段 4：当前用户 + 登出（**本地版渲染为空**）。 */}
@@ -330,92 +268,32 @@ export default function App() {
             系统设置用 mt:auto 顶到底部，与日常/治理两组视觉分离。
             P5-3：整块侧栏用 `<nav aria-label="主导航">` 承载，读屏用户可按地标快速跳转。 */}
         <Box component="nav" aria-label="主导航" sx={{ overflow: 'auto', flexGrow: 1, display: 'flex', flexDirection: 'column' }}>
-          {NAV_GROUPS.map((group) => (
-            <List
-              key={group.label}
-              subheader={
-                <ListSubheader
-                  component="div"
-                  disableSticky
-                  sx={{
-                    bgcolor: 'transparent',
-                    color: 'text.secondary',
-                    fontSize: 12,
-                    fontWeight: 600,
-                    lineHeight: 2,
-                    mt: 1,
-                  }}
-                >
-                  {group.label}
-                </ListSubheader>
-              }
-            >
-              {group.items.map((item) => (
-                <NavListButton key={item.path} item={item} onNavigate={handleNavigate} />
-              ))}
-            </List>
-          ))}
+          <List subheader={<ListSubheader component="div" disableSticky>日常</ListSubheader>}>
+            {NAV_GROUPS[0].items.map(item => <NavListButton key={item.path} item={item} onNavigate={handleNavigate} />)}
+          </List>
+          <List>
+            <ListItemButton aria-label="展开数据维护" aria-expanded={maintenanceOpen}
+              aria-controls="maintenance-nav" onClick={() => setMaintenanceOpen(value => !value)}>
+              <ListItemText primary="数据维护" />
+            </ListItemButton>
+            <Collapse in={maintenanceOpen} id="maintenance-nav" unmountOnExit>
+              {NAV_GROUPS[1].items.map(item => <NavListButton key={item.path} item={item} onNavigate={handleNavigate} />)}
+            </Collapse>
+          </List>
           <List sx={{ mt: 'auto' }}>
             <NavListButton item={SETTINGS_ITEM} onNavigate={handleNavigate} />
           </List>
         </Box>
       </Drawer>
 
-      {/* 全局「切换试卷」抽屉（P1-6）：任意页面都能切换 / 新建。
-          命名刻意与组卷页的「试卷管理」（含删除 + 撤销）区分——两者能力不同，
-          都叫「试卷列表」会让老师困惑「为什么这里的删不掉」。 */}
-      <Drawer anchor="left" open={paperListOpen} onClose={() => setPaperListOpen(false)}
-        PaperProps={{ role: 'dialog', 'aria-labelledby': 'paper-switch-drawer-title' }}>
-        <Box sx={{ width: 320, p: 2 }}>
-          {/* 同上：避免被固定顶栏遮住标题与新建表单。 */}
-          <Toolbar variant="dense" />
-          <Typography id="paper-switch-drawer-title" variant="subtitle1" component="h2" gutterBottom>
-            切换试卷
-          </Typography>
-          <Stack direction="row" spacing={1} sx={{ mb: 1 }}>
-            <TextField
-              size="small"
-              label="新建试卷标题"
-              value={newPaperTitle}
-              onChange={(e) => setNewPaperTitle(e.target.value)}
-              fullWidth
-            />
-            <Button
-              variant="contained"
-              disabled={createPaperMut.isPending}
-              onClick={() => createPaperMut.mutate(newPaperTitle.trim() || '未命名试卷')}
-            >
-              新建
-            </Button>
-          </Stack>
-          <Divider sx={{ my: 1 }} />
-          {papersQ.isLoading && (
-            <Typography variant="body2" color="text.secondary">
-              加载中…
-            </Typography>
-          )}
-          {papersQ.isError && (
-            <Typography variant="body2" color="error">
-              加载失败，请确认后端服务已启动。
-            </Typography>
-          )}
-          <List dense>
-            {papers.map((p) => (
-              <ListItemButton key={p.id} selected={p.id === currentPaperId} onClick={() => switchPaper(p.id)}>
-                <ListItemText
-                  primary={p.title}
-                  secondary={`${p.item_count ?? 0} 题 · ${p.total_score ?? 0} 分${(p.unscored_count ?? 0) > 0 ? ` · 未设分 ${p.unscored_count}` : ''}`}
-                />
-              </ListItemButton>
-            ))}
-          </List>
-          {papers.length === 0 && !papersQ.isLoading && !papersQ.isError && (
-            <Typography variant="body2" color="text.secondary">
-              还没有试卷，在上方输入标题新建一份。
-            </Typography>
-          )}
-        </Box>
-      </Drawer>
+      {/* 唯一管理宿主：首次打开才加载，与工作台及空态复用相同开关。 */}
+      {(paperListOpen || libraryLoaded) && (
+        <ErrorBoundary resetKeys={[paperListOpen]}>
+          <Suspense fallback={<LoadingState label="试卷管理加载中…" />}>
+            <PaperLibraryDrawer open={paperListOpen} onClose={closePaperLibrary} onSelectPaper={switchPaper} />
+          </Suspense>
+        </ErrorBoundary>
+      )}
 
       {/* 主内容区：`id` + `role="main"` 作为 skip-link 的目标与读屏地标；
           `tabIndex={-1}` 使其可被脚本聚焦（不进 Tab 序列），聚焦时去掉整页外框。

@@ -29,7 +29,6 @@ import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline'
 import AddIcon from '@mui/icons-material/Add'
 import EditIcon from '@mui/icons-material/Edit'
 import RefreshIcon from '@mui/icons-material/Refresh'
-import FileDownloadIcon from '@mui/icons-material/FileDownload'
 import { useDroppable } from '@dnd-kit/core'
 import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable'
 import type { Paper as PaperModel, PaperItem, PaperSection, ExportQuestion } from '../api/types'
@@ -66,7 +65,6 @@ export interface PaperPanelProps {
   targetSectionId: number | null
   onTargetSectionChange: (id: number | null) => void
   onOpenDrawer: () => void
-  onGoExport: () => void
   onOpenDetail: (questionId: number) => void
   contentQuestions?: ExportQuestion[]
 }
@@ -101,7 +99,6 @@ export function PaperPanel({
   targetSectionId,
   onTargetSectionChange,
   onOpenDrawer,
-  onGoExport,
   onOpenDetail,
   contentQuestions,
 }: PaperPanelProps) {
@@ -149,11 +146,11 @@ export function PaperPanel({
           <EmptyState
             dense
             title="还没有试卷"
-            description="点右上角「切换试卷」新建或选择一份试卷。"
+            description="点「试卷管理」新建或选择一份试卷。"
           />
         )}
         <Button sx={{ mt: 2 }} variant="outlined" onClick={onOpenDrawer}>
-          打开试卷列表
+          试卷管理
         </Button>
       </Paper>
     )
@@ -355,9 +352,6 @@ export function PaperPanel({
           无答案 <strong>{noAnswerCount}</strong> 题
         </Typography>
         <Box sx={{ flex: 1 }} />
-        <Button variant="contained" startIcon={<FileDownloadIcon />} onClick={onGoExport}>
-          导出
-        </Button>
       </Stack>
 
       {/* 设分对话框 */}

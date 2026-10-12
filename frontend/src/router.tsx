@@ -1,6 +1,6 @@
 import { lazy, type ReactElement } from 'react'
-import { Navigate, RouterProvider, createHashRouter } from 'react-router-dom'
-import App, { NAV_ITEMS } from './App'
+import { Navigate, RouterProvider, createHashRouter, useLocation } from 'react-router-dom'
+import App from './App'
 import RequireAuth from './app/auth/RequireAuth'
 import LoginLoadBoundary from './components/LoginLoadBoundary'
 
@@ -33,17 +33,19 @@ const KnowledgeReviewPage = lazy(() => import('./pages/KnowledgeReviewPage'))
 const FormulaReviewPage = lazy(() => import('./pages/FormulaReviewPage'))
 const SourcesPage = lazy(() => import('./pages/SourcesPage'))
 const StatsPage = lazy(() => import('./pages/StatsPage'))
+const DataMaintenancePage = lazy(() => import('./pages/DataMaintenancePage'))
 const SettingsPage = lazy(() => import('./pages/SettingsPage'))
 
-const PAGES: Record<string, ReactElement> = {
+export const PAGES: Record<string, ReactElement> = {
   search: <SearchPage />,
   builder: <PaperBuilderPage />,
   export: <ExportPage />,
-  'manage/knowledge': <KnowledgeReviewPage />,
-  'manage/formula-review': <FormulaReviewPage />,
-  'manage/sources': <SourcesPage />,
-  'manage/stats': <StatsPage />,
+  'manage/knowledge': <KnowledgeReviewPage headingLevel={2} />,
+  'manage/formula-review': <FormulaReviewPage headingLevel={2} />,
+  'manage/sources': <SourcesPage headingLevel={2} />,
+  'manage/stats': <StatsPage headingLevel={2} />,
   settings: <SettingsPage />,
+  'question/:id': <QuestionDetailPage />,
 }
 
 /** 默认落地页：组卷工作台（`index` 与 `*` 通配都指向它）。 */
@@ -62,15 +64,31 @@ export const LEGACY_REDIRECTS: Record<string, string> = {
   stats: '/manage/stats',
 }
 
-const children = NAV_ITEMS.map((item) => ({
-  path: item.path,
-  element: PAGES[item.path] ?? <Navigate to={DEFAULT_LANDING_PATH} replace />,
-}))
+/** 路由全集独立于侧栏；导出辅助页与维护子页不因隐藏导航而失效。 */
+export const ROUTE_PATHS = [...Object.keys(PAGES), 'manage']
 
-// 旧路径重定向：放在 NAV_ITEMS 路由之后、`*` 通配之前，确保旧链接仍可用。
+/** 兼容旧书签和维护默认页时保留查询串与来源 state，替换历史避免来回重定向。 */
+export function LegacyRedirect({ to }: { to: string }) {
+  const location = useLocation()
+  return <Navigate to={to + location.search} state={location.state} replace />
+}
+
+const children: import('react-router-dom').RouteObject[] = Object.entries(PAGES)
+  .filter(([path]) => !path.startsWith('manage/'))
+  .map(([path, element]) => ({ path, element }))
+children.push({
+  path: 'manage',
+  element: <DataMaintenancePage />,
+  children: [
+    { index: true, element: <LegacyRedirect to="/manage/knowledge" /> },
+    ...Object.entries(PAGES).filter(([path]) => path.startsWith('manage/'))
+      .map(([path, element]) => ({ path: path.slice('manage/'.length), element })),
+  ],
+})
+
 const legacyChildren = Object.entries(LEGACY_REDIRECTS).map(([from, to]) => ({
   path: from,
-  element: <Navigate to={to} replace />,
+  element: <LegacyRedirect to={to} />,
 }))
 
 const router = createHashRouter([
@@ -89,7 +107,6 @@ const router = createHashRouter([
     ),
     children: [
       { index: true, element: <Navigate to={DEFAULT_LANDING_PATH} replace /> },
-      { path: 'question/:id', element: <QuestionDetailPage /> },
       ...children,
       ...legacyChildren,
       { path: '*', element: <Navigate to={DEFAULT_LANDING_PATH} replace /> },

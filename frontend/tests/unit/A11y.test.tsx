@@ -20,12 +20,15 @@ import { fireEvent, screen } from '@testing-library/react'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { AuthProvider } from '../../src/app/auth/AuthProvider'
+import { usePaperLibraryStore } from '../../src/store/paperLibraryStore'
 import App, { BASE_TITLE, documentTitleForPath } from '../../src/App'
 import SettingsPage from '../../src/pages/SettingsPage'
 import { EmptyState } from '../../src/components/EmptyState'
 import type { SettingsData } from '../../src/api/types'
 import { renderWithTheme } from './testUtils'
 import { renderPage, jsonResponse } from './pages/pageTestUtils'
+
+beforeEach(() => usePaperLibraryStore.setState({ open: false }))
 
 // mock 掉 API 客户端：健康检查 / 试卷列表返回空数据，测试不依赖后端。
 vi.mock('../../src/api/client', () => ({
@@ -61,7 +64,7 @@ describe('documentTitleForPath（路由 → 文档标题）', () => {
   it('已知导航路由 → 「页面名 · 初中物理题库」', () => {
     expect(documentTitleForPath('/builder')).toBe('组卷工作台 · 初中物理题库')
     expect(documentTitleForPath('/manage/stats')).toBe('题库统计 · 初中物理题库')
-    expect(documentTitleForPath('/settings')).toBe('系统设置 · 初中物理题库')
+    expect(documentTitleForPath('/settings')).toBe('设置 · 初中物理题库')
   })
 
   it('题目详情路由 → 固定文案', () => {
@@ -110,7 +113,7 @@ describe('App 外壳无障碍语义', () => {
 
   it('切换到另一路由后，aria-current 随之迁移', () => {
     renderApp('/manage/stats')
-    expect(screen.getByText('题库统计').closest('[aria-current="page"]')).not.toBeNull()
+    expect(screen.getAllByText('数据维护').find(node => node.closest('[aria-current="page"]'))).not.toBeNull()
     expect(screen.getByText('组卷工作台').closest('[aria-current]')).toBeNull()
   })
 })
@@ -157,14 +160,14 @@ describe('组件内「伪标题」已消除（P5-3）', () => {
 })
 
 describe('Drawer 可访问名（P5-3）', () => {
-  it('「切换试卷」抽屉打开后，可见标题被 aria-labelledby 引用（Drawer 不自动派生）', () => {
+  it('「试卷管理」抽屉打开后，可见标题被 aria-labelledby 引用（Drawer 不自动派生）', async () => {
     renderApp('/builder')
     // 桌面宽度下触发控件是文字按钮「试卷列表」（窄屏才是同名 IconButton）。
-    fireEvent.click(screen.getByRole('button', { name: '试卷列表' }))
+    fireEvent.click(screen.getByRole('button', { name: '试卷管理' }))
     // 抽屉标题是真实 h2，且带被 aria-labelledby 引用的 id。
-    const title = screen.getByRole('heading', { level: 2, name: '切换试卷' })
-    expect(title).toHaveAttribute('id', 'paper-switch-drawer-title')
+    const title = await screen.findByRole('heading', { level: 2, name: '试卷管理' })
+    expect(title).toHaveAttribute('id', 'paper-library-title')
     // 必须存在某个元素通过 aria-labelledby 指向它（否则读屏只会念「对话框」）。
-    expect(document.querySelector('[aria-labelledby="paper-switch-drawer-title"]')).not.toBeNull()
+    expect(document.querySelector('[aria-labelledby="paper-library-title"]')).not.toBeNull()
   })
 })

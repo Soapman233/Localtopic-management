@@ -6,19 +6,10 @@
  */
 import { describe, it, expect } from 'vitest'
 import { NAV_GROUPS, NAV_ITEMS, SETTINGS_ITEM } from '../../src/App'
-import { DEFAULT_LANDING_PATH, LEGACY_REDIRECTS } from '../../src/router'
+import { DEFAULT_LANDING_PATH, LEGACY_REDIRECTS, ROUTE_PATHS } from '../../src/router'
 
 /** 期望的导航路径全集（含顺序）——改动导航结构时必须同步更新此清单。 */
-const EXPECTED_PATHS = [
-  'builder',
-  'search',
-  'export',
-  'manage/knowledge',
-  'manage/formula-review',
-  'manage/sources',
-  'manage/stats',
-  'settings',
-]
+const EXPECTED_PATHS = ['builder', 'search', 'manage', 'settings']
 
 describe('导航配置不变量', () => {
   it('每个导航项的 path 唯一（无重复项）', () => {
@@ -33,7 +24,7 @@ describe('导航配置不变量', () => {
   it('每个导航项都能在已知路由集合中找到对应路由（或属于固定路由）', () => {
     // 已知路由集合 = 全部导航路径 + 单题详情 + 旧链接重定向源。
     const knownRoutes = new Set<string>([
-      ...NAV_ITEMS.map((i) => i.path),
+      ...ROUTE_PATHS,
       'question/:id',
       ...Object.keys(LEGACY_REDIRECTS),
     ])
@@ -42,12 +33,12 @@ describe('导航配置不变量', () => {
     }
   })
 
-  it('分组项数符合预期（日常备课 3 项 / 数据治理 4 项）', () => {
+  it('分组项数符合预期（日常 2 项 / 数据维护 1 项）', () => {
     expect(NAV_GROUPS).toHaveLength(2)
-    expect(NAV_GROUPS[0].label).toBe('日常备课')
-    expect(NAV_GROUPS[0].items).toHaveLength(3)
-    expect(NAV_GROUPS[1].label).toBe('数据治理')
-    expect(NAV_GROUPS[1].items).toHaveLength(4)
+    expect(NAV_GROUPS[0].label).toBe('日常')
+    expect(NAV_GROUPS[0].items).toHaveLength(2)
+    expect(NAV_GROUPS[1].label).toBe('数据维护')
+    expect(NAV_GROUPS[1].items).toHaveLength(1)
   })
 
   it('系统设置不归入任何分组，固定为底部独立项', () => {
@@ -74,8 +65,8 @@ describe('旧链接兼容重定向', () => {
     })
   })
 
-  it('每个重定向目标都是真实存在的导航路由（不会指向 404）', () => {
-    const navPaths = new Set(NAV_ITEMS.map((i) => `/${i.path}`))
+  it('每个重定向目标都是真实存在的独立路由（不会指向 404）', () => {
+    const navPaths = new Set(ROUTE_PATHS.map(path => `/${path}`))
     for (const target of Object.values(LEGACY_REDIRECTS)) {
       expect(navPaths.has(target)).toBe(true)
     }

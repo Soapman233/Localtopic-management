@@ -26,9 +26,9 @@
  * const facetsQ = useFacetsQuery(facetsParams)
  * ```
  */
-import { useEffect, useMemo, useState, type Dispatch, type SetStateAction } from 'react'
-import { useSearchParams } from 'react-router-dom'
-import { readFiltersFromUrl, writeFiltersToUrl } from '../api/searchParams'
+import { useEffect, useMemo, useRef, useState, type Dispatch, type SetStateAction } from 'react'
+import { useLocation, useSearchParams } from 'react-router-dom'
+import { FILTER_BOOL_KEYS, FILTER_STR_KEYS, readFiltersFromUrl, writeFiltersToUrl } from '../api/searchParams'
 import type { SearchParams } from '../api/search'
 import { useUiStore } from '../store/uiStore'
 
@@ -38,6 +38,8 @@ const KEYWORD_DEBOUNCE_MS = 300
 export interface UseQuestionFiltersOptions {
   /** 每页条数。检索页与组卷页取值不同（各自页面常量），故由调用方传入。 */
   pageSize: number
+  /** B1 回程本挂载内保留辅助页 query 与必要 state；普通检索默认保持既有清理策略。 */
+  preserveLocation?: boolean
 }
 
 export interface UseQuestionFiltersResult {
@@ -61,8 +63,12 @@ export interface UseQuestionFiltersResult {
 }
 
 /** 检索条件状态（关键词防抖 / URL 同步 / query 与 facets 参数）。 */
-export function useQuestionFilters({ pageSize }: UseQuestionFiltersOptions): UseQuestionFiltersResult {
+export function useQuestionFilters({ pageSize, preserveLocation = false }: UseQuestionFiltersOptions): UseQuestionFiltersResult {
   const [searchParams, setSearchParams] = useSearchParams()
+  const location = useLocation()
+  // 取最新剩余 state，不能把已消费的回程意图从旧 entry 快照附回。
+  const locationRef = useRef(location)
+  locationRef.current = location
   // 严格模式（「仅看已确认知识点」）——两页共享同一 UI store 开关。
   const strictKp = useUiStore((s) => s.strictKp)
 
@@ -83,13 +89,21 @@ export function useQuestionFilters({ pageSize }: UseQuestionFiltersOptions): Use
   // 筛选条件 / 页码写入 URL（replace，避免污染历史）。
   useEffect(() => {
     setSearchParams((current) => {
-      const next = writeFiltersToUrl(filters, page)
+      const nextFilters = writeFiltersToUrl(filters, page)
+      if (preserveLocation) {
+        const next = new URLSearchParams(current)
+        // 只替换 hook 管理的筛选键，来源/debug重复值仅留在URL，不进入查询参数。
+        for (const key of [...FILTER_STR_KEYS, ...FILTER_BOOL_KEYS, 'page']) next.delete(key)
+        nextFilters.forEach((value, key) => next.append(key, value))
+        return next
+      }
+      const next = nextFilters
       // B0：debug 是路由诊断开关，不是检索条件；同步筛选时保留当前原值及重复值。
       // 只保留这个明确冻结的键，不能把其它未知参数带回，更不能写入查询/API 参数。
       for (const value of current.getAll('debug')) next.append('debug', value)
       return next
-    }, { replace: true })
-  }, [filters, page, setSearchParams])
+    }, { replace: true, ...(preserveLocation ? { state: locationRef.current.state } : {}) })
+  }, [filters, page, setSearchParams, preserveLocation])
 
   const queryParams: SearchParams = useMemo(
     () => ({

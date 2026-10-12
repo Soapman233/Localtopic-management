@@ -37,7 +37,8 @@ export function IssueDetails({ issue }: { issue: ExportIssue }) {
   </Box>
 }
 
-export function ExportDiagnosticsPanel({ paperId, data, onRevised }: { paperId: number; data: ExportPayload; onRevised?: (id: number) => void }) {
+/** readOnly 只展示诊断，不挂载可创建修订的候选窗口；抽屉默认保留原能力。 */
+export function ExportDiagnosticsPanel({ paperId, data, onRevised, readOnly = false }: { paperId: number; data: ExportPayload; onRevised?: (id: number) => void; readOnly?: boolean }) {
   const qc = useQueryClient()
   const [open, setOpen] = useState(false)
   const [excluded, setExcluded] = useState<number[]>([])
@@ -47,7 +48,7 @@ export function ExportDiagnosticsPanel({ paperId, data, onRevised }: { paperId: 
   const candidateQ = useQuery({
     queryKey: qk.exportData(paperId, '答案解析版', String(data.paper.template ?? '考试')),
     queryFn: () => getExportData(paperId, '答案解析版', String(data.paper.template ?? '考试')),
-    enabled: open,
+    enabled: open && !readOnly,
   })
   const d = data.diagnostics
   // P0-1：原始诊断 JSON / 摘要等只在 debug 下暴露给维护者。
@@ -88,14 +89,14 @@ export function ExportDiagnosticsPanel({ paperId, data, onRevised }: { paperId: 
     <Stack direction="row" spacing={1} sx={{ mt: 1 }}>
       {/* 复制原始诊断 JSON 是维护者工具，默认不暴露给老师。 */}
       {debug && <Button size="small" onClick={copy}>复制完整诊断JSON</Button>}
-      <Button size="small" variant="outlined" onClick={() => { setExcluded([...d.revision_proposal.exclude_item_ids]); setTitle(`${String(data.paper.title ?? '未命名试卷')}（修订）`); setToken(d.diagnostic_digest); setMessage(''); setOpen(true) }}>查看{describeRevisionIssues()}</Button>
+      {!readOnly && <Button size="small" variant="outlined" onClick={() => { setExcluded([...d.revision_proposal.exclude_item_ids]); setTitle(`${String(data.paper.title ?? '未命名试卷')}（修订）`); setToken(d.diagnostic_digest); setMessage(''); setOpen(true) }}>查看{describeRevisionIssues()}</Button>}
     </Stack>
     {message && <Alert severity="info" sx={{ mt: 1 }}>{message}</Alert>}
     <Box component="details" sx={{ mt: 1 }}><summary>逐条问题与来源（{d.issues.length}）</summary>{d.issues.map((issue, i) => <IssueDetails key={i} issue={issue} />)}</Box>
     {d.duplicate_groups.map(g => <Typography variant="caption" display="block" key={g.question_id}>第 {g.seqs.join(' / ')} 题内容重复（可能是有意重复，可保留）。{debug ? `（qid ${g.question_id}；items ${g.item_ids.join(' / ')}）` : ''}</Typography>)}
     {/* 完整诊断 JSON 含 snapshot_digest / scan index 等原始字段，仅 debug 可见。 */}
     {debug && <Box component="details"><summary>{describeTechnicalInfo()}</summary><Box component="pre" sx={{ whiteSpace: 'pre-wrap', overflowWrap: 'anywhere', fontSize: 11 }}>{JSON.stringify(d, null, 2)}</Box></Box>}
-    <Dialog open={open} onClose={() => !revision.isPending && setOpen(false)} maxWidth="md" fullWidth>
+    {!readOnly && <Dialog open={open} onClose={() => !revision.isPending && setOpen(false)} maxWidth="md" fullWidth>
       <DialogTitle>{describeRevisionIssues()} · 原卷 #{paperId} 保留</DialogTitle>
       <DialogContent>
         <Alert severity="info">{d.revision_proposal.message} 默认仅建议移除已确认答案区条目。勾选代表移除；其余题目沿用本卷当前版本。新卷需要重新预览。</Alert>
@@ -114,6 +115,6 @@ export function ExportDiagnosticsPanel({ paperId, data, onRevised }: { paperId: 
         {message && <Alert severity="warning">{message}</Alert>}
       </DialogContent>
       <DialogActions><Typography variant="caption">保留 {items.length - excluded.length} / {items.length} 项</Typography><Button disabled={revision.isPending} onClick={() => setOpen(false)}>取消</Button><Button variant="contained" disabled={revision.isPending || candidateQ.isFetching || candidateQ.isError || !candidateQ.data || candidateQ.data.diagnostics.diagnostic_digest !== token || items.length === 0 || excluded.length >= items.length || !title.trim() || token !== d.diagnostic_digest} onClick={() => revision.mutate()}>创建修订卷</Button></DialogActions>
-    </Dialog>
+    </Dialog>}
   </Box>
 }

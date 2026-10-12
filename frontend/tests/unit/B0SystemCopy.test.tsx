@@ -34,15 +34,15 @@ describe('B0 系统文案', () => {
   it('大题删除确认用 strong，保留不会丢失事实', () => {
     const paper = { id: 1, title: 'B0', template: '考试', answer_mode: '学生版', sections: [{ id: 1, name: '选择题', seq: 1 }], items: [{ id: 1, question_id: 1, seq: 1, section_id: 1, score: null, has_answer: true, plain_text: '原题 2**3', number: '1' }], summary: { item_count: 1, total_score: 0, unscored_count: 0 } } as unknown as PaperModel
     const actions = Object.fromEntries(['addQuestions','removeItem','moveItem','setScore','addSection','renameSection','moveSection','deleteSection','refreshSnapshots','updatePaper'].map(key => [key, vi.fn()])) as unknown as PaperActions
-    mount(<PaperPanel paper={paper} loading={false} actions={actions} targetSectionId={null} onTargetSectionChange={vi.fn()} onOpenDrawer={vi.fn()} onGoExport={vi.fn()} onOpenDetail={vi.fn()} />)
+    mount(<PaperPanel paper={paper} loading={false} actions={actions} targetSectionId={null} onTargetSectionChange={vi.fn()} onOpenDrawer={vi.fn()} onOpenDetail={vi.fn()} />)
     fireEvent.click(screen.getByRole('button', { name: '删除大题' }))
     const dialog = screen.getByRole('dialog')
     expect(dialog.querySelector('strong')).toHaveTextContent('不会丢失')
     expect(dialog.textContent).not.toContain('**')
   })
-  it('导出页面删除完整定位段，真实页面仍有导出选项', () => {
+  it('预览页面删除完整定位段，真实页面仍有模式选项', () => {
     mount(<ExportPage />, '/export?paper_id=1')
-    expect(screen.getByRole('heading', { name: '导出中心 · B0文案' })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: '试卷预览 · B0文案' })).toBeInTheDocument()
     expect(screen.getByText('答案模式')).toBeInTheDocument()
     expect(document.body.textContent).not.toMatch(/定位：|共用同一份门禁状态/)
   })
