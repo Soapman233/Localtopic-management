@@ -7,6 +7,9 @@
 import { useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
+  Accordion,
+  AccordionDetails,
+  AccordionSummary,
   Alert,
   Box,
   Button,
@@ -15,7 +18,6 @@ import {
   DialogActions,
   DialogContent,
   DialogTitle,
-  Divider,
   MenuItem,
   Paper,
   Select,
@@ -24,6 +26,7 @@ import {
 } from '@mui/material'
 import ArrowBackIcon from '@mui/icons-material/ArrowBack'
 import EditIcon from '@mui/icons-material/Edit'
+import ExpandMoreIcon from '@mui/icons-material/ExpandMore'
 import { useNavigate, useParams } from 'react-router-dom'
 import {
   getQuestion,
@@ -44,11 +47,14 @@ import { qk } from '../api/queryKeys'
 import { describeMentionScope, describeFormulaStatus } from '../lib/glossary'
 import { usePermissionGuard } from '../hooks/usePermission'
 
-/** 单条公式展示块（点击可查看 latex 源码）。 */
+/** 单条公式展示块。`fid` 退为**次级定位**（B2 §3.4）：小号灰字，不再是显眼的独立徽章；
+ * 非 OK 状态经 `describeFormulaStatus` 中文化。 */
 function FormulaRow({ formula }: { formula: Formula }) {
   return (
     <Stack direction="row" spacing={1} alignItems="center" sx={{ p: 1, border: '1px solid', borderColor: 'divider', borderRadius: 1 }}>
-      <Chip size="small" label={formula.fid} variant="outlined" />
+      <Typography variant="caption" color="text.disabled" sx={{ minWidth: 28 }}>
+        {formula.fid}
+      </Typography>
       <Box sx={{ flex: 1, minWidth: 0, overflowX: 'auto' }}>
         <KatexFormula latex={formula.latex} />
       </Box>
@@ -141,17 +147,19 @@ export default function QuestionDetailPage() {
   const hasAnswer = Boolean(q.answer && q.answer.trim())
   const hasAnalysis = Boolean(q.analysis && q.analysis.trim())
   const needsReviewCount = (q.formulas ?? []).filter((f) => f.needs_review).length
+  const formulaCount = (q.formulas ?? []).length
 
   return (
-    <Box sx={{ maxWidth: 1100 }}>
+    // B2 §3.4：正文收窄到 720 并在主内容区居中（原 maxWidth 1100 左对齐）。
+    <Box data-testid="detail-container" sx={{ maxWidth: 720, mx: 'auto' }}>
       <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 2 }} flexWrap="wrap" useFlexGap>
         <Button startIcon={<ArrowBackIcon />} onClick={() => navigate(-1)}>
           返回
         </Button>
         <Typography variant="h6" component="h1">题 {q.number || q.id}</Typography>
         {q.qtype && <Chip size="small" label={q.qtype} variant="outlined" />}
-        <AnswerBadge hasAnswer={hasAnswer} />
-        <AnalysisBadge hasAnalysis={hasAnalysis} />
+        {/* B2 §3.4：顶部只保留两个**主要状态**——难度与待复核风险。
+            答案/解析状态移到各自正文标题旁（见下）。 */}
         <DifficultyBadge difficulty={q.difficulty} onAnnotate={() => setAnnotateOpen(true)} />
         {needsReviewCount > 0 && <ReviewBadge count={needsReviewCount} />}
         <Box sx={{ flex: 1 }} />
@@ -161,6 +169,13 @@ export default function QuestionDetailPage() {
           </Button>
         )}
       </Stack>
+
+      {/* 默认来源摘要只显示文件名（B2 §3.4）；六项完整来源放进「更多信息」。 */}
+      {q.src_file && (
+        <Typography variant="caption" color="text.secondary" display="block" sx={{ mb: 1 }}>
+          来源文件：{q.src_file}
+        </Typography>
+      )}
 
       {saveMsg && (
         <Alert severity="success" sx={{ mb: 2 }}>
@@ -201,44 +216,34 @@ export default function QuestionDetailPage() {
                       component="img"
                       src={img.id != null ? mediaUrl(q.id, img.id) : (img.media_path ?? '')}
                       alt={`题图 ${i + 1}`}
-                      sx={{ maxWidth: 280, maxHeight: 220, border: '1px solid', borderColor: 'divider', borderRadius: 1 }}
+                      sx={{ maxWidth: '100%', maxHeight: 260, height: 'auto', border: '1px solid', borderColor: 'divider', borderRadius: 1 }}
                     />
                   ))}
                 </Stack>
               </Box>
             )}
 
-            {(q.formulas ?? []).length > 0 && (
-              <Box sx={{ mb: 2 }}>
-                <Typography variant="subtitle2" component="h2" color="text.secondary" gutterBottom>
-                  公式列表（{q.formulas!.length} 条）
-                </Typography>
-                <Stack spacing={1}>
-                  {q.formulas!.map((f) => (
-                    <FormulaRow key={f.fid} formula={f} />
-                  ))}
-                </Stack>
-              </Box>
-            )}
-
-            <Stack direction="row" spacing={3} flexWrap="wrap" sx={{ mb: 2 }}>
-              <Box sx={{ flex: 1, minWidth: 240 }}>
-                <Typography variant="subtitle2" component="h2" color="text.secondary" gutterBottom>
-                  答案
-                </Typography>
-                <Box sx={{ p: 1.5, bgcolor: 'action.hover', borderRadius: 1 }}>
-                  <FormulaText text={q.answer || '（本题库中无答案）'} formulas={q.formulas} />
-                </Box>
-              </Box>
-              <Box sx={{ flex: 1, minWidth: 240 }}>
-                <Typography variant="subtitle2" component="h2" color="text.secondary" gutterBottom>
-                  解析
-                </Typography>
-                <Box sx={{ p: 1.5, bgcolor: 'action.hover', borderRadius: 1 }}>
-                  <FormulaText text={q.analysis || '（本题库中无解析）'} formulas={q.formulas} />
-                </Box>
-              </Box>
+            {/* B2 §3.4：题干 / 图片 / 答案 / 解析**顺序纵排**（原答案、解析为左右双列）。
+                答案/解析状态徽章就地放在各自标题旁。 */}
+            <Stack direction="row" spacing={0.5} alignItems="center" sx={{ mb: 0.5 }}>
+              <Typography variant="subtitle2" component="h2" color="text.secondary">
+                答案
+              </Typography>
+              <AnswerBadge hasAnswer={hasAnswer} />
             </Stack>
+            <Box sx={{ p: 1.5, bgcolor: 'action.hover', borderRadius: 1, mb: 2 }}>
+              <FormulaText text={q.answer || '（本题库中无答案）'} formulas={q.formulas} />
+            </Box>
+
+            <Stack direction="row" spacing={0.5} alignItems="center" sx={{ mb: 0.5 }}>
+              <Typography variant="subtitle2" component="h2" color="text.secondary">
+                解析
+              </Typography>
+              <AnalysisBadge hasAnalysis={hasAnalysis} />
+            </Stack>
+            <Box sx={{ p: 1.5, bgcolor: 'action.hover', borderRadius: 1, mb: 2 }}>
+              <FormulaText text={q.analysis || '（本题库中无解析）'} formulas={q.formulas} />
+            </Box>
 
             <Typography variant="subtitle2" component="h2" color="text.secondary" gutterBottom>
               知识点标签（三态）
@@ -260,24 +265,69 @@ export default function QuestionDetailPage() {
               ))}
             </Stack>
 
-            <Divider sx={{ my: 1.5 }} />
-            <Typography variant="subtitle2" component="h2" color="text.secondary" gutterBottom>
-              来源定位
-            </Typography>
-            <Typography variant="body2" color="text.secondary">
-              来源文件：{q.src_file || '—'}；学段 {q.src_stage || '待补充'}；学科 {q.src_subject || '待补充'}；
-              年级 {q.src_grade || '待补充'}；教材 {q.src_textbook || '待补充'}；章节 {q.chapter || '待补充'}
-            </Typography>
+            {/* B2 §3.4：公式与完整来源放进**默认关闭**的「更多信息」（键盘可展开）。
+                ⚠️ 未知字形 / 待核对风险不随它隐藏——顶部的「待复核公式 N」徽章始终可见。 */}
+            <Accordion
+              disableGutters
+              elevation={0}
+              data-testid="more-info"
+              sx={{ '&:before': { display: 'none' }, border: '1px solid', borderColor: 'divider', borderRadius: 1 }}
+            >
+              <AccordionSummary expandIcon={<ExpandMoreIcon />}>
+                <Typography variant="body2" fontWeight={600}>
+                  更多信息（公式与来源）
+                </Typography>
+                {formulaCount > 0 && (
+                  <Typography variant="caption" color="text.secondary" sx={{ ml: 1 }}>
+                    公式 {formulaCount} 条{needsReviewCount > 0 ? ` · ${needsReviewCount} 条待核对` : ''}
+                  </Typography>
+                )}
+              </AccordionSummary>
+              <AccordionDetails>
+                {formulaCount > 0 && (
+                  <Box sx={{ mb: 2 }}>
+                    <Typography variant="subtitle2" component="h3" color="text.secondary" gutterBottom>
+                      公式列表（{formulaCount} 条）
+                    </Typography>
+                    <Stack spacing={1}>
+                      {(q.formulas ?? []).map((f) => (
+                        <FormulaRow key={f.fid} formula={f} />
+                      ))}
+                    </Stack>
+                  </Box>
+                )}
+                <Typography variant="subtitle2" component="h3" color="text.secondary" gutterBottom>
+                  来源定位
+                </Typography>
+                <Typography variant="body2" color="text.secondary">
+                  来源文件：{q.src_file || '—'}；学段 {q.src_stage || '待补充'}；学科 {q.src_subject || '待补充'}；
+                  年级 {q.src_grade || '待补充'}；教材 {q.src_textbook || '待补充'}；章节 {q.chapter || '待补充'}
+                </Typography>
+              </AccordionDetails>
+            </Accordion>
           </>
         )}
       </Paper>
 
-      <Paper variant="outlined" sx={{ p: 2.5 }}>
-        <Typography variant="subtitle1" component="h2" gutterBottom>
-          版本历史（只读）
-        </Typography>
-        <VersionHistory questionId={q.id} versions={q.versions} />
-      </Paper>
+      {/* B2 §3.4：版本历史入口**折叠**，仍只读（展开某版才拉取该版快照，无回滚按钮）。 */}
+      <Accordion
+        disableGutters
+        elevation={0}
+        data-testid="version-history"
+        sx={{ '&:before': { display: 'none' }, border: '1px solid', borderColor: 'divider', borderRadius: 1 }}
+      >
+        <AccordionSummary expandIcon={<ExpandMoreIcon />}>
+          <Typography variant="subtitle1" component="h2">
+            版本历史（只读）
+          </Typography>
+          <Typography variant="caption" color="text.secondary" sx={{ ml: 1 }}>
+            共 {(q.versions ?? []).length} 版
+          </Typography>
+        </AccordionSummary>
+        <AccordionDetails>
+          <VersionHistory questionId={q.id} versions={q.versions} />
+        </AccordionDetails>
+      </Accordion>
 
       {/* 难度标注 */}
       <Dialog open={annotateOpen} onClose={() => setAnnotateOpen(false)}>

@@ -411,7 +411,13 @@ export default function PaperBuilderPage() {
               onRetry={() => exportDataQ.refetch()}
             />
           ) : exportDataQ.data && exportDataQ.data.sections.length === 0 ? (
-            <EmptyState title="试卷为空" description="从左侧题库点「加入」或拖拽题目到此处。" />
+            // B2 §4 #14：空卷不是终点，给出可点击的下一步（去「找题」页搜索并加入）。
+            <EmptyState
+              title="试卷为空"
+              description="这份试卷还没有题目。到「找题」页搜索，点题卡上的「加入」即可放进本卷。"
+              actionLabel="去找题"
+              onAction={() => navigate('/search')}
+            />
           ) : exportDataQ.data ? (
             <LivePreviewPanel
               paperId={paperId}

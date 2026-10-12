@@ -13,6 +13,7 @@ import {
   Chip,
   Divider,
   FormControlLabel,
+  IconButton,
   Skeleton,
   Stack,
   Switch,
@@ -20,6 +21,7 @@ import {
   Typography,
 } from '@mui/material'
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore'
+import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined'
 import type { CoverageBucket, FacetDimension, FacetsData } from '../api/types'
 import type { SearchParams } from '../api/search'
 
@@ -71,17 +73,36 @@ function dimensionUsable(bucket?: FacetDimension): boolean {
   return bucket.items.length > 0
 }
 
-/** 覆盖率徽标：按后端动态统计显示当前维度覆盖率，不硬编码历史题量。 */
-function CoverageChip({ bucket, label }: { bucket?: CoverageBucket; label: string }) {
-  if (!bucket) return null
+/** 维度帮助：覆盖率数值与「按它筛会漏题」的说明收进悬浮说明（B2 §3.3 帮助化）。
+ *
+ * 此前这些说明**直接铺在筛选栏里**（每个维度一个覆盖率徽标 + 年级/教材/章节一段橙色长文），
+ * 视觉噪声大。改为默认只留一个小「i」，把数值和解释放到悬浮说明里；
+ * **影响当前筛选结果的漏题事实**仍由结果区的 {@link GradeGapNotice} 实时显露，不随这里藏掉。
+ */
+function DimHelp({ label, bucket }: { label: string; bucket?: CoverageBucket }) {
+  const lines: string[] = []
+  if (bucket) {
+    lines.push(
+      `${label}有值的题占全库 ${bucket.pct}%（${(bucket.n ?? 0).toLocaleString('zh-CN')}/${(bucket.total ?? 0).toLocaleString('zh-CN')}）。`,
+    )
+  }
+  lines.push('缺失元数据的题仍可被关键词检索命中，只是无法按此维度筛出。')
+  if (['年级', '教材', '章节'].includes(label) && bucket && (bucket.n ?? 0) < (bucket.total ?? 0)) {
+    lines.push(
+      `按具体${label}筛选会漏掉 ${((bucket.total ?? 0) - (bucket.n ?? 0)).toLocaleString('zh-CN')} 道未标注题；可选「全部」配合关键词查找，或选「待补充」。`,
+    )
+  }
   return (
-    <Tooltip title={`${label}有值的题占全库比例；缺失元数据的题仍可被关键词检索命中，只是无法按此维度筛出`}>
-      <Chip
+    <Tooltip title={lines.join('')}>
+      {/* 阻止点击冒泡到 AccordionSummary，避免点「说明」把分组一起开合。 */}
+      <IconButton
         size="small"
-        variant="outlined"
-        label={`${label} ${bucket.pct}%`}
-        sx={{ height: 20, fontSize: 11 }}
-      />
+        aria-label={`${label}覆盖率说明`}
+        sx={{ p: 0.25 }}
+        onClick={(e) => e.stopPropagation()}
+      >
+        <InfoOutlinedIcon sx={{ fontSize: 16, color: 'text.disabled' }} />
+      </IconButton>
     </Tooltip>
   )
 }
@@ -103,7 +124,15 @@ export function FilterSidebar({
     <Box sx={{ width: 248, flexShrink: 0 }}>
       <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mb: 1 }}>
         {/* P5-3：筛选栏面板小标题，显式降为 <div>，避免与页面 h1 形成 h1→h6 跳级（视觉不变）。 */}
-        <Typography variant="subtitle2" component="div">筛选</Typography>
+        <Stack direction="row" spacing={0.25} alignItems="center">
+          <Typography variant="subtitle2" component="div">筛选</Typography>
+          {/* 说明帮助化（B2 §3.3）：默认不把整段「默认不预选…」铺在筛选栏里，收进悬浮说明。 */}
+          <Tooltip title="默认不预选任何筛选条件（= 全库）；缺失元数据单列「待补充」桶，避免系统性漏题。">
+            <IconButton size="small" aria-label="筛选说明" sx={{ p: 0.25 }}>
+              <InfoOutlinedIcon sx={{ fontSize: 16, color: 'text.disabled' }} />
+            </IconButton>
+          </Tooltip>
+        </Stack>
         <Chip size="small" variant="outlined" label="重置" onClick={onReset} />
       </Stack>
 
@@ -204,6 +233,17 @@ export function FilterSidebar({
             }
             label={<Typography variant="body2">仅看已确认知识点</Typography>}
           />
+          {/* B2 §3.3：严格模式状态就地显示在知识点筛选旁（原在搜索框右侧另起一条 Alert）。 */}
+          {strictKp && (
+            <Chip
+              size="small"
+              color="primary"
+              variant="outlined"
+              label="严格模式已启用"
+              sx={{ mt: 0.5, height: 20, fontSize: 11 }}
+              data-testid="strict-kp-active"
+            />
+          )}
           {facets?.coverage?.label_status && (
             <Typography variant="caption" color="text.secondary" display="block">
               已确认 {(facets.coverage.label_status['已确认'] ?? 0).toLocaleString('zh-CN')} / 待复核{' '}
@@ -229,7 +269,7 @@ export function FilterSidebar({
                 <Typography variant="body2" fontWeight={600}>
                   {dim.label}
                 </Typography>
-                <CoverageChip bucket={cov} label={dim.label} />
+                <DimHelp label={dim.label} bucket={cov} />
                 {!usable && (
                   <Chip size="small" variant="outlined" label="暂不可用"
                     sx={{ height: 20, fontSize: 11 }} />
@@ -261,13 +301,9 @@ export function FilterSidebar({
                 </Alert>
               ) : (
                 <>
-                  {['grade', 'textbook', 'chapter'].includes(dim.key) && cov && cov.n < cov.total && (
-                    <Typography variant="caption" color="warning.main" display="block" sx={{ mb: 1 }}>
-                      {dim.label}覆盖率 {cov.pct}%；按具体{dim.label}筛选会漏掉
-                      {(cov.total - cov.n).toLocaleString('zh-CN')} 道未标注题。
-                      可选「全部」配合关键词查找，或选「待补充」。
-                    </Typography>
-                  )}
+                  {/* B2 §3.3：原「年级覆盖率 17.6%；按具体年级筛选会漏掉 N 道未标注题」的橙色长文
+                      已收进维度标题旁的帮助说明（DimHelp）。当前筛选条件下真正漏掉的题数
+                      由结果区的 GradeGapNotice 实时显露，不随这里一起藏掉。 */}
                   {loading && <Skeleton variant="rounded" height={28} />}
                   {!loading && (
                     <Stack direction="row" spacing={0.5} flexWrap="wrap" useFlexGap>
@@ -319,9 +355,18 @@ export function FilterSidebar({
       })}
 
       <Divider sx={{ my: 1 }} />
-      <Typography variant="caption" color="text.secondary">
-        默认不预选任何筛选条件（= 全库）；缺失元数据单列「待补充」桶，避免系统性漏题。
-      </Typography>
+      {/* B2 §3.3：原「默认不预选任何筛选条件（= 全库）…」的常驻说明已收进标题旁的帮助（见上）。
+          此处只留一个可触达的帮助入口，默认不占版面。 */}
+      <Stack direction="row" spacing={0.25} alignItems="center">
+        <Tooltip title="默认不预选任何筛选条件（= 全库）；缺失元数据单列「待补充」桶，避免系统性漏题。">
+          <IconButton size="small" aria-label="筛选行为说明" sx={{ p: 0.25 }}>
+            <InfoOutlinedIcon sx={{ fontSize: 16, color: 'text.disabled' }} />
+          </IconButton>
+        </Tooltip>
+        <Typography variant="caption" color="text.secondary">
+          筛选说明
+        </Typography>
+      </Stack>
     </Box>
   )
 }

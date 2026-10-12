@@ -287,7 +287,13 @@ function PaperExportPage({ paperId }: { paperId: number }) {
                 </Typography>
                 <LivePreviewPanel paperId={paperId} data={exportDataQ.data} template={(template ?? '考试') as '考试' | '测验' | '作业'} />
                 {sections.length === 0 && (
-                  <EmptyState dense title="该试卷暂无题目" description="从「组卷」页加入题目后再导出。" />
+                  <EmptyState
+                    dense
+                    title="该试卷暂无题目"
+                    description="这份试卷还没有题目，先到「组卷」页加入题目。"
+                    actionLabel="去组卷"
+                    onAction={() => navigate('/builder')}
+                  />
                 )}
               </Box>
             )}

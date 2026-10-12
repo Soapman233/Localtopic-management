@@ -1,10 +1,14 @@
-/** 覆盖率提示条（P0-13 数据状态可见性）。
+/** 数据完整度提示条（P0-13 数据状态可见性）。
  *
  * 橙色、**非阻塞**、可关闭（PRD 4「提示条」/ 5.1）。
- * 文案示例：「年级 17%（1,342/7,945）」，悬浮说明「缺失元数据的题仍可被关键词检索命中，
- * 只是无法按此维度筛出」。
+ *
+ * 设计（B2 §3.3）：默认**只占一行**——一句话说清「哪些维度未标全会漏题」，
+ * 需要时才展开看六维数值与复核数。**不合算未经定义的完整度百分比**（不造总分）。
+ * 折叠的只是「数值明细」，**影响当前筛选结果的漏题事实**由结果区的
+ * {@link GradeGapNotice} 继续显露，不随这里一起藏掉。
  */
-import { Alert, AlertTitle, Box, IconButton, Stack, Typography } from '@mui/material'
+import { useState } from 'react'
+import { Alert, Box, Button, IconButton, Stack, Typography } from '@mui/material'
 import CloseIcon from '@mui/icons-material/Close'
 import type { CoverageBucket, CoverageSummary } from '../api/types'
 
@@ -29,8 +33,10 @@ export interface CoverageBannerProps {
   onDismiss: () => void
 }
 
-/** 覆盖率提示条；`dismissed` 为真时返回 null。 */
+/** 数据完整度提示条；`dismissed` 为真时返回 null。默认折叠为一行，展开后看六维数值。 */
 export function CoverageBanner({ coverage, dismissed, onDismiss }: CoverageBannerProps) {
+  // hooks 必须在提前 return 之前调用。
+  const [expanded, setExpanded] = useState(false)
   if (dismissed || !coverage) return null
 
   const items: { label: string; bucket?: CoverageBucket | null; tip: string }[] = [
@@ -45,46 +51,63 @@ export function CoverageBanner({ coverage, dismissed, onDismiss }: CoverageBanne
   return (
     <Alert
       severity="warning"
-      sx={{ mb: 2, alignItems: 'flex-start' }}
+      sx={{ mb: 2, py: 0.25, alignItems: 'center' }}
       action={
-        <IconButton aria-label="关闭提示" size="small" onClick={onDismiss}>
-          <CloseIcon fontSize="small" />
-        </IconButton>
+        <Stack direction="row" spacing={0.5} alignItems="center">
+          <Button
+            size="small"
+            color="inherit"
+            onClick={() => setExpanded((v) => !v)}
+            aria-expanded={expanded}
+            data-testid="coverage-toggle"
+          >
+            {expanded ? '收起' : '展开明细'}
+          </Button>
+          <IconButton aria-label="关闭提示" size="small" onClick={onDismiss}>
+            <CloseIcon fontSize="small" />
+          </IconButton>
+        </Stack>
       }
     >
-      <AlertTitle>数据覆盖率提示</AlertTitle>
-      <Typography variant="body2" sx={{ mb: 0.5 }}>
-        年级、教材、章节尚未标全，按这些维度筛选会漏掉未标注的题。
-        可清除相应筛选后用关键词查找，或选择「待补充」查看缺失项。
-        「难度」需教研组人工标注，当前全库均未标注，暂不能按难度筛选。
-      </Typography>
-      <Stack direction="row" flexWrap="wrap" columnGap={2} rowGap={0.5}>
-        {items.map((it) => (
-          <Box key={it.label} title={it.tip}>
-            <Typography variant="body2" component="span" color="text.secondary">
-              {it.label}{' '}
-            </Typography>
-            {isUnannotated(it.bucket) ? (
-              // P0-5：0% 不等于"统计坏了"，要直说是"未标注"。
-              <Typography variant="body2" component="span" fontWeight={600} color="warning.main">
-                未标注（{it.bucket?.total?.toLocaleString('zh-CN') ?? '0'} 题）
-              </Typography>
-            ) : (
-              <Typography variant="body2" component="span" fontWeight={600}>
-                {fmtPct(it.bucket)}
-              </Typography>
-            )}
-          </Box>
-        ))}
-        <Box>
-          <Typography variant="body2" component="span" color="text.secondary">
-            待复核公式{' '}
-          </Typography>
-          <Typography variant="body2" component="span" fontWeight={600}>
-            {coverage.review_open?.toLocaleString('zh-CN') ?? '0'} 条
-          </Typography>
-        </Box>
+      {/* 默认一行：只说「按哪些维度筛会漏题」这一件事实，不铺开六维数值。 */}
+      <Stack direction="row" spacing={1} alignItems="baseline" flexWrap="wrap" useFlexGap>
+        <Typography variant="body2" component="span" fontWeight={600}>
+          数据完整度
+        </Typography>
+        <Typography variant="body2" component="span" color="text.secondary">
+          年级、教材、章节尚未标全，按这些维度筛选会漏掉未标注的题；「难度」需教研组人工标注，暂不能按难度筛选。
+        </Typography>
       </Stack>
+
+      {expanded && (
+        <Stack direction="row" flexWrap="wrap" columnGap={2} rowGap={0.5} sx={{ mt: 0.75 }}>
+          {items.map((it) => (
+            <Box key={it.label} title={it.tip}>
+              <Typography variant="body2" component="span" color="text.secondary">
+                {it.label}{' '}
+              </Typography>
+              {isUnannotated(it.bucket) ? (
+                // P0-5：0% 不等于"统计坏了"，要直说是"未标注"。
+                <Typography variant="body2" component="span" fontWeight={600} color="warning.main">
+                  未标注（{it.bucket?.total?.toLocaleString('zh-CN') ?? '0'} 题）
+                </Typography>
+              ) : (
+                <Typography variant="body2" component="span" fontWeight={600}>
+                  {fmtPct(it.bucket)}
+                </Typography>
+              )}
+            </Box>
+          ))}
+          <Box>
+            <Typography variant="body2" component="span" color="text.secondary">
+              待复核公式{' '}
+            </Typography>
+            <Typography variant="body2" component="span" fontWeight={600}>
+              {coverage.review_open?.toLocaleString('zh-CN') ?? '0'} 条
+            </Typography>
+          </Box>
+        </Stack>
+      )}
     </Alert>
   )
 }

@@ -1,8 +1,8 @@
 /**
- * `CoverageBanner` 行为测试。
+ * `CoverageBanner` 行为测试（B2 §3.3 起改为「一行摘要 + 展开明细」）。
  *
- * 关注：覆盖率数据渲染（含千分位与百分比格式）、`dismissed` / 无数据时返回 null、
- * 点关闭按钮触发 `onDismiss`。
+ * 关注：默认**只占一行**（六维数值不铺开）、点「展开明细」后才渲染六维数值与复核数、
+ * `dismissed` / 无数据时返回 null、点关闭按钮触发 `onDismiss`。
  */
 import { describe, it, expect, vi } from 'vitest'
 import { fireEvent, screen } from '@testing-library/react'
@@ -28,9 +28,17 @@ function makeCoverage(): CoverageSummary {
 }
 
 describe('CoverageBanner', () => {
-  it('渲染标题与各维度覆盖率（千分位 / 百分比）', () => {
+  it('默认只占一行：显示「数据完整度」摘要，不铺开六维数值', () => {
     renderWithTheme(<CoverageBanner coverage={makeCoverage()} dismissed={false} onDismiss={vi.fn()} />)
-    expect(screen.getByText('数据覆盖率提示')).toBeInTheDocument()
+    expect(screen.getByText('数据完整度')).toBeInTheDocument()
+    // 默认折叠：六维数值与复核数都还没渲染。
+    expect(screen.queryByText('17%（1,342/7,945）')).not.toBeInTheDocument()
+    expect(screen.queryByText('待复核公式')).not.toBeInTheDocument()
+  })
+
+  it('展开明细后渲染各维度覆盖率（千分位 / 百分比）与复核数', () => {
+    renderWithTheme(<CoverageBanner coverage={makeCoverage()} dismissed={false} onDismiss={vi.fn()} />)
+    fireEvent.click(screen.getByTestId('coverage-toggle'))
     expect(screen.getByText('年级')).toBeInTheDocument()
     expect(screen.getByText('17%（1,342/7,945）')).toBeInTheDocument()
     expect(screen.getByText('待复核公式')).toBeInTheDocument()
@@ -60,6 +68,7 @@ describe('CoverageBanner', () => {
 
   it('覆盖率为 0 的维度显示「未标注」而不是「0%」（P0-5）', () => {
     renderWithTheme(<CoverageBanner coverage={makeCoverage()} dismissed={false} onDismiss={vi.fn()} />)
+    fireEvent.click(screen.getByTestId('coverage-toggle'))
     // 样本里 textbook / chapter 的 n=0 → 应显示「未标注（7,945 题）」
     expect(screen.getAllByText(/未标注（7,945 题）/).length).toBeGreaterThan(0)
     // 且不应再出现会被误读成"统计坏了"的 0%

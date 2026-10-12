@@ -262,12 +262,11 @@ export default function SearchPage() {
         </Typography>
         <TextField
           size="small"
-          placeholder="搜索题干关键词（中文双字切分）"
+          placeholder="搜索题干关键词"
           value={keywordInput}
           onChange={(e) => setKeywordInput(e.target.value)}
           sx={{ minWidth: 320, flex: 1 }}
         />
-        {strictKp && <Alert severity="info" sx={{ py: 0 }}>已启用「仅看已确认知识点」严格模式</Alert>}
       </Stack>
 
       <CoverageBanner
@@ -276,11 +275,11 @@ export default function SearchPage() {
         onDismiss={() => setCoverageDismissed(true)}
       />
 
-      {/* 加入成功后的「已加入 · 去看看试卷 →」入口（§1.3①，新增交互） */}
+      {/* 加入成功：短反馈 + 「查看试卷」行动（B2 §3.3，原「已加入 · 去看看试卷 →」精简）。 */}
       {addedPaperId != null && (
         <Alert
           severity="success"
-          sx={{ mb: 1 }}
+          sx={{ mb: 1, py: 0.25 }}
           onClose={() => setAddedPaperId(null)}
           action={
             <Button
@@ -289,7 +288,7 @@ export default function SearchPage() {
               onClick={() => navigate('/builder')}
               data-testid="go-to-paper"
             >
-              已加入 · 去看看试卷 →
+              查看试卷
             </Button>
           }
         >
@@ -357,8 +356,10 @@ export default function SearchPage() {
             />
           )}
 
-          {/* P1-3：批量加题工具条（勾选多题一次加入） */}
-          {items.length > 0 && (
+          {/* P1-3：批量加题工具条——**仅在勾选了题目时出现**（B2 §3.3）。
+              未选题时不再常驻一条「加入所选（0）」，减少对结果区的干扰；
+              题卡复选框始终可用，勾选后本工具条才出现。 */}
+          {selectedIds.size > 0 && (
             <Alert
               severity="info"
               sx={{ mb: 1, py: 0.25 }}
@@ -368,7 +369,7 @@ export default function SearchPage() {
                   <Button
                     size="small"
                     variant="contained"
-                    disabled={selectedIds.size === 0 || addMutation.isPending}
+                    disabled={addMutation.isPending}
                     onClick={handleAddSelected}
                     data-testid="add-selected"
                   >
@@ -376,7 +377,7 @@ export default function SearchPage() {
                   </Button>
                   <Button
                     size="small"
-                    disabled={selectedIds.size === 0 || addMutation.isPending}
+                    disabled={addMutation.isPending}
                     onClick={() => setSelectedIds(new Set())}
                   >
                     清空
@@ -384,7 +385,7 @@ export default function SearchPage() {
                 </Stack>
               }
             >
-              勾选多题可一次加入当前试卷{targetSectionId ? '（目标大题已选）' : ''}。
+              已勾选 {selectedIds.size} 题，可一次加入当前试卷{targetSectionId ? '（目标大题已选）' : ''}。
             </Alert>
           )}
 

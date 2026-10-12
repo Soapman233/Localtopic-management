@@ -1,6 +1,7 @@
-/** B0 单题详情：真实页内公式状态，未知/空值不能静默变成正常。 */
+/** B0 单题详情：真实页内公式状态，未知/空值不能静默变成正常。
+ *  B2 §3.4 后公式列表进入默认关闭的「更多信息」，断言前先展开该折叠区。 */
 import { it, expect, vi } from 'vitest'
-import { screen } from '@testing-library/react'
+import { fireEvent, screen } from '@testing-library/react'
 import { MemoryRouter, Routes, Route } from 'react-router-dom'
 import QuestionDetailPage from '../../src/pages/QuestionDetailPage'
 import { renderWithProviders } from './testUtils'
@@ -12,6 +13,8 @@ vi.mock('../../src/api/questions', () => ({ getQuestion: async () => ({
 it('非正常状态中文显示，空/未知需核对；OK保持安静而不宣称内容正确', async () => {
   renderWithProviders(<MemoryRouter initialEntries={['/question/1']}><Routes><Route path="/question/:id" element={<QuestionDetailPage />} /></Routes></MemoryRouter>)
   await screen.findByRole('heading', { name: '题 1' })
+  // B2 §3.4：公式列表默认折叠在「更多信息」里，展开后再断言状态文案。
+  fireEvent.click(screen.getByText('更多信息（公式与来源）'))
   for (const label of ['不支持', '未提取到内容', '转换失败', '待核对']) expect(screen.getByText(label)).toBeInTheDocument()
   expect(screen.getAllByText('状态信息不可用，待核对')).toHaveLength(2)
   expect(screen.getByText('计算 2**3 的值')).toBeInTheDocument()
