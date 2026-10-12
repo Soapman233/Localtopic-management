@@ -60,8 +60,16 @@ hiddenimports = [
     "webui.routers.network",
     "webui.services.import_svc",
     "webui.services.network_svc",
+    "webui.services.tls_svc",
     # 局域网访问：二维码生成（延迟导入，静态分析会漏）
     "segno",
+    # 局域网 HTTPS：自签证书生成（延迟导入，静态分析会漏）
+    "cryptography",
+    "cryptography.x509",
+    "cryptography.hazmat.primitives.asymmetric.rsa",
+    "cryptography.hazmat.primitives.hashes",
+    "cryptography.hazmat.primitives.serialization",
+    "cryptography.x509.oid",
 ]
 
 # --- 排除（显著减小体积）--------------------------------------------------- #

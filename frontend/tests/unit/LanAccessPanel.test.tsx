@@ -23,13 +23,15 @@ const OFF = {
   lan_enabled: false, lan_ip: '192.168.0.103', port: 8720, host: '127.0.0.1',
   exposure: 'local', token_set: false, token_masked: null, auth_enabled: false,
   restart_required: false,
+  https: true, scheme: 'https', tls_available: true, cert_fingerprint: null,
 }
 const ON = {
   ...OFF, lan_enabled: true, exposure: 'lan', token_set: true,
   token_masked: 'abcd…wxyz', auth_enabled: true, restart_required: false,
+  cert_fingerprint: 'D5B500671F6E1498',
 }
 const LINK = {
-  ...ON, lan_url: 'http://192.168.0.103:8720/?t=tok-abc',
+  ...ON, lan_url: 'https://192.168.0.103:8720/?t=tok-abc',
   qr_svg: '<svg xmlns="http://www.w3.org/2000/svg" width="8" height="8"></svg>',
 }
 
@@ -42,6 +44,7 @@ function stubFetch(status: unknown, link: unknown = LINK) {
     const u = String(input)
     requested.push(u)
     if (u.includes('/api/network/link')) return jsonResponse(link)
+    if (u.includes('/api/network/https')) return jsonResponse({ https: true, restart_required: true, message: '已更新加密设置' })
     if (u.includes('/api/network/enable')) return jsonResponse({ lan_enabled: true, token_set: true, restart_required: true, message: '已开启' })
     if (u.includes('/api/network/disable')) return jsonResponse({ lan_enabled: false, restart_required: true, message: '已关闭' })
     if (u.includes('/api/network/rotate')) return jsonResponse({ lan_enabled: true, token_set: true, restart_required: true, message: '已更换' })
@@ -85,7 +88,8 @@ describe('LanAccessPanel', () => {
     stubFetch(ON)
     renderPage(<LanAccessPanel />)
     expect(await screen.findByText(/已开启/)).toBeTruthy()
-    fireEvent.click(screen.getByRole('checkbox'))
+    // ⚠️ 开启态下页面有**两个**开关（局域网 + 加密），必须按标签精确定位
+    fireEvent.click(screen.getByLabelText('手机 / 其他设备访问'))
     await waitFor(() =>
       expect(requested.some((u) => u.includes('/api/network/disable'))).toBe(true),
     )
@@ -99,7 +103,7 @@ describe('LanAccessPanel', () => {
 
     fireEvent.click(btn)
     // 链接以文本形式展示，且二维码 SVG 被内联
-    expect(await screen.findByText('http://192.168.0.103:8720/?t=tok-abc')).toBeTruthy()
+    expect(await screen.findByText('https://192.168.0.103:8720/?t=tok-abc')).toBeTruthy()
     expect(screen.getByLabelText('手机访问二维码').querySelector('svg')).toBeTruthy()
   })
 
@@ -107,5 +111,39 @@ describe('LanAccessPanel', () => {
     stubFetch({ ...ON, restart_required: true })
     renderPage(<LanAccessPanel />)
     expect(await screen.findByText(/重启题库/)).toBeTruthy()
+  })
+
+  // ---- 加密（HTTPS）------------------------------------------------------ //
+  it('开启态 + 已加密：解释证书警告（否则老师会被"不安全"提示吓退）', async () => {
+    stubFetch(ON)
+    renderPage(<LanAccessPanel />)
+    expect(await screen.findByText(/加密传输（HTTPS）/)).toBeTruthy()
+    expect(screen.getByText(/点「继续访问」即可/)).toBeTruthy()
+    expect(screen.getByText(/D5B500671F6E1498/)).toBeTruthy()
+  })
+
+  it('🔴 关闭加密：必须给出明确风险提示', async () => {
+    stubFetch({ ...ON, https: false, scheme: 'http', cert_fingerprint: null })
+    renderPage(<LanAccessPanel />)
+    expect(await screen.findByText(/已关闭加密/)).toBeTruthy()
+    expect(screen.getByText(/截获/)).toBeTruthy()
+  })
+
+  it('切换加密开关 → 调用 /api/network/https', async () => {
+    stubFetch(ON)
+    renderPage(<LanAccessPanel />)
+    const httpsSwitch = await screen.findByLabelText('加密传输（HTTPS）')
+    fireEvent.click(httpsSwitch)
+    await waitFor(() =>
+      expect(requested.some((u) => u.includes('/api/network/https'))).toBe(true),
+    )
+  })
+
+  it('缺少证书能力时禁用开关并说明原因', async () => {
+    stubFetch({ ...ON, tls_available: false, cert_fingerprint: null })
+    renderPage(<LanAccessPanel />)
+    const sw = await screen.findByLabelText('加密传输（HTTPS）')
+    expect((sw as HTMLInputElement).disabled).toBe(true)
+    expect(screen.getByText(/缺少证书生成组件/)).toBeTruthy()
   })
 })

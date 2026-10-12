@@ -45,10 +45,19 @@ def lan_ip() -> str | None:
 
 def _req(base: str, path: str, *, token: str | None = None, method: str = "GET",
          timeout: float = 20.0):
+    """发起请求。
+
+    ⚠️ HTTPS 用的是**自签证书**，必须用不校验的 SSL 上下文——
+    否则连不上（这不是缺陷，是自签证书的固有属性；手机端表现为需点一次「继续访问」）。
+    """
+    import ssl
+    ctx = ssl.create_default_context()
+    ctx.check_hostname = False
+    ctx.verify_mode = ssl.CERT_NONE
     headers = {"Authorization": f"Bearer {token}"} if token else {}
     r = urllib.request.Request(base + path, headers=headers, method=method)
     try:
-        with urllib.request.urlopen(r, timeout=timeout) as resp:
+        with urllib.request.urlopen(r, timeout=timeout, context=ctx) as resp:
             return resp.status, json.loads(resp.read())
     except urllib.error.HTTPError as e:
         return e.code, None
@@ -72,6 +81,22 @@ def _wait(base: str, tries: int = 40) -> bool:
         if st == 200:
             return True
     return False
+
+
+def _wait_any(port: int, tries: int = 40) -> str | None:
+    """探测回环地址就绪，**自动识别 http/https**，返回可用的 base。
+
+    ⚠️ 局域网开启后服务端走 HTTPS，此时仍按 http 探测会一直失败
+    （本脚本第一版就因此把「重启后可启动」误判为 FAIL）。
+    """
+    for _ in range(tries):
+        time.sleep(1.0)
+        for scheme in ("https", "http"):
+            base = f"{scheme}://127.0.0.1:{port}"
+            st, _ = _req(base, "/api/health", timeout=6)
+            if st == 200:
+                return base
+    return None
 
 
 def _kill(proc) -> None:
@@ -134,8 +159,9 @@ def main() -> int:
     # ---------- 1) 默认仅回环 ----------
     print(f"[步骤1] 默认启动（端口 {P1}，应仅回环）")
     p1 = _launch(P1)
-    ok = _wait(_port_of(P1))
-    print(f"   回环就绪: {ok}")
+    base1 = _wait_any(P1)
+    ok = base1 is not None
+    print(f"   回环就绪: {ok}（协议 {base1.split(':')[0] if base1 else '—'}）")
     R["默认可启动"] = ok
     st_lan, _ = _req(f"http://{ip}:{P1}", "/api/health", timeout=5)
     print(f"   局域网地址访问 -> {st_lan}（期望 None=连不上）")
@@ -143,12 +169,12 @@ def main() -> int:
 
     # ---------- 2) 开启局域网 ----------
     print(f"\n[步骤2] 经 API 开启局域网访问（端口 {P1}）")
-    st, body = _req(_port_of(P1), "/api/network/enable", method="POST")
+    st, body = _req(base1, "/api/network/enable", method="POST")
     d = (body or {}).get("data") or {}
     print(f"   enable -> {st} lan_enabled={d.get('lan_enabled')} "
           f"token_set={d.get('token_set')} restart_required={d.get('restart_required')}")
     R["开启接口可用"] = (st == 200 and bool(d.get("lan_enabled")) and bool(d.get("token_set")))
-    st, body = _req(_port_of(P1), "/api/network/link")
+    st, body = _req(base1, "/api/network/link")
     link = (body or {}).get("data") or {}
     token = link["lan_url"].split("?t=")[-1] if link.get("lan_url") else None
     print(f"   链接: {link.get('lan_url')}")
@@ -160,14 +186,24 @@ def main() -> int:
     # ---------- 3) 重启后生效 + 局域网鉴权 ----------
     print(f"\n[步骤3] 重启（端口 {P2}）→ 应自动监听全网卡并带上令牌")
     p2 = _launch(P2)
-    ok = _wait(_port_of(P2))
-    print(f"   回环就绪: {ok}")
-    R["重启后可启动"] = ok
+    base2 = _wait_any(P2)
+    print(f"   回环就绪: {base2 is not None}（协议 {base2.split(':')[0] if base2 else '—'}）")
+    R["重启后可启动"] = (base2 is not None)
 
-    LAN = f"http://{ip}:{P2}"
+    LAN = f"https://{ip}:{P2}"
     st_lan, _ = _req(LAN, "/api/health", timeout=10)
     print(f"   局域网 /api/health（豁免）-> {st_lan}")
-    R["局域网可达"] = (st_lan == 200)
+    R["局域网可达(HTTPS)"] = (st_lan == 200)
+
+    # 🔴 HTTPS 的核心价值：同网段的**明文嗅探拿不到令牌**。这里验证同一端口
+    #    不接受明文 HTTP（否则中间人可直接读走令牌）。
+    st_plain, _ = _req(f"http://{ip}:{P2}", "/api/health", timeout=6)
+    print(f"   同端口明文 HTTP -> {st_plain}（期望 None=握手失败）")
+    R["明文 HTTP 被拒"] = (st_plain is None)
+
+    R["链接为 https"] = bool(link.get("lan_url", "").startswith("https://"))
+    print(f"   手机链接协议: {link.get('lan_url', '')[:8]}…")
+
     st_no, _ = _req(LAN, "/api/papers", timeout=10)
     print(f"   局域网 /api/papers 不带令牌 -> {st_no}（期望 401）")
     R["无令牌被拒(401)"] = (st_no == 401)
@@ -181,7 +217,7 @@ def main() -> int:
     # 顺手关掉局域网，为下一步的"危险配置"清场。
     # ⚠️ **必须带令牌**：局域网开启后鉴权已生效，不带令牌的 disable 会被 401 拒绝
     #    （本脚本第一版就因此没关掉配置，导致下一步误判——见步骤4 的断言）。
-    st_dis, _ = _req(_port_of(P2), "/api/network/disable", token=token, method="POST")
+    st_dis, _ = _req(base2, "/api/network/disable", token=token, method="POST")
     print(f"   关闭局域网 -> {st_dis}（期望 200）")
     R["关闭接口可用(带令牌)"] = (st_dis == 200)
     _kill(p2)
@@ -212,7 +248,7 @@ def main() -> int:
         if p3.poll() is not None:
             exited = True
             break
-    started = _wait(_port_of(P3), tries=8) if not exited else False
+    started = (_wait_any(P3, tries=8) is not None) if not exited else False
     print(f"   进程自行退出: {exited}（退出码 {p3.poll()}）")
     print(f"   端口是否被监听: {started}（期望 False）")
     if log.is_file():

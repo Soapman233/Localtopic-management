@@ -22,6 +22,14 @@ export interface NetworkStatus {
   auth_enabled: boolean
   /** 配置与**当前实际监听**是否不一致——不一致说明需重启生效。 */
   restart_required: boolean
+  /** 局域网是否走 HTTPS（自签证书）。**默认 true**。 */
+  https: boolean
+  /** 实际协议。 */
+  scheme: 'http' | 'https'
+  /** 是否具备证书生成能力（缺 cryptography 时为 false，会退回明文 HTTP）。 */
+  tls_available: boolean
+  /** 自签证书指纹（SHA-256 前 16 位），供人工核对；无证书为 null。 */
+  cert_fingerprint: string | null
 }
 
 /** ``GET /api/network/link``：含令牌的手机链接与二维码。 */
@@ -63,4 +71,16 @@ export function disableLan(): Promise<NetworkActionResult> {
 /** ``POST /api/network/rotate``：更换令牌，旧链接立即失效。 */
 export function rotateLanToken(): Promise<NetworkActionResult> {
   return api.post<NetworkActionResult>('/api/network/rotate')
+}
+
+/** ``POST /api/network/https`` 的响应。 */
+export interface HttpsToggleResult {
+  https: boolean
+  restart_required: boolean
+  message: string
+}
+
+/** ``POST /api/network/https``：开关「局域网使用 HTTPS（自签证书）」。 */
+export function setLanHttps(enabled: boolean): Promise<HttpsToggleResult> {
+  return api.post<HttpsToggleResult>('/api/network/https', { enabled })
 }

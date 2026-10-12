@@ -32,6 +32,7 @@ from __future__ import annotations
 import io
 import secrets
 import socket
+from pathlib import Path
 
 from .. import config, edition
 
@@ -64,41 +65,73 @@ def lan_ip() -> str | None:
 
 
 def get_lan_config() -> dict:
-    """读取局域网配置：``{enabled: bool, token: str | None}``。"""
+    """读取局域网配置：``{enabled, token, https}``。
+
+    ``https`` 缺省为 **True**——公共/公司网络下明文传输等于把令牌交出去，
+    因此**默认加密**；仅在用户显式关闭时才用 HTTP。
+    """
     raw = (config.get_settings() or {}).get(SETTINGS_KEY) or {}
     token = raw.get("token")
     return {
         "enabled": bool(raw.get("enabled")),
         "token": token if isinstance(token, str) and token.strip() else None,
+        "https": raw.get("https", True) is not False,
     }
 
 
-def _write_lan_config(enabled: bool, token: str | None) -> None:
-    config.update_settings({SETTINGS_KEY: {"enabled": bool(enabled), "token": token}})
+def _write_lan_config(enabled: bool, token: str | None, https: bool = True) -> None:
+    config.update_settings(
+        {SETTINGS_KEY: {"enabled": bool(enabled), "token": token, "https": bool(https)}})
 
 
-def set_lan_enabled(enabled: bool) -> dict:
+def set_lan_enabled(enabled: bool, *, https: bool | None = None) -> dict:
     """开启/关闭局域网访问。
 
-    * 开启：若无令牌则**生成一个**并持久化；
-    * 关闭：保留令牌（下次开启无需重新扫码），但不再监听全网卡。
+    * 开启：若无令牌则**生成一个**并持久化；``https`` 缺省保持当前值（首次为 True）；
+    * 关闭：保留令牌与 https 设置（下次开启无需重新扫码）。
 
-    ⚠️ 监听地址在**启动时**绑定，因此改动**需重启**才生效。
+    ⚠️ 监听地址与 TLS 都在**启动时**绑定，因此改动**需重启**才生效。
     """
     cfg = get_lan_config()
     token = cfg["token"]
     if enabled and not token:
         token = secrets.token_urlsafe(TOKEN_BYTES)
-    _write_lan_config(enabled, token)
-    return {"enabled": enabled, "token": token, "restart_required": True}
+    want_https = cfg["https"] if https is None else bool(https)
+    _write_lan_config(enabled, token, want_https)
+    return {"enabled": enabled, "token": token, "https": want_https,
+            "restart_required": True}
+
+
+def set_https(enabled: bool) -> dict:
+    """单独切换「局域网是否使用 HTTPS」。**需重启生效**。"""
+    cfg = get_lan_config()
+    _write_lan_config(cfg["enabled"], cfg["token"], bool(enabled))
+    return {"enabled": cfg["enabled"], "token": cfg["token"], "https": bool(enabled),
+            "restart_required": True}
 
 
 def rotate_token() -> dict:
     """重新生成令牌（旧链接立即失效）。"""
     cfg = get_lan_config()
     token = secrets.token_urlsafe(TOKEN_BYTES)
-    _write_lan_config(cfg["enabled"], token)
-    return {"enabled": cfg["enabled"], "token": token, "restart_required": True}
+    _write_lan_config(cfg["enabled"], token, cfg["https"])
+    return {"enabled": cfg["enabled"], "token": token, "https": cfg["https"],
+            "restart_required": True}
+
+
+def tls_files() -> tuple[Path, Path] | None:
+    """需要 HTTPS 时准备自签证书，返回 ``(cert, key)``；否则 ``None``。
+
+    仅在「局域网已开启 **且** https 未关闭」时生成——单机模式用不到 TLS，
+    没必要在磁盘上留私钥。
+    """
+    cfg = get_lan_config()
+    if not cfg["enabled"] or not cfg["https"]:
+        return None
+    from . import tls_svc
+    ip = lan_ip()
+    hosts = [h for h in (ip, "localhost") if h]
+    return tls_svc.ensure_cert(hosts)
 
 
 def mask_token(token: str | None) -> str | None:
@@ -109,16 +142,20 @@ def mask_token(token: str | None) -> str | None:
 
 
 def build_lan_url(token: str | None, *, host: str | None = None,
-                  port: int | None = None) -> str | None:
+                  port: int | None = None, https: bool | None = None) -> str | None:
     """构造手机可直接打开的链接（**含令牌**，扫码即登录）。
 
-    形如 ``http://192.168.0.103:8720/?t=<token>``。
+    形如 ``https://192.168.0.103:8720/?t=<token>``。
     前端读取 ``?t=`` 后写入 localStorage 并从地址栏抹掉（避免留在浏览历史里）。
+
+    ``https`` 缺省取配置值（**默认加密**）。
     """
     ip = host or lan_ip()
     if not ip or not token:
         return None
-    return f"http://{ip}:{port or edition.resolve_port()}/?t={token}"
+    use_https = get_lan_config()["https"] if https is None else bool(https)
+    scheme = "https" if use_https else "http"
+    return f"{scheme}://{ip}:{port or edition.resolve_port()}/?t={token}"
 
 
 def qr_svg(url: str) -> str | None:
@@ -169,6 +206,7 @@ def network_status(*, include_link: bool = False) -> dict:
     cfg = get_lan_config()
     ip = lan_ip()
     port = edition.resolve_port()
+    from . import tls_svc
     out = {
         "lan_enabled": cfg["enabled"],
         "lan_ip": ip,
@@ -179,6 +217,11 @@ def network_status(*, include_link: bool = False) -> dict:
         "token_masked": mask_token(cfg["token"]),
         "auth_enabled": edition.auth_enabled(),
         "restart_required": cfg["enabled"] != (edition.resolve_exposure() != "local"),
+        # ---- HTTPS（自签证书）----
+        "https": cfg["https"],
+        "scheme": "https" if cfg["https"] else "http",
+        "tls_available": tls_svc.available(),
+        "cert_fingerprint": tls_svc.fingerprint() if cfg["https"] else None,
     }
     if include_link:
         url = build_lan_url(cfg["token"], host=ip, port=port)
@@ -189,7 +232,7 @@ def network_status(*, include_link: bool = False) -> dict:
 
 __all__ = [
     "SETTINGS_KEY", "TOKEN_BYTES",
-    "lan_ip", "get_lan_config", "set_lan_enabled", "rotate_token",
+    "lan_ip", "get_lan_config", "set_lan_enabled", "set_https", "rotate_token",
     "mask_token", "build_lan_url", "qr_svg", "network_status",
-    "apply_to_environment",
+    "apply_to_environment", "tls_files",
 ]

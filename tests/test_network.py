@@ -126,8 +126,9 @@ class TestNetworkService(unittest.TestCase):
         self.assertNotIn("efghijkl", masked or "")
 
     def test_build_lan_url_contains_token(self):
+        """默认走 **https**（公共网络下必须加密）。"""
         url = svc.build_lan_url("tok123", host="192.168.0.9", port=8720)
-        self.assertEqual(url, "http://192.168.0.9:8720/?t=tok123")
+        self.assertEqual(url, "https://192.168.0.9:8720/?t=tok123")
 
     def test_build_lan_url_none_without_token(self):
         """无令牌就没有可用的手机链接（避免给出打不开的地址）。"""
@@ -178,6 +179,111 @@ class TestNetworkService(unittest.TestCase):
         with mock.patch.dict("os.environ", {}, clear=True):
             svc.apply_to_environment()
             self.assertEqual(edition.resolve_host(), "127.0.0.1")
+
+
+class TestTls(unittest.TestCase):
+    """自签证书（局域网 HTTPS）。
+
+    🔴 关键性质：**私钥必须每台机器独立**。若随程序分发同一份私钥，
+    嗅探者用公开的私钥即可解密流量，加密形同虚设。
+    """
+
+    def setUp(self):
+        import tempfile
+        from pathlib import Path
+        self.tmp = Path(tempfile.mkdtemp(prefix="qb-tls-test-"))
+        self._p = mock.patch("webui.config.WEBUI_DIR", self.tmp)
+        self._p.start()
+
+    def tearDown(self):
+        import shutil
+        self._p.stop()
+        shutil.rmtree(self.tmp, ignore_errors=True)
+
+    def test_generate_and_reuse(self):
+        from webui.services import tls_svc as T
+        if not T.available():
+            self.skipTest("未安装 cryptography")
+        cert, key = T.ensure_cert(["192.168.0.103"])
+        self.assertTrue(cert.is_file())
+        self.assertTrue(key.is_file())
+        # SAN 必须含目标 IP（否则浏览器会额外报"名称不匹配"）
+        self.assertIn("192.168.0.103", T.current_san() or ())
+        self.assertIn("127.0.0.1", T.current_san() or ())
+        # 同 SAN 复用：**不重建**（避免手机端反复信任）
+        cert_mtime = cert.stat().st_mtime_ns
+        T.ensure_cert(["192.168.0.103"])
+        self.assertEqual(cert.stat().st_mtime_ns, cert_mtime)
+
+    def test_rebuild_when_ip_changes(self):
+        from webui.services import tls_svc as T
+        if not T.available():
+            self.skipTest("未安装 cryptography")
+        T.ensure_cert(["192.168.0.103"])
+        T.ensure_cert(["10.0.0.7"])
+        self.assertIn("10.0.0.7", T.current_san() or ())
+
+    def test_key_is_unique_per_generation(self):
+        """两次生成（强制重建）必须得到**不同**的私钥。"""
+        from webui.services import tls_svc as T
+        if not T.available():
+            self.skipTest("未安装 cryptography")
+        _, key = T.ensure_cert(["192.168.0.103"])
+        first = key.read_bytes()
+        T.ensure_cert(["192.168.0.103"], force=True)
+        self.assertNotEqual(first, key.read_bytes())
+
+    def test_fingerprint(self):
+        from webui.services import tls_svc as T
+        if not T.available():
+            self.skipTest("未安装 cryptography")
+        T.ensure_cert(["192.168.0.103"])
+        fp = T.fingerprint()
+        self.assertTrue(fp and len(fp) == 16)
+
+
+class TestHttpsConfig(unittest.TestCase):
+    """HTTPS 开关与链接协议。"""
+
+    def setUp(self):
+        _SETTINGS.clear()
+        self._p1 = mock.patch("webui.config.get_settings", _fake_get_settings)
+        self._p2 = mock.patch("webui.config.update_settings", _fake_update_settings)
+        self._p1.start()
+        self._p2.start()
+
+    def tearDown(self):
+        self._p1.stop()
+        self._p2.stop()
+        _SETTINGS.clear()
+
+    def test_default_is_https(self):
+        """默认必须**加密**——公共网络下明文等于把令牌交出去。"""
+        self.assertTrue(svc.get_lan_config()["https"])
+
+    def test_url_uses_https_by_default(self):
+        url = svc.build_lan_url("tok", host="192.168.0.9", port=8720)
+        self.assertTrue(url.startswith("https://"))
+
+    def test_url_uses_http_when_disabled(self):
+        svc.set_https(False)
+        url = svc.build_lan_url("tok", host="192.168.0.9", port=8720)
+        self.assertTrue(url.startswith("http://"))
+
+    def test_set_https_keeps_token(self):
+        t = svc.set_lan_enabled(True)["token"]
+        svc.set_https(False)
+        self.assertEqual(svc.get_lan_config()["token"], t)
+
+    def test_status_reports_scheme(self):
+        svc.set_lan_enabled(True)
+        st = svc.network_status()
+        self.assertEqual(st["scheme"], "https")
+        self.assertIn("tls_available", st)
+
+    def test_tls_files_none_when_lan_disabled(self):
+        """单机模式不该在磁盘上留私钥。"""
+        self.assertIsNone(svc.tls_files())
 
 
 class TestNetworkApi(unittest.TestCase):

@@ -44,6 +44,7 @@ import {
   getNetworkLink,
   getNetworkStatus,
   rotateLanToken,
+  setLanHttps,
 } from '../api/network'
 import { qk } from '../api/queryKeys'
 import { notify } from '../lib/feedback'
@@ -88,6 +89,15 @@ export default function LanAccessPanel() {
     onSuccess: (res) => {
       notify.warning(res.message)
       setConfirmRotate(false)
+      invalidate()
+    },
+    onError: (e) => notify.errorFrom(e),
+  })
+  const httpsM = useMutation({
+    mutationFn: setLanHttps,
+    onSuccess: (res) => {
+      // 关闭加密是**降低安全性**的动作，用 warning 而非 info
+      notify[res.https ? 'info' : 'warning'](res.message)
       invalidate()
     },
     onError: (e) => notify.errorFrom(e),
@@ -143,6 +153,41 @@ export default function LanAccessPanel() {
             <Alert severity="info" sx={{ mt: 1 }}>
               {GLOSSARY.lanNeedRestart}
             </Alert>
+          )}
+
+          {/* 加密（HTTPS）：公司/公共网络下必须有，否则同网段可嗅探到访问令牌 */}
+          {data?.lan_enabled && (
+            <Box sx={{ mt: 2 }}>
+              <FormControlLabel
+                control={
+                  <Switch
+                    checked={Boolean(data.https)}
+                    disabled={busy || !data.tls_available || statusQ.isLoading}
+                    onChange={(_e, next) => httpsM.mutate(next)}
+                    inputProps={{ 'aria-label': GLOSSARY.lanHttpsTitle }}
+                  />
+                }
+                label={GLOSSARY.lanHttpsTitle}
+              />
+              {!data.tls_available ? (
+                <Alert severity="error" sx={{ mt: 1 }}>
+                  {GLOSSARY.lanHttpsUnavailable}
+                </Alert>
+              ) : data.https ? (
+                <Alert severity="success" sx={{ mt: 1 }}>
+                  {GLOSSARY.lanHttpsOn}
+                  {data.cert_fingerprint && (
+                    <Typography variant="caption" display="block" sx={{ mt: 0.5 }}>
+                      {GLOSSARY.lanCertFingerprint}：{data.cert_fingerprint}
+                    </Typography>
+                  )}
+                </Alert>
+              ) : (
+                <Alert severity="error" sx={{ mt: 1 }}>
+                  {GLOSSARY.lanHttpsOffRisk}
+                </Alert>
+              )}
+            </Box>
           )}
 
           {data?.lan_enabled && (

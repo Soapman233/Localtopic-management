@@ -21,7 +21,9 @@
 
 from __future__ import annotations
 
+import logging
 import os
+import re
 import sys
 import threading
 import time
@@ -34,6 +36,49 @@ from . import config, edition
 def _print(msg: str = "") -> None:
     """带前缀的启动日志（中文）。"""
     print(f"[题库] {msg}", flush=True)
+
+
+class _RedactQueryFilter(logging.Filter):
+    """🔴 把访问日志里的**查询串**抹掉。
+
+    为什么必须有
+    ------------
+    手机扫码用的链接是 ``http://<ip>:<port>/?t=<令牌>``。uvicorn 的访问日志
+    默认记录完整 ``request_line``，会把**令牌明文写进 ``outputs/webui/start.log``**
+    ——任何能看到该日志文件的人都拿到了完整读写权限（实测确认过）。
+
+    这里统一把 ``?...`` 换成 ``?<redacted>``，从根上杜绝令牌落盘。
+    """
+
+    _REDACTED = "?<redacted>"
+
+    def filter(self, record: logging.LogRecord) -> bool:  # noqa: A003
+        args = getattr(record, "args", None)
+        if isinstance(args, tuple) and len(args) >= 3:
+            path = args[2]
+            if isinstance(path, str) and "?" in path:
+                new = list(args)
+                new[2] = path.split("?", 1)[0] + self._REDACTED
+                record.args = tuple(new)
+        # 兜底：即便消息里已经拼好了完整 URL，也把 ?t= 之后的内容抹掉
+        if isinstance(record.msg, str) and "?t=" in record.msg:
+            record.msg = re.sub(r"\?t=[^\s\"']+", "?t=<redacted>", record.msg)
+        return True
+
+
+def _safe_log_config() -> dict:
+    """在 uvicorn 默认日志配置上挂脱敏过滤器（访问日志与默认日志都挂）。"""
+    import copy
+
+    from uvicorn.config import LOGGING_CONFIG
+
+    cfg = copy.deepcopy(LOGGING_CONFIG)
+    cfg.setdefault("filters", {})["redact_query"] = {"()": _RedactQueryFilter}
+    for name in ("default", "access"):
+        handler = cfg.get("handlers", {}).get(name)
+        if handler is not None:
+            handler["filters"] = ["redact_query"]
+    return cfg
 
 
 def migrate_database(db_path: Path) -> list[str]:
@@ -107,7 +152,21 @@ def main(argv: list[str] | None = None) -> int:
         _print(f"  {_safety['hint']}")
         return 1
     if _safety["exposure"] == "lan":
-        _print(f"局域网访问：已开启（http://{host}:{port}）——手机连同一 WiFi 即可使用。")
+        _print("局域网访问：已开启——手机连同一 WiFi 即可使用。")
+
+    # 局域网 HTTPS：**必须在构造访问地址之前**准备证书，否则提示与自动打开的地址
+    # 会是 http://，而实际监听的是 https://（实测踩过）。
+    # 缺库/生成失败时**明确告警**并退回 HTTP，不静默降级。
+    ssl_kwargs: dict = {}
+    _tls = _net.tls_files()
+    if _tls is not None:
+        _cert, _key = _tls
+        ssl_kwargs = {"ssl_certfile": str(_cert), "ssl_keyfile": str(_key)}
+        _print("已启用 HTTPS（自签证书）——手机首次访问会提示「不安全」，"
+               "这是自签证书的正常现象，点「继续访问」即可。")
+    elif _net.get_lan_config()["enabled"] and _net.get_lan_config()["https"]:
+        _print("⚠️ 未能启用 HTTPS（缺少证书生成能力），当前为**明文传输**——"
+               "请勿在公共/公司网络下使用。")
 
     if not db_path.is_file():
         # 便携客户端**首启必须能自动建库**——老师不会去命令行跑 bank.cli init。
@@ -144,16 +203,20 @@ def main(argv: list[str] | None = None) -> int:
     for msg in env["messages"]:
         _print(f"  ! 降级：{msg}")
 
-    url = f"http://{host}:{port}"
+    scheme = "https" if ssl_kwargs else "http"
+    url = f"{scheme}://{host}:{port}"
     _print("题库已启动，关闭此窗口即退出。")
     _print(f"访问地址：{url}")
 
-    _open_browser_later(url)
+    # 浏览器不能用 0.0.0.0 访问；局域网模式下改开回环地址。
+    browse_host = "127.0.0.1" if host in ("0.0.0.0", "::", "") else host
+    _open_browser_later(f"{scheme}://{browse_host}:{port}")
 
     import uvicorn
     from .app import app
 
-    uvicorn.run(app, host=host, port=port, log_level="info")
+    uvicorn.run(app, host=host, port=port, log_level="info",
+                log_config=_safe_log_config(), **ssl_kwargs)
     return 0
 
 

@@ -167,3 +167,7 @@ spike/acceptance/_p42_timing/
 spike/acceptance/_lan_e2e/
 spike/acceptance/_net*/
 spike/acceptance/_safety/
+
+spike/acceptance/_https/
+spike/acceptance/_tls/
+spike/acceptance/_redact/

@@ -20,6 +20,7 @@ from __future__ import annotations
 from fastapi import APIRouter
 
 from ..errors import ok
+from ..schemas import HttpsToggle
 from ..services import network_svc as svc
 
 router = APIRouter(prefix="/api", tags=["network"])
@@ -73,6 +74,26 @@ def api_network_rotate() -> dict:
         "token_set": res["token"] is not None,
         "restart_required": res["restart_required"],
         "message": "已更换访问令牌，旧链接已失效。请重启题库后用新链接重新扫码。",
+    })
+
+
+@router.post("/network/https")
+def api_network_https(body: HttpsToggle) -> dict:
+    """开关「局域网使用 HTTPS（自签证书）」。**需重启生效**。
+
+    ⚠️ 关闭后在公共/公司网络下是**明文传输**，同网段可嗅探到访问令牌。
+    """
+    res = svc.set_https(bool(body.enabled))
+    if body.enabled:
+        msg = ("已启用 HTTPS（自签证书）。重启后手机首次访问会提示「不安全」，"
+               "这是自签证书的正常现象，点「继续访问」即可。")
+    else:
+        msg = ("已关闭 HTTPS——当前为**明文传输**，请勿在公共/公司网络下使用。"
+               "重启后生效。")
+    return ok({
+        "https": res["https"],
+        "restart_required": res["restart_required"],
+        "message": msg,
     })
 
 

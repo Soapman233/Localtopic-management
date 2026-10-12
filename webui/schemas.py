@@ -156,6 +156,12 @@ class AddQuestionsRequest(BaseModel):
     group: bool = False
 
 
+class HttpsToggle(BaseModel):
+    """``POST /api/network/https`` 请求体：是否让局域网走 HTTPS（自签证书）。"""
+
+    enabled: bool
+
+
 class MoveRequest(BaseModel):
     """``POST .../move`` 请求体（题目条目 / 大题移动）。"""
 
