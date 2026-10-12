@@ -107,19 +107,3 @@ htmlcov/
 # build_asset_manifest.py / embed_metadata.py 等脚本），**需要跟踪**，
 # 故此处不做忽略（其 __pycache__ 已由上面的规则覆盖）。
 
-
-# 临时工作目录（PDF 装配中间产物，不入库）
-.tmp_md2pdf/
-
-# 探针临时库与工作目录（可再生，不入库）
-spike/programmatic_import/tmp_bank.db
-spike/programmatic_import/work/
-
-# 探针生成的中间产物（可再生）
-spike/latex2omml_smoke/*.pdf
-spike/latex2omml_smoke/real_*.docx
-
-# DOCX 生成器探针产物（可再生）
-spike/docx_writer_smoke/*.pdf
-spike/docx_writer_smoke/*.docx
-spike/docx_writer_smoke/_media/
