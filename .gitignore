@@ -156,3 +156,6 @@ spike/acceptance/_srcrun/
 spike/acceptance/_fresh/
 spike/acceptance/_backup_test/
 spike/acceptance/_backup_api/
+
+spike/acceptance/_mtef/
+spike/acceptance/_mtef_frozen/
