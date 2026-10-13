@@ -331,6 +331,16 @@ export default function SourcesPage({ headingLevel = 1 }: { headingLevel?: 1 | 2
     (r) => isMissing(r.grade) || isMissing(r.textbook),
   ).length
 
+  // T21：学段 / 学科是**全库级**属性——实测 209/209 份文件恒为「初中 / 物理」，
+  // 逐行打印同一个值没有信息量。改为页级 caption：先取全部文件的去重组合，
+  // 取值单一则明示「全库一致」；万一将来出现多种取值，也如实列出（不隐藏事实）。
+  const stageSubject = useMemo(() => {
+    const set = new Set(
+      (sourcesQ.data ?? []).map((r) => [r.stage, r.subject].filter(Boolean).join(' / ') || '—'),
+    )
+    return [...set]
+  }, [sourcesQ.data])
+
   // T06：分页。筛选变化时回到第 1 页；`safePage` 兜底防止筛选后页码越界（不写状态、纯派生）。
   const pageCount = Math.max(1, Math.ceil(rows.length / PAGE_SIZE))
   const safePage = Math.min(page, pageCount)
@@ -380,6 +390,14 @@ export default function SourcesPage({ headingLevel = 1 }: { headingLevel?: 1 | 2
       <Typography variant="caption" color="text.secondary" display="block" sx={{ mb: 1 }}>
         共 {totalFiles} 份来源文件；其中 <strong>{missingFiles}</strong> 份的<strong>年级 / 教材</strong>元数据缺失。
         缺失不影响关键词检索，但无法按该维度筛出——可在此逐份回填。
+        {/* T21：学段 / 学科在全库恒定（实测 209/209 =「初中 / 物理」），逐行重复无信息量 →
+            提升为页级说明，撤掉表格里那一列。取值单一则明示「全库一致」。 */}
+        {stageSubject.length > 0 && (
+          <>
+            {' '}全部文件的<strong>学段 / 学科</strong>为 {stageSubject.join('、')}
+            {stageSubject.length === 1 ? '（全库一致，故未逐行重复）' : ''}。
+          </>
+        )}
       </Typography>
 
       {toast && (
@@ -403,7 +421,6 @@ export default function SourcesPage({ headingLevel = 1 }: { headingLevel?: 1 | 2
             <TableHead>
               <TableRow>
                 <TableCell>文件名</TableCell>
-                <TableCell>学段/学科</TableCell>
                 <TableCell>年级</TableCell>
                 <TableCell>教材</TableCell>
                 <TableCell align="right">题量</TableCell>
@@ -426,9 +443,6 @@ export default function SourcesPage({ headingLevel = 1 }: { headingLevel?: 1 | 2
                   >
                     <TableCell sx={{ maxWidth: 320, wordBreak: 'break-all' }}>{r.file_name}</TableCell>
                     <TableCell>
-                      {[r.stage, r.subject].filter(Boolean).join(' / ') || '—'}
-                    </TableCell>
-                    <TableCell>
                       {gMissing ? <MissingCell field="年级" /> : r.grade}
                     </TableCell>
                     <TableCell>
@@ -441,7 +455,7 @@ export default function SourcesPage({ headingLevel = 1 }: { headingLevel?: 1 | 2
               })}
               {rows.length === 0 && (
                 <TableRow>
-                  <TableCell colSpan={6}>
+                  <TableCell colSpan={5}>
                     <EmptyState
                       dense
                       title="没有匹配的来源文件"

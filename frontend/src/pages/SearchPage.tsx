@@ -14,13 +14,18 @@ import {
   DialogActions,
   DialogContent,
   DialogTitle,
+  Drawer,
   MenuItem,
   Pagination,
   Select,
   Stack,
   TextField,
+  Toolbar,
   Typography,
+  useMediaQuery,
+  useTheme,
 } from '@mui/material'
+import FilterListIcon from '@mui/icons-material/FilterList'
 import { useAppNavigate } from '../hooks/useAppNavigate'
 import { AnimatedList } from '../components/AnimatedList'
 import { FilterSidebar } from '../components/FilterSidebar'
@@ -29,6 +34,7 @@ import { GradeGapNotice } from '../components/GradeGapNotice'
 import { QuestionCard } from '../components/QuestionCard'
 import { EmptyState } from '../components/EmptyState'
 import { ErrorState } from '../components/ErrorState'
+import { LoadingState } from '../components/LoadingState'
 import { useCoverageQuery, useFacetsQuery, useSearchQuery } from '../hooks/useSearch'
 import { addQuestions, createPaper, listPapers } from '../api/papers'
 import { setDifficulty } from '../api/questions'
@@ -170,6 +176,12 @@ export default function SearchPage() {
   const { currentPaperId, targetSectionId, setCurrentPaperId } = usePaperStore()
   const { coverageDismissed, setCoverageDismissed, strictKp, setStrictKp } = useUiStore()
 
+  // T24b 响应式（规范 §2.8 断点）：`<lg`（<1200px）时左侧筛选栏折叠为抽屉（默认关闭），
+  // 结果区独占整宽；`≥1200px` 保持双栏「边筛边看」——1366（教师主流机型）仍是双栏。
+  const theme = useTheme()
+  const narrow = useMediaQuery(theme.breakpoints.down('lg'))
+  const [filtersOpen, setFiltersOpen] = useState(false)
+
   // 检索条件状态（关键词防抖 / URL 同步 / query 与 facets 参数）——与组卷页共用同一实现（§1.6）。
   const {
     keywordInput,
@@ -276,6 +288,19 @@ export default function SearchPage() {
           onChange={(e) => setKeywordInput(e.target.value)}
           sx={{ minWidth: 320, flex: 1 }}
         />
+        {/* T24b：窄屏（<1200px）下筛选栏收进抽屉，用此按钮开合（规范 §2.8）。 */}
+        {narrow && (
+          <Button
+            variant="outlined"
+            startIcon={<FilterListIcon />}
+            onClick={() => setFiltersOpen(true)}
+            data-testid="open-filters"
+            aria-expanded={filtersOpen}
+            aria-controls="search-filters-drawer"
+          >
+            筛选
+          </Button>
+        )}
       </Stack>
 
       <CoverageBanner
@@ -306,25 +331,29 @@ export default function SearchPage() {
       )}
 
       <Box sx={{ display: 'flex', gap: 2, alignItems: 'flex-start' }}>
-        <FilterSidebar
-          facets={facetsQ.data}
-          loading={facetsQ.isLoading}
-          filters={filters}
-          onChange={(patch) => {
-            setFilters((f) => ({ ...f, ...patch }))
-            setPage(1)
-          }}
-          strictKp={strictKp}
-          onStrictKpChange={setStrictKp}
-          onReset={resetFilters}
-        />
+        {/* T24b：宽屏（≥1200px）筛选栏内联常驻；窄屏收进抽屉（见文件末尾），结果区独占整宽。 */}
+        {!narrow && (
+          <FilterSidebar
+            facets={facetsQ.data}
+            loading={facetsQ.isLoading}
+            filters={filters}
+            onChange={(patch) => {
+              setFilters((f) => ({ ...f, ...patch }))
+              setPage(1)
+            }}
+            strictKp={strictKp}
+            onStrictKpChange={setStrictKp}
+            onReset={resetFilters}
+          />
+        )}
 
         <Box sx={{ flex: 1, minWidth: 0 }}>
           <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 1 }}>
             <Typography variant="body2" color="text.secondary">
               共 <strong>{total.toLocaleString('zh-CN')}</strong> 题
             </Typography>
-            {searchQ.isFetching && <CircularProgress size={16} />}
+            {/* 后台刷新（已有数据、`isFetching`）用行内小 spinner；首屏加载改由下方 LoadingState 表达。 */}
+            {searchQ.isFetching && !searchQ.isLoading && <CircularProgress size={16} />}
           </Stack>
 
           <GradeGapNotice
@@ -355,6 +384,11 @@ export default function SearchPage() {
               />
             </Box>
           )}
+
+          {/* T26（规范 §3.2 七态 / §4.2 强制复用四态组件）：首屏加载（`isLoading` 且尚无数据）
+              用统一的 <LoadingState />，不再只显示一个裸的行内 spinner。
+              后台刷新（已有数据、`isFetching`）仍用上方行内小 spinner，避免结果区整块闪空。 */}
+          {searchQ.isLoading && <LoadingState label="正在检索题库…" />}
 
           {!searchQ.isLoading && items.length === 0 && !searchQ.isError && (
             <EmptyState
@@ -448,6 +482,41 @@ export default function SearchPage() {
           setPendingAddIds([])
         }}
       />
+
+      {/* T24b：窄屏（<1200px）筛选栏折叠为左侧抽屉（规范 §2.8）。默认关闭，由顶部「筛选」按钮打开；
+          筛选变更即时生效（不自动关闭，方便连续多选）。 */}
+      {narrow && (
+        <Drawer
+          anchor="left"
+          open={filtersOpen}
+          onClose={() => setFiltersOpen(false)}
+          PaperProps={{ role: 'dialog', 'aria-labelledby': 'search-filters-drawer-title' }}
+        >
+          <Box id="search-filters-drawer" sx={{ width: 300, p: 1.5, height: '100%', overflow: 'auto' }}>
+            {/* ⚠️ 固定顶栏（AppBar）的 zIndex 比 Drawer 高（项目刻意设置），会遮住抽屉顶部；
+                按 MUI 惯例放一个 Toolbar 占位（见规范 §2.7）。 */}
+            <Toolbar variant="dense" />
+            <Stack direction="row" alignItems="center" sx={{ mb: 1 }}>
+              <Typography id="search-filters-drawer-title" variant="subtitle1" component="h2" sx={{ flex: 1 }}>
+                筛选条件
+              </Typography>
+              <Button size="small" onClick={() => setFiltersOpen(false)}>关闭</Button>
+            </Stack>
+            <FilterSidebar
+              facets={facetsQ.data}
+              loading={facetsQ.isLoading}
+              filters={filters}
+              onChange={(patch) => {
+                setFilters((f) => ({ ...f, ...patch }))
+                setPage(1)
+              }}
+              strictKp={strictKp}
+              onStrictKpChange={setStrictKp}
+              onReset={resetFilters}
+            />
+          </Box>
+        </Drawer>
+      )}
     </Box>
   )
 }

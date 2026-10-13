@@ -26,6 +26,7 @@ import {
   Box,
   Button,
   Chip,
+  Drawer,
   FormControlLabel,
   LinearProgress,
   List,
@@ -36,10 +37,14 @@ import {
   Switch,
   Tab,
   Tabs,
+  Toolbar,
   Typography,
+  useMediaQuery,
+  useTheme,
 } from '@mui/material'
 import CheckIcon from '@mui/icons-material/Check'
 import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutline'
+import ListAltIcon from '@mui/icons-material/ListAlt'
 import OpenInNewIcon from '@mui/icons-material/OpenInNew'
 import ReplayIcon from '@mui/icons-material/Replay'
 import { useAppNavigate } from '../hooks/useAppNavigate'
@@ -95,6 +100,12 @@ export default function FormulaReviewPage({ headingLevel = 1 }: { headingLevel?:
   const [selectedId, setSelectedId] = useState<number | null>(null)
   const [showFullText, setShowFullText] = useState(false)
   const [toast, setToast] = useState<{ kind: 'success' | 'error'; text: string } | null>(null)
+
+  // T24c 响应式（规范 §2.8 断点）：`<lg`（<1200px）时左侧短列表折叠为抽屉（默认关闭），
+  // 右侧当前项详情独占整宽；`≥1200px` 保持「左列表 + 右详情」双栏。
+  const theme = useTheme()
+  const narrow = useMediaQuery(theme.breakpoints.down('lg'))
+  const [listOpen, setListOpen] = useState(false)
 
   const summaryQ = useQuery({
     queryKey: qk.reviewSummary(),
@@ -163,6 +174,50 @@ export default function FormulaReviewPage({ headingLevel = 1 }: { headingLevel?:
   /** 切换状态 / 已处理开关 / 翻页时清空选中，保证不串用旧详情。 */
   const resetSelection = () => setSelectedId(null)
 
+  // 左栏短列表：宽屏内联定宽 300；窄屏放进抽屉（T24c），宽度铺满抽屉。
+  // 抽成变量避免重复 JSX——同一时刻只渲染其中一个分支。
+  const listPanel = (
+    <Paper
+      variant="outlined"
+      sx={{
+        width: narrow ? '100%' : 300,
+        flexShrink: 0,
+        maxHeight: narrow ? 'none' : '68vh',
+        display: 'flex',
+        flexDirection: 'column',
+        // 窄屏放进抽屉（flex 列）时占满剩余高度，让内层 List 自身滚动。
+        ...(narrow ? { flexGrow: 1, minHeight: 0 } : {}),
+      }}
+    >
+      <List dense sx={{ overflow: 'auto', flex: 1, py: 0 }}>
+        {items.map((it: ReviewItem) => (
+          <ListItemButton
+            key={it.id}
+            selected={it.id === selectedId}
+            // 窄屏（抽屉内）选中后自动收起抽屉，直接露出右侧详情。
+            onClick={() => {
+              setSelectedId(it.id)
+              if (narrow) setListOpen(false)
+            }}
+          >
+            <Stack spacing={0.25} sx={{ minWidth: 0, flex: 1 }}>
+              <Stack direction="row" spacing={0.5} alignItems="center">
+                {/* T04：**不再逐行渲染状态徽章**——列表已按状态 tab 过滤，130 行会堆叠出
+                    130 个同值橙色「不支持」徽章（F3 实测）。状态由当前 tab 与右侧详情表达。
+                    只保留「已处理」标记，用于区分同一 tab 内是否已核对。 */}
+                {it.resolved === 1 && <Chip size="small" variant="outlined" label="已处理" />}
+              </Stack>
+              <Typography variant="caption" color="text.secondary" noWrap>
+                题 {it.number ?? it.question_id ?? '—'}
+                {it.chapter ? ` · ${it.chapter}` : ''}
+              </Typography>
+            </Stack>
+          </ListItemButton>
+        ))}
+      </List>
+    </Paper>
+  )
+
   return (
     <Box>
       {/* 计数与处理进度合成一行 */}
@@ -205,6 +260,19 @@ export default function FormulaReviewPage({ headingLevel = 1 }: { headingLevel?:
             ))}
           </Tabs>
           <Box sx={{ flex: 1 }} />
+          {/* T24c：窄屏（<1200px）下左列表收进抽屉，用此按钮开合（规范 §2.8）。 */}
+          {narrow && (
+            <Button
+              variant="outlined"
+              startIcon={<ListAltIcon />}
+              onClick={() => setListOpen(true)}
+              data-testid="open-review-list"
+              aria-expanded={listOpen}
+              aria-controls="formula-review-list-drawer"
+            >
+              待处理列表
+            </Button>
+          )}
           <FormControlLabel
             control={
               <Switch
@@ -234,34 +302,8 @@ export default function FormulaReviewPage({ headingLevel = 1 }: { headingLevel?:
 
         {!listQ.isLoading && !listQ.isError && items.length > 0 && (
           <Box sx={{ display: 'flex', gap: 2, alignItems: 'flex-start' }}>
-            {/* 左：短列表 */}
-            <Paper
-              variant="outlined"
-              sx={{ width: 300, flexShrink: 0, maxHeight: '68vh', display: 'flex', flexDirection: 'column' }}
-            >
-              <List dense sx={{ overflow: 'auto', flex: 1, py: 0 }}>
-                {items.map((it: ReviewItem) => (
-                  <ListItemButton
-                    key={it.id}
-                    selected={it.id === selectedId}
-                    onClick={() => setSelectedId(it.id)}
-                  >
-                    <Stack spacing={0.25} sx={{ minWidth: 0, flex: 1 }}>
-                      <Stack direction="row" spacing={0.5} alignItems="center">
-                        {/* T04：**不再逐行渲染状态徽章**——列表已按状态 tab 过滤，130 行会堆叠出
-                            130 个同值橙色「不支持」徽章（F3 实测）。状态由当前 tab 与右侧详情表达。
-                            只保留「已处理」标记，用于区分同一 tab 内是否已核对。 */}
-                        {it.resolved === 1 && <Chip size="small" variant="outlined" label="已处理" />}
-                      </Stack>
-                      <Typography variant="caption" color="text.secondary" noWrap>
-                        题 {it.number ?? it.question_id ?? '—'}
-                        {it.chapter ? ` · ${it.chapter}` : ''}
-                      </Typography>
-                    </Stack>
-                  </ListItemButton>
-                ))}
-              </List>
-            </Paper>
+            {/* 左：短列表——宽屏内联（T24c：窄屏折叠为抽屉，见文件末尾）。 */}
+            {!narrow && listPanel}
 
             {/* 右：当前项详情（只挂载当前项） */}
             <Box sx={{ flex: 1, minWidth: 0 }}>
@@ -387,6 +429,30 @@ export default function FormulaReviewPage({ headingLevel = 1 }: { headingLevel?:
           </Stack>
         )}
       </Paper>
+
+      {/* T24c：窄屏（<1200px）左列表折叠为左侧抽屉（规范 §2.8）。默认关闭，由顶部「待处理列表」按钮打开；
+          选中一项后自动收起，露出右侧详情。 */}
+      {narrow && (
+        <Drawer
+          anchor="left"
+          open={listOpen}
+          onClose={() => setListOpen(false)}
+          PaperProps={{ role: 'dialog', 'aria-labelledby': 'formula-review-list-drawer-title' }}
+        >
+          <Box id="formula-review-list-drawer" sx={{ width: 320, p: 1.5, height: '100%', display: 'flex', flexDirection: 'column' }}>
+            {/* ⚠️ 固定顶栏（AppBar）的 zIndex 比 Drawer 高（项目刻意设置），会遮住抽屉顶部；
+                按 MUI 惯例放一个 Toolbar 占位（见规范 §2.7）。 */}
+            <Toolbar variant="dense" />
+            <Stack direction="row" alignItems="center" sx={{ mb: 1 }}>
+              <Typography id="formula-review-list-drawer-title" variant="subtitle1" component="h2" sx={{ flex: 1 }}>
+                待处理列表
+              </Typography>
+              <Button size="small" onClick={() => setListOpen(false)}>关闭</Button>
+            </Stack>
+            {listPanel}
+          </Box>
+        </Drawer>
+      )}
     </Box>
   )
 }
