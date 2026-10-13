@@ -53,8 +53,11 @@
 
 **客户端契约（规范 §4.5 的 7 条里，前端侧 4 条）**
 - **自动保存明示**、**继续上次的卷**、**首启四步引导**、**跟随系统深色**（三态，`matchMedia` 监听）。
-- 另 3 条（单实例 / 最小化到托盘 / `client_state.db`）**必须靠外壳实现**：
-  只产出骨架 + 诚实标注（`editions/desktop/`），**未安装 pywebview、未端到端验证**。
+- 另 3 条（单实例 / 最小化到托盘 / `client_state.db`）由外壳实现（`editions/desktop/`）：
+  **已装 pywebview 6.2.1 + pythonnet + pystray 并实现**，`verify_desktop.py` **21/21**、
+  `verify_shell_e2e.py` **9/9** 通过（含真实开窗、单实例拦截、端口唯一性）。
+  依赖写在 `editions/desktop/requirements.txt`（**故意不进根 requirements**——便携版不打包该目录）。
+  ⚠️ **托盘交互与「关闭再开主题/令牌仍在」仍需人工确认**，脚本会打印核对清单。
 
 **门禁（新增 4 道，全部可反证）**
 - `npm run check:colors`：**硬编码颜色扫描**（豁免须写明理由）——启用当天即抓出人工 grep 漏掉的 `rgba(`。

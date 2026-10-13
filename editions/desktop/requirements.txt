@@ -1,0 +1,23 @@
+# 桌面外壳（editions/desktop/）的**额外**依赖。
+#
+# ⚠️ 故意**不**写进仓库根的 requirements.txt：
+#   根 requirements 服务于**便携版**（PyInstaller 打包的「题库.exe」），
+#   而 `editions/desktop/` **不参与打包**（`packaging/portable.spec` 只收
+#   `editions/local/portable_main.py`）。把 pywebview 塞进根依赖会让便携版的
+#   依赖面变大，却对便携版毫无用处。
+#
+# 安装：pip install -r editions/desktop/requirements.txt
+#
+# 版本为本机实测通过的组合（Windows 11 + Python 3.13 + WebView2 Runtime 154.0.4258.62）。
+
+# 窗口外壳：用**系统 WebView2**，外壳层体量小（预计 +3–8 MB），无 Electron 那样的整包 Chromium。
+pywebview==6.2.1
+
+# WebView2 后端（EdgeChromium）走 .NET —— pywebview 在 Windows 上依赖它。
+pythonnet==3.2.1
+
+# 系统托盘图标（契约③「关闭 × → 最小化到托盘」）。
+pystray==0.19.5
+
+# pystray 画托盘图标用（本机已随其它依赖装好）。
+Pillow>=10
