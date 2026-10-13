@@ -11,6 +11,7 @@ import AddIcon from '@mui/icons-material/Add'
 import ArticleIcon from '@mui/icons-material/Article'
 import { useDraggable } from '@dnd-kit/core'
 import type { SearchItem } from '../api/types'
+import { stripEmbeddedAnswer } from '../lib/questionText'
 import { AnswerBadge, AnalysisBadge, DifficultyBadge, ReviewBadge } from './StatusBadges'
 
 export interface QuestionCardProps {
@@ -29,7 +30,9 @@ export interface QuestionCardProps {
 }
 
 function previewText(item: SearchItem): string {
-  const t = (item.plain_text || '').replace(/\s+/g, ' ').trim()
+  // F4：先剥离题干里被塞入的「【答案】…【详解】…」，再做空白归一 —— 顺序不能反，
+  // 因为行首型标记（`答案：` / `解析：`）依赖原始换行来判定「行首」。
+  const t = stripEmbeddedAnswer(item.plain_text).replace(/\s+/g, ' ').trim()
   return t || '（无题干文本）'
 }
 
@@ -155,8 +158,16 @@ export function QuestionCard({
         <DifficultyBadge difficulty={item.difficulty} onAnnotate={onAnnotate ? () => onAnnotate(item) : undefined} />
         {item.needs_review && <ReviewBadge />}
         <Box sx={{ flex: 1 }} />
+        {/* ⚠️ 2026-10-13（T12 / 规范 §4.2「一屏 contained ≤ 1」）：
+            **由 `contained` 降为 `outlined`**。原先每张题卡一个蓝色主按钮，
+            一屏 8+ 个同权按钮把「主操作」稀释成「没有主操作」。
+            现在整页**唯一的主操作**是顶部批量条的「加入所选」（勾选后才出现，§4.2 指定做法），
+            卡片上的「加入」退回**次级操作**。
+            ⚠️ 残留分歧（已记入任务表）：§4.2 的字面约束是「表格/卡片行内只能用 text」，
+            但「加入」是真实动作而非「详情/更多」那类行内链接，降到 text 会让最高频动作过弱，
+            故取 `outlined`。若按字面执行，改这一处即可。 */}
         {onAdd && (
-          <Button size="small" variant="contained" startIcon={<AddIcon />} onClick={() => onAdd(item)} disabled={adding}>
+          <Button size="small" variant="outlined" startIcon={<AddIcon />} onClick={() => onAdd(item)} disabled={adding}>
             加入
           </Button>
         )}

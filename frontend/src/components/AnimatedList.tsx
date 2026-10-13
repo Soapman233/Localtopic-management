@@ -18,21 +18,27 @@
 import { useEffect, useRef } from 'react'
 import autoAnimate, { type AutoAnimateOptions } from '@formkit/auto-animate'
 import { useReducedMotion } from '../lib/useReducedMotion'
+import { tokens } from '../theme'
 
 export interface AnimatedListProps extends React.HTMLAttributes<HTMLDivElement> {
   /** 是否启用（默认 true）；仍会与 reduce 偏好取交集。 */
   enabled?: boolean
-  /** 动画时长（毫秒）。默认 180——比 AutoAnimate 默认的 250 更克制。 */
+  /**
+   * 动画时长（毫秒）。默认 `tokens.motion.base`（180，规范 §2.6「列表增删」档）——
+   * 比 AutoAnimate 自带的 250 更克制。
+   */
   duration?: number
-  /** 缓动。默认 Material 标准缓动。 */
+  /** 缓动。默认 `tokens.motion.ease`（规范 §2.6 标准缓动）。 */
   easing?: string
   children?: React.ReactNode
 }
 
 export default function AnimatedList({
   enabled = true,
-  duration = 180,
-  easing = 'cubic-bezier(0.2, 0, 0, 1)',
+  // ⚠️ 默认值来自 **token**，不是字面量——原先的 180 / cubic-bezier(0.2,0,0,1)
+  //    恰好等于规范值，但「恰好相等」不等于「有出处」：改 token 时不会跟着变。
+  duration = tokens.motion.base,
+  easing = tokens.motion.ease,
   children,
   ...rest
 }: AnimatedListProps) {

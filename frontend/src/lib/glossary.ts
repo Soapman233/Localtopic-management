@@ -238,6 +238,26 @@ export const GLOSSARY = {
   primaryLow: '对比度不足',
   /** 「一键切到推荐主色」按钮。 */
   primaryUseRecommended: '使用推荐主色',
+
+  // ---- 表格分页（规范 §4.2 Table：行数 > 50 必须分页）--------------------- //
+  /** `TablePagination` 的每页标签（与选项拼成「每页 25 行」）。 */
+  tablePerPage: '每页',
+  /** 每页条数选项的单位后缀。 */
+  tablePerPageUnit: '行',
+  /** 翻页按钮的读屏名称（MUI 默认是英文，必须换中文）。 */
+  tableFirstPage: '第一页',
+  tablePreviousPage: '上一页',
+  tableNextPage: '下一页',
+  tableLastPage: '最后一页',
+
+  // ---- 组卷工作台·窄屏提示（评审 F7 / 规范 §2.8、§3.3）------------------- //
+  /**
+   * 窄屏提示。**必须保留三件事**：窗口较窄、面板已折叠、去哪找回。
+   * 规范 §2.8 明确「禁止在 <1200 用常驻 Alert 提示请拉宽窗口」，故它是一条
+   * **一次性可关闭**的 caption，而不是彩色横幅。
+   */
+  builderNarrowHint: '当前窗口较窄，已折叠试卷面板；点右上角「试卷面板」按钮可打开。'
+    + '拉宽至 1200px 以上可恢复双栏「边组边看」。',
 } as const
 
 /** 单题「快照锁定」提示（用于 Tooltip / 单行徽章）。 */
@@ -334,6 +354,16 @@ export function describeTechnicalInfo(): string {
  */
 export function describePaletteSearch(query: string): string {
   return `搜索题目「${query}」`
+}
+
+/**
+ * 表格分页的「显示范围」文案（如「第 1–25 行，共 209 行」）。
+ *
+ * ⚠️ 数字用**半角连字符 `–`** 连接而不是「至」：分页范围是**数据**，不是文案，
+ * 老师扫一眼就要能对上表格行号。
+ */
+export function describeTableRange(from: number, to: number, count: number): string {
+  return `第 ${from}–${to} 行，共 ${count} 行`
 }
 
 /**

@@ -49,6 +49,7 @@ import { SlideOver } from '../components/SlideOver'
 import { ErrorCode, errorCodeOf, errorDataOf } from '../api/errors'
 import { qk } from '../api/queryKeys'
 import { describeMentionScope } from '../lib/glossary'
+import { stripEmbeddedAnswer } from '../lib/questionText'
 import { usePermissionGuard } from '../hooks/usePermission'
 
 /** 公式状态代码 → 中文（非 OK 状态不再直接暴露原始码，见 §3.4）。 */
@@ -255,7 +256,9 @@ export default function QuestionDetailPage() {
                   题干
                 </Typography>
                 <Box sx={{ fontSize: 15, mb: 2 }}>
-                  <FormulaText text={q.text} formulas={q.formulas} />
+                  {/* F4：题干可能把答案/详解一起塞在 `text` 里；这里剥离后渲染，
+                      答案/解析本就有各自区块，不再重复三遍。不改数据。 */}
+                  <FormulaText text={stripEmbeddedAnswer(q.text)} formulas={q.formulas} />
                 </Box>
 
                 {(q.images ?? []).length > 0 && (

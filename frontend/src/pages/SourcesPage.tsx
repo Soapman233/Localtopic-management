@@ -8,6 +8,13 @@
  * 关键产品约束（PRD 3.2 / Q3）：年级、教材是**文件级**字段——改一题 = 改该来源文件下全部题。
  * 故保存前必须先经 ``/api/sources/{id}/impact`` 预检影响题数，并二次确认（``confirm=true``）。
  *
+ * T05（评审 F5 / 规范 §4.2 Table）落地：
+ * - **分页**：默认每页 25 行（可选 25/50），消除 209 行全量渲染导致的 9,788px 页高；
+ *   分页只改「渲染多少行」，数据来源 / 筛选 / 排序口径不变。
+ * - **「元数据状态」列去徽章化**：该列 174/209 行同值（83% > 60% 阈值），不再逐行渲染
+ *   Chip；缺失信号改由行级标记（缺失处 `—`）+ 顶部「仅看元数据缺失」筛选承载。
+ * - **数字列**（题量 / 公式）右对齐 + 等宽字体。
+ *
  * 标题层级：父页 h1（`DataMaintenancePage`）；本页 `PageHeader level="section"` → h2；内部区块 h3。
  * 移动端：宽表格由 `TableContainer`（`overflow-x: auto`）内部横向滚动，不撑宽文档。
  */
@@ -32,6 +39,7 @@ import {
   TableCell,
   TableContainer,
   TableHead,
+  TablePagination,
   TableRow,
   TextField,
   Typography,
@@ -47,6 +55,7 @@ import { LoadingState } from '../components/LoadingState'
 import PageHeader from '../components/PageHeader'
 import SectionCard from '../components/SectionCard'
 import { qk } from '../api/queryKeys'
+import { GLOSSARY, describeTableRange } from '../lib/glossary'
 
 /** 判断文件级字段是否缺失（``NULL`` / 空串 / 哨兵值「待补充」）。 */
 function isMissing(v: string | null | undefined): boolean {
@@ -58,6 +67,49 @@ function pctText(bucket?: { n: number; total: number; pct: number } | null): str
   if (!bucket) return '—'
   return `${bucket.pct}%（${bucket.n}/${bucket.total}）`
 }
+
+// --------------------------------------------------------------------------- //
+// T05（评审 F5 / 规范 §4.2 Table）：分页
+//
+// 背景：本表实测 209 行全量渲染，页高 9,788px（1366 视口）——全站第二名的 5.8 倍。
+// 规范 §4.2 Table：「行数 > 50 必须分页或虚拟滚动」。
+//
+// ⚠️ 分页**只改「渲染多少行」**：数据来源（`listSources(0)` 全量）、筛选（关键词 /
+// 仅看缺失）、排序一律不动，因此「共 N 行 / 缺失 M 份」等口径与分页前**逐字节一致**。
+// --------------------------------------------------------------------------- //
+
+/** 默认每页条数（规范允许 20–50；取 25 兼顾一屏可读与页高上限）。 */
+const PAGE_SIZE_DEFAULT = 25
+/** 可选每页条数档位（均 ≤ 50，保证 1366 视口下单页页高可控）。 */
+const PAGE_SIZE_CHOICES = [25, 50]
+
+/**
+ * 分页控件文案。
+ *
+ * ⚠️ 文案**不在本文件定义**，而是引用 `lib/glossary.ts`（术语唯一来源）——
+ * 这里只做一层「本页用到的键」的收拢，避免散落在 JSX 里。
+ * （原先受「只改一个文件」的并行约束曾就地内联，串行合并时已收敛回 glossary。）
+ */
+const PAGE_COPY = {
+  perPageLabel: GLOSSARY.tablePerPage,
+  perPageUnit: GLOSSARY.tablePerPageUnit,
+  rangeLabel: describeTableRange,
+  ariaPage: {
+    first: GLOSSARY.tableFirstPage,
+    previous: GLOSSARY.tablePreviousPage,
+    next: GLOSSARY.tableNextPage,
+    last: GLOSSARY.tableLastPage,
+  },
+} as const
+
+/** `TablePagination` 的每页条数选项（模块级常量，避免每次渲染重建数组）。 */
+const PAGE_SIZE_OPTIONS = PAGE_SIZE_CHOICES.map((value) => ({
+  value,
+  label: `${value} ${PAGE_COPY.perPageUnit}`,
+}))
+
+/** 数字列单元格样式：右对齐 + 等宽字体（规范 §4.2 Table）。 */
+const NUMERIC_CELL_SX = { fontFamily: 'Consolas, Menlo, monospace' } as const
 
 /** 文件级元数据编辑对话框（含影响题数二次确认）。 */
 function SourceDetailDialog({
@@ -300,6 +352,9 @@ export default function SourcesPage() {
   const [onlyMissing, setOnlyMissing] = useState(false)
   const [activeId, setActiveId] = useState<number | null>(null)
   const [toast, setToast] = useState<{ kind: 'success' | 'error'; text: string } | null>(null)
+  // 分页状态：`page` 为 0 起（与 `TablePagination` 一致）。
+  const [page, setPage] = useState(0)
+  const [rowsPerPage, setRowsPerPage] = useState<number>(PAGE_SIZE_DEFAULT)
 
   const sourcesQ = useQuery({ queryKey: qk.sources(), queryFn: () => listSources(0) })
 
@@ -317,6 +372,15 @@ export default function SourcesPage() {
   const missingFiles = (sourcesQ.data ?? []).filter(
     (r) => isMissing(r.grade) || isMissing(r.textbook),
   ).length
+
+  // 分页只影响「渲染多少行」：`rows` 是筛选后的全量结果，这里只切片。
+  const pageCount = Math.max(1, Math.ceil(rows.length / rowsPerPage))
+  // 夹紧页码：筛选后行数变少时不会停在越界页（否则会渲染出一页空白）。
+  const safePage = Math.min(page, pageCount - 1)
+  const pageRows = useMemo(
+    () => rows.slice(safePage * rowsPerPage, safePage * rowsPerPage + rowsPerPage),
+    [rows, safePage, rowsPerPage],
+  )
 
   return (
     <Box>
@@ -353,11 +417,23 @@ export default function SourcesPage() {
             size="small"
             placeholder="按文件名筛选…"
             value={keyword}
-            onChange={(e) => setKeyword(e.target.value)}
+            onChange={(e) => {
+              setKeyword(e.target.value)
+              // 筛选变化后回到第 1 页（避免停在一个已不存在的页码上）。
+              setPage(0)
+            }}
             sx={{ minWidth: 260 }}
           />
           <FormControlLabel
-            control={<Switch checked={onlyMissing} onChange={(e) => setOnlyMissing(e.target.checked)} />}
+            control={
+              <Switch
+                checked={onlyMissing}
+                onChange={(e) => {
+                  setOnlyMissing(e.target.checked)
+                  setPage(0)
+                }}
+              />
+            }
             label="仅看元数据缺失"
           />
           <Typography variant="body2" color="text.secondary">
@@ -376,104 +452,119 @@ export default function SourcesPage() {
       )}
 
       {sourcesQ.data && (
-        <TableContainer component={Paper} variant="outlined">
-          <Table size="small" stickyHeader>
-            {/* 表格 caption：为读屏提供整体说明，视觉隐藏（避免重复噪声）。 */}
-            <Box
-              component="caption"
-              sx={{
-                position: 'absolute',
-                width: '1px',
-                height: '1px',
-                p: 0,
-                m: '-1px',
-                overflow: 'hidden',
-                clip: 'rect(0, 0, 0, 0)',
-                whiteSpace: 'nowrap',
-                border: 0,
-              }}
-            >
-              来源文件列表：文件名、学段/学科、年级、教材、题量、公式与元数据状态
-            </Box>
-            {/* 表头底色区分：用语义槽 `action.hover`（随明暗模式自适应，不新增色值）。
-                `nowrap` 让表头单行显示（窄屏下由 TableContainer 内部横向滚动承载）。
-                sx 命中 `& .MuiTableCell-head`，特异性高于 stickyHeader 的 `.MuiTableCell-stickyHeader`，
-                可覆盖其 `background.paper`。 */}
-            <TableHead sx={{ '& .MuiTableCell-head': { bgcolor: 'action.hover', fontWeight: 500, whiteSpace: 'nowrap' } }}>
-              <TableRow>
-                <TableCell>文件名</TableCell>
-                <TableCell>学段/学科</TableCell>
-                <TableCell>年级</TableCell>
-                <TableCell>教材</TableCell>
-                <TableCell align="right">题量</TableCell>
-                <TableCell align="right">公式</TableCell>
-                <TableCell>元数据状态</TableCell>
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {rows.map((r: SourceRow) => {
-                const gMissing = isMissing(r.grade)
-                const tMissing = isMissing(r.textbook)
-                return (
-                  <TableRow
-                    key={r.id}
-                    hover
-                    sx={{ cursor: 'pointer' }}
-                    onClick={() => setActiveId(r.id)}
-                  >
-                    <TableCell sx={{ maxWidth: 320, wordBreak: 'break-all' }}>{r.file_name}</TableCell>
-                    <TableCell>
-                      {[r.stage, r.subject].filter(Boolean).join(' / ') || '—'}
-                    </TableCell>
-                    <TableCell>
-                      {gMissing ? (
-                        <Box component="span" aria-label="年级元数据缺失" title="年级元数据缺失">—</Box>
-                      ) : (
-                        r.grade
-                      )}
-                    </TableCell>
-                    <TableCell>
-                      {tMissing ? (
-                        <Box component="span" aria-label="教材元数据缺失" title="教材元数据缺失">—</Box>
-                      ) : (
-                        r.textbook
-                      )}
-                    </TableCell>
-                    <TableCell align="right">{r.questions_count}</TableCell>
-                    <TableCell align="right">{r.formulas_count}</TableCell>
-                    <TableCell>
-                      {gMissing || tMissing ? (
-                        <Chip size="small" color="warning" variant="outlined" label="待补充元数据" />
-                      ) : (
-                        <Chip size="small" color="success" variant="outlined" label="完整" />
-                      )}
+        // 外层 Paper 同时承载表格与分页条（MUI 推荐结构），圆角走 `MuiPaper` 的 `radius.lg`。
+        <Paper variant="outlined" sx={{ overflow: 'hidden' }}>
+          <TableContainer>
+            <Table size="small" stickyHeader>
+              {/* 表格 caption：为读屏提供整体说明，视觉隐藏（避免重复噪声）。 */}
+              <Box
+                component="caption"
+                sx={{
+                  position: 'absolute',
+                  width: '1px',
+                  height: '1px',
+                  p: 0,
+                  m: '-1px',
+                  overflow: 'hidden',
+                  clip: 'rect(0, 0, 0, 0)',
+                  whiteSpace: 'nowrap',
+                  border: 0,
+                }}
+              >
+                来源文件列表：文件名、学段/学科、年级、教材、题量与公式数
+              </Box>
+              {/* 表头底色区分：用语义槽 `action.hover`（随明暗模式自适应，不新增色值）。
+                  `nowrap` 让表头单行显示（窄屏下由 TableContainer 内部横向滚动承载）。
+                  sx 命中 `& .MuiTableCell-head`，特异性高于 stickyHeader 的 `.MuiTableCell-stickyHeader`，
+                  可覆盖其 `background.paper`。 */}
+              <TableHead sx={{ '& .MuiTableCell-head': { bgcolor: 'action.hover', fontWeight: 500, whiteSpace: 'nowrap' } }}>
+                <TableRow>
+                  <TableCell>文件名</TableCell>
+                  <TableCell>学段/学科</TableCell>
+                  <TableCell>年级</TableCell>
+                  <TableCell>教材</TableCell>
+                  <TableCell align="right">题量</TableCell>
+                  <TableCell align="right">公式</TableCell>
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                {pageRows.map((r: SourceRow) => {
+                  const gMissing = isMissing(r.grade)
+                  const tMissing = isMissing(r.textbook)
+                  return (
+                    <TableRow
+                      key={r.id}
+                      hover
+                      sx={{ cursor: 'pointer' }}
+                      onClick={() => setActiveId(r.id)}
+                    >
+                      <TableCell sx={{ maxWidth: 320, wordBreak: 'break-all' }}>{r.file_name}</TableCell>
+                      <TableCell>
+                        {[r.stage, r.subject].filter(Boolean).join(' / ') || '—'}
+                      </TableCell>
+                      <TableCell>
+                        {gMissing ? (
+                          <Box component="span" aria-label="年级元数据缺失" title="年级元数据缺失">—</Box>
+                        ) : (
+                          r.grade
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        {tMissing ? (
+                          <Box component="span" aria-label="教材元数据缺失" title="教材元数据缺失">—</Box>
+                        ) : (
+                          r.textbook
+                        )}
+                      </TableCell>
+                      <TableCell align="right" sx={NUMERIC_CELL_SX}>{r.questions_count}</TableCell>
+                      <TableCell align="right" sx={NUMERIC_CELL_SX}>{r.formulas_count}</TableCell>
+                    </TableRow>
+                  )
+                })}
+                {rows.length === 0 && (
+                  <TableRow>
+                    <TableCell colSpan={6}>
+                      <EmptyState
+                        dense
+                        title="没有匹配的来源文件"
+                        description={
+                          keyword.trim() || onlyMissing
+                            ? '试试清除筛选条件，或换个文件名关键词。'
+                            : '当前题库还没有来源文件。'
+                        }
+                        actionLabel={keyword.trim() || onlyMissing ? '清除筛选' : undefined}
+                        onAction={() => {
+                          setKeyword('')
+                          setOnlyMissing(false)
+                          setPage(0)
+                        }}
+                      />
                     </TableCell>
                   </TableRow>
-                )
-              })}
-              {rows.length === 0 && (
-                <TableRow>
-                  <TableCell colSpan={7}>
-                    <EmptyState
-                      dense
-                      title="没有匹配的来源文件"
-                      description={
-                        keyword.trim() || onlyMissing
-                          ? '试试清除筛选条件，或换个文件名关键词。'
-                          : '当前题库还没有来源文件。'
-                      }
-                      actionLabel={keyword.trim() || onlyMissing ? '清除筛选' : undefined}
-                      onAction={() => {
-                        setKeyword('')
-                        setOnlyMissing(false)
-                      }}
-                    />
-                  </TableCell>
-                </TableRow>
-              )}
-            </TableBody>
-          </Table>
-        </TableContainer>
+                )}
+              </TableBody>
+            </Table>
+          </TableContainer>
+          {/* 分页条：仅在有行时渲染（0 行时范围文案「第 0–0 行」无意义，空态已由表格内承载）。 */}
+          {rows.length > 0 && (
+            <TablePagination
+              component="div"
+              count={rows.length}
+              page={safePage}
+              onPageChange={(_event, next) => setPage(next)}
+              rowsPerPage={rowsPerPage}
+              onRowsPerPageChange={(e) => {
+                setRowsPerPage(Number.parseInt(e.target.value, 10))
+                setPage(0)
+              }}
+              rowsPerPageOptions={PAGE_SIZE_OPTIONS}
+              labelRowsPerPage={PAGE_COPY.perPageLabel}
+              labelDisplayedRows={({ from, to, count }) => PAGE_COPY.rangeLabel(from, to, count)}
+              getItemAriaLabel={(type) => PAGE_COPY.ariaPage[type]}
+              sx={{ borderTop: '1px solid', borderColor: 'divider' }}
+            />
+          )}
+        </Paper>
       )}
 
       <SourceDetailDialog

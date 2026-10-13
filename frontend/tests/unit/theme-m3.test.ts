@@ -48,21 +48,34 @@ describe('M3 主题升级', () => {
     expect(e.emphasizedDecelerate).toBe('cubic-bezier(0.05, 0.7, 0.1, 1)')
     expect(e.emphasizedAccelerate).toBe('cubic-bezier(0.3, 0, 0.8, 0.15)')
     expect(e.linear).toBe('cubic-bezier(0, 0, 1, 1)')
-    for (const curve of Object.values(e)) expect(curve).toMatch(/^cubic-bezier\(/)
+    // ⚠️ 2026-10-13（T09）：**M3 族**（standard / emphasized / linear）必须是 cubic-bezier；
+    //    而 MUI 旧键 easeOut / easeIn 现在取规范 §2.6 给的关键字（`ease-out` / `ease-in`），
+    //    所以不能对「所有缓动值」一律断言 cubic-bezier。
+    for (const [key, curve] of Object.entries(e)) {
+      if (key === 'easeOut' || key === 'easeIn') continue
+      expect(curve, `M3 缓动 ${key} 应为 cubic-bezier`).toMatch(/^cubic-bezier\(/)
+    }
+    // MUI 旧键单独钉住（规范值）
+    expect(e.easeOut).toBe(tokens.motion.easeOut)
+    expect(e.easeIn).toBe(tokens.motion.easeIn)
   })
 
-  it('MUI 旧档位键被重映射到 M3 刻度（组件实际用的就是 M3 时长）', () => {
+  it('MUI 旧档位键被重映射（组件实际用的不是 M2 默认值）', () => {
     const d = theme.transitions.duration
-    // 不再是 M2 的 150 / 250 / 375
-    expect(d.shortest).toBe(motion.duration.short2)
-    expect(d.shorter).toBe(motion.duration.short3)
-    expect(d.short).toBe(motion.duration.short4)
-    expect(d.standard).toBe(motion.duration.medium2)
-    expect(d.complex).toBe(motion.duration.medium4)
-    expect(d.enteringScreen).toBe(motion.duration.medium1)
-    expect(d.leavingScreen).toBe(motion.duration.short4)
+    // ⚠️ 2026-10-13（T09 / 规范 §2.6）：由「映射到 M3 档位（100/150/200/300/400）」
+    //    改为**映射到规范的 motion 刻度**（120/180/240）——规范落地后以规范为准
+    //    （与 R03 / R04 同一口径：实现让位）。
+    //    影响是真实可见的：hover 反馈 200ms→120ms、抽屉/对话框 400ms→240ms。
+    expect(d.shortest).toBe(tokens.motion.fast) // 120
+    expect(d.short).toBe(tokens.motion.fast) // 120 —— hover / focus
+    expect(d.standard).toBe(tokens.motion.base) // 180
+    expect(d.complex).toBe(tokens.motion.slow) // 240 —— 抽屉 / 对话框
+    // 仍是 M2 的 150 / 250 / 375 才算回退
+    expect(d.shortest).not.toBe(150)
+    expect(d.short).not.toBe(250)
+    expect(d.complex).not.toBe(375)
     // 缓动同样不再是 M2 的 cubic-bezier(0.4, 0, 0.2, 1)
-    expect(theme.transitions.easing.easeInOut).toBe(motion.easing.standard)
+    expect(theme.transitions.easing.easeInOut).toBe(tokens.motion.ease)
     expect(theme.transitions.easing.easeInOut).not.toBe('cubic-bezier(0.4, 0, 0.2, 1)')
   })
 

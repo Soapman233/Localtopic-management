@@ -179,6 +179,41 @@ export const tokens = {
   bgDark: '#121212',
   paperDark: '#1E1E1E',
 
+  // ── 间距（规范 §2.3）：**8pt 栅格，只允许下列 8 档** ─────────────────────
+  /**
+   * 基准 8px，与 MUI 的 `spacing` 单位一致（`buildTheme` 里显式声明 `spacing: 8`）。
+   *
+   * 规范禁止 `5 / 7 / 9 / 11` 等非标值。现状抽样显示 1/2/0 占 279 次、3/4/8 共 7 次 ——
+   * **基本已合规**，本组 token 的作用是给后续代码一个「该写哪个数」的明确出处。
+   */
+  space: { 0: 0, half: 4, 1: 8, 2: 16, 3: 24, 4: 32, 6: 48, 8: 64 },
+
+  // ── 动效（规范 §2.6）────────────────────────────────────────────────────
+  /**
+   * 应用级动效刻度。**这是组件真正消费的那一套**（`buildTheme` 用它给 MUI 的
+   * `transitions.duration.short / standard / complex` 赋值，`AnimatedList` 与
+   * `index.css` 也走它）——不再是散落的魔法数字（评审 F11 的缺口）。
+   *
+   * ⚠️ 与上面 M3 完整档位（`short1…extraLong4`）的分工：
+   * - M3 档位是**声明**（保持与 Material 3 的可对照性，供细粒度取用）；
+   * - 本组是**应用实际在跑的三档**（规范按「快/中/慢」给的粗刻度）。
+   * 二者不冲突：`transitions.duration` 同时暴露两套，组件用本组。
+   */
+  motion: {
+    /** 路由切换、hover / focus 反馈、状态点变化。 */
+    fast: 120,
+    /** 列表增删（AutoAnimate）。 */
+    base: 180,
+    /** 抽屉、对话框。 */
+    slow: 240,
+    /** 标准缓动。 */
+    ease: 'cubic-bezier(0.2, 0, 0, 1)',
+    /** 进入。 */
+    easeOut: 'ease-out',
+    /** 退出。 */
+    easeIn: 'ease-in',
+  },
+
   // ── 圆角（**唯一来源**：设计规范 §2.4 的圆角表）──────────────────────────────
   /**
    * 基础圆角，接入 MUI `shape.borderRadius`，对应规范里的 **`radius.lg = 10`**。
@@ -439,6 +474,11 @@ export function buildTheme(preferences?: { primary?: string; dark?: boolean }) {
      * 这是「M3 高度靠极淡阴影表达」的落地点，且**不改颜色**，不影响对比度门禁。
      */
     shadows: M3_SHADOWS,
+    /**
+     * 间距基准 = 8px（规范 §2.3）。MUI 默认就是 8，这里**显式写出来**是为了让
+     * `tokens.space.*` 与 `theme.spacing()` 有可核对的对应关系，而不是靠约定俗成。
+     */
+    spacing: 8,
     shape: {
       borderRadius: tokens.radius,
     },
@@ -453,21 +493,24 @@ export function buildTheme(preferences?: { primary?: string; dark?: boolean }) {
     transitions: {
       duration: {
         ...motion.duration,
-        // MUI 旧键 → M3 刻度（原 M2 值：150 / 200 / 250 / 300 / 375 / 225 / 195）
-        shortest: motion.duration.short2, // 100
-        shorter: motion.duration.short3, // 150
-        short: motion.duration.short4, // 200
-        standard: motion.duration.medium2, // 300
-        complex: motion.duration.medium4, // 400
-        enteringScreen: motion.duration.medium1, // 250
-        leavingScreen: motion.duration.short4, // 200
+        // ⚠️ 2026-10-13（T09 / 规范 §2.6）：MUI 旧键改由 **`tokens.motion`** 驱动。
+        //    之前映射到 M3 档位（100/150/200/300/400），与规范给的「快/中/慢」
+        //    （120/180/240）不一致 —— 于是 hover 反馈 200ms、抽屉 400ms，
+        //    比规范慢一倍。规范落地后以规范为准（与 R03/R04 同一口径：实现让位）。
+        shortest: tokens.motion.fast, // 120
+        shorter: tokens.motion.fast, // 120
+        short: tokens.motion.fast, // 120 —— hover / focus 反馈
+        standard: tokens.motion.base, // 180
+        complex: tokens.motion.slow, // 240 —— 抽屉 / 对话框
+        enteringScreen: tokens.motion.slow,
+        leavingScreen: tokens.motion.base,
       },
       easing: {
         ...motion.easing,
-        // MUI 旧键 → M3 缓动族
-        easeInOut: motion.easing.standard,
-        easeOut: motion.easing.standardDecelerate,
-        easeIn: motion.easing.standardAccelerate,
+        // MUI 旧键 → 规范的三种缓动（规范 §2.6）
+        easeInOut: tokens.motion.ease,
+        easeOut: tokens.motion.easeOut,
+        easeIn: tokens.motion.easeIn,
         sharp: motion.easing.emphasizedAccelerate,
       },
     },

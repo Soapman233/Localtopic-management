@@ -38,6 +38,22 @@ video {
   font-size: 0.9em;
 }
 
+/* 语义加粗 ≠ 视觉加粗（规范 §2.2：**字重只有 400 / 500 两档**）。
+ *
+ * `<strong>` / `<b>` 浏览器默认渲染 `font-weight: 700` —— 中文粗体在 1366 屏上会糊，
+ * 而「找 `<strong>`」这类扫描抓不到（它不是 `fontWeight:` 属性）。全库共 12 处用它做强调。
+ * 这里统一降到 500：**保留 `<strong>` 的语义**（读屏仍播报强调），只改视觉字重。
+ * ⚠️ 例外：A4 纸面预览（`.lp-page`）是**导出件版式的镜像**，规范 §7 明确未覆盖，
+ *    故把 700 还给它——否则预览与导出的 docx 会不一致。 */
+strong,
+b {
+  font-weight: 500;
+}
+.lp-page strong,
+.lp-page b {
+  font-weight: 700;
+}
+
 /* 长公式横向可滚动，避免撑破卡片 */
 .katex-display {
   overflow-x: auto;
@@ -45,20 +61,36 @@ video {
   padding: 2px 0;
 }
 
+/* 动效令牌的 CSS 镜像（**必须与 `theme.ts` 的 `tokens.motion` 一致**）。
+ *
+ * 为什么要有这一层：CSS 无法 import TS 常量，而把 120ms / cubic-bezier 直接写在
+ * CSS 里，就等于把同一套刻度维护两遍（评审 F11 说的「魔法数字散落」）。
+ * 这里集中成变量：**改 token 时改这一处**，CSS 各处引用变量。
+ * ⚠️ 与 `tokens.motion` 的一致性由 `tests/unit/motion-tokens.test.ts` 断言守着。 */
+:root {
+  --qb-motion-fast: 120ms;
+  --qb-motion-base: 180ms;
+  --qb-motion-slow: 240ms;
+  --qb-motion-ease: cubic-bezier(0.2, 0, 0, 1);
+  --qb-motion-ease-out: ease-out;
+  --qb-motion-ease-in: ease-in;
+}
+
 /* 页面切换过渡（View Transitions API，实施方案 §5）
  *
  * 只给**页面内容容器**做淡入淡出（120ms），**不做整壳动画**：
  * AppBar / 侧栏 / 全局 Drawer 保持静止，否则切换页面时整个界面都在晃，反而更晕。
  *
- * 时长与缓动取自 Material 3 的「短时长 / 标准缓动」档位。 */
+ * 时长与缓动取自 `tokens.motion`（规范 §2.6）：fast（120ms）+ ease（标准缓动）。
+ * 退出用 ease-in、进入用 ease 之后（规范：`motion.easeOut` 进入 / `motion.easeIn` 退出）。 */
 .qb-route-content {
   view-transition-name: route-content;
 }
 ::view-transition-old(route-content) {
-  animation: qb-route-out 120ms cubic-bezier(0.4, 0, 1, 1) both;
+  animation: qb-route-out var(--qb-motion-fast) var(--qb-motion-ease-in) both;
 }
 ::view-transition-new(route-content) {
-  animation: qb-route-in 120ms cubic-bezier(0.2, 0, 0, 1) both;
+  animation: qb-route-in var(--qb-motion-fast) var(--qb-motion-ease) both;
 }
 @keyframes qb-route-out {
   to {

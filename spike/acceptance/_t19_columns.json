@@ -1,0 +1,29 @@
+[
+  {
+    "page": "sources",
+    "table": 1,
+    "header": "学段/学科",
+    "rows": 25,
+    "topValue": "初中 / 物理",
+    "topShare": 1,
+    "distinct": 1
+  },
+  {
+    "page": "sources",
+    "table": 1,
+    "header": "年级",
+    "rows": 25,
+    "topValue": "—",
+    "topShare": 0.88,
+    "distinct": 2
+  },
+  {
+    "page": "sources",
+    "table": 1,
+    "header": "教材",
+    "rows": 25,
+    "topValue": "—",
+    "topShare": 0.88,
+    "distinct": 2
+  }
+]

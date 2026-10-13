@@ -33,6 +33,7 @@ import { GradeGapNotice } from '../components/GradeGapNotice'
 import { QuestionCard } from '../components/QuestionCard'
 import { EmptyState } from '../components/EmptyState'
 import { ErrorState } from '../components/ErrorState'
+import LoadingState from '../components/LoadingState'
 import AnimatedList from '../components/AnimatedList'
 import { useCoverageQuery, useFacetsQuery, useSearchQuery } from '../hooks/useSearch'
 import { addQuestions, createPaper, listPapers } from '../api/papers'
@@ -515,6 +516,15 @@ export default function SearchPage() {
               />
             </Box>
           )}
+
+          {/* ⚠️ T18 七态审计补漏：**首屏加载**此前**什么都不渲染**（结果区一片空白）。
+              规范 §3.2 明确「加载中 → `<LoadingState />`（骨架或文案，**不用裸 spinner**）」，
+              而这里既没有 LoadingState 也没有空态（空态分支被 `!isLoading` 挡掉了）——
+              老师冷启动时会看到一块空白，不知道是在加载还是坏了。
+              ⚠️ 与顶栏那个 `CircularProgress size={14}` 的分工：那个是**刷新指示**
+              （已有内容、正在重新取数，见 `searchQ.isFetching`），属于 I1「异步动作要有进行中状态」；
+              这里是**首屏加载态**，必须走统一组件。 */}
+          {searchQ.isLoading && <LoadingState label="正在检索题目…" />}
 
           {!searchQ.isLoading && items.length === 0 && !searchQ.isError && (
             <EmptyState

@@ -20,6 +20,7 @@ import {
   CircularProgress,
   Divider,
   Drawer,
+  IconButton,
   ListItemButton,
   ListItemText,
   MenuItem,
@@ -35,6 +36,7 @@ import {
   useMediaQuery,
   useTheme,
 } from '@mui/material'
+import CloseIcon from '@mui/icons-material/Close'
 import FileDownloadIcon from '@mui/icons-material/FileDownload'
 import FilterListIcon from '@mui/icons-material/FilterList'
 import ListAltIcon from '@mui/icons-material/ListAlt'
@@ -92,6 +94,7 @@ import { ErrorCode, errorCodeOf, errorDataOf } from '../api/errors'
 import type { ExportDiagnostics } from '../api/types'
 import type { SearchItem } from '../api/types'
 import { qk } from '../api/queryKeys'
+import { GLOSSARY } from '../lib/glossary'
 
 const PAGE_SIZE = 15
 /** 排版视图缩放（仅展示；测量层不受影响）。A4 宽 ≈ 794px × 0.72 ≈ 572px，适配右栏。 */
@@ -188,6 +191,11 @@ export default function PaperBuilderPage() {
   const [papersLoadedOnce, setPapersLoadedOnce] = useState(false)
   // 删除试卷二次确认（P0-1）：单击不再直接 force 删除，必须先确认（显示将删除的题数）。
   const [confirmDeletePaper, setConfirmDeletePaper] = useState<{ id: number; title: string; itemCount: number } | null>(null)
+  // T08（评审 F7 / §2.8 / §3.3）：窄屏提示的「一次性关闭」标记。**仅会话内**——
+  // 视口宽度是**环境态**（同一会话内可能反复变窄），换一个会话仍可能需要提示，
+  // 故不写 `localStorage` / `uiStore`（既有约定：UI 会话态不持久化，见 `store/uiStore.ts`）；
+  // 也**绝不**触碰后端 / `bank.db`。关闭后同一会话内不再出现。
+  const [narrowHintDismissed, setNarrowHintDismissed] = useState(false)
 
   // P0-3 响应式（断点统一）：窄屏用 MUI 标准断点 `<lg`（<1200px）折叠右栏，
   // **不再用 1439 魔法值**——否则 1366×768（教师笔记本主流分辨率）会被误判为窄屏，
@@ -703,11 +711,24 @@ export default function PaperBuilderPage() {
         </Alert>
       )}
 
-      {/* 窄屏提示（P0-3）：<lg（<1200px）时右栏折叠为抽屉，给出轻提示避免困惑。 */}
-      {narrow && (
-        <Alert severity="info" sx={{ mb: 1, py: 0.25 }}>
-          当前窗口较窄，已折叠试卷面板；建议将窗口拉宽至 1200px 以上，使用双栏「边组边看」。
-        </Alert>
+      {/* T08（评审 F7 / §2.8 / §3.3 / P3）：窄屏提示不再用**常驻彩色 Alert 横幅**，
+          降级为**一次性可关闭**的一行 caption——无背景色、无语义色、无图标，仅传达事实
+          （窗口较窄 / 试卷面板已折叠 / 从右上「试卷面板」按钮找回），避免 §4.2「一屏 ≤1 个 Alert」。
+          ⚠️ 只改**提示的呈现**：`narrow` 判定、右栏折叠逻辑、1366 双栏策略一律不动。 */}
+      {narrow && !narrowHintDismissed && (
+        <Stack direction="row" alignItems="flex-start" spacing={1} sx={{ mb: 1, flexShrink: 0 }}>
+          <Typography variant="caption" color="text.secondary" sx={{ flex: 1, minWidth: 0, pt: 0.5 }}>
+            {GLOSSARY.builderNarrowHint}
+          </Typography>
+          <IconButton
+            size="small"
+            onClick={() => setNarrowHintDismissed(true)}
+            aria-label="关闭窄屏提示"
+            data-testid="dismiss-narrow-hint"
+          >
+            <CloseIcon fontSize="small" />
+          </IconButton>
+        </Stack>
       )}
 
       <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={onDragEnd}>
