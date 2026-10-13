@@ -14,13 +14,17 @@ function styles(theme, component, slot, ownerState = {}) {
   return typeof value === 'function' ? value({ theme, ownerState }) : value || {}
 }
 await main('G-b/runtime', async options => {
+  if (options.probe && options.probe !== true && options.probe !== 'runtime') throw new Error('未知probe: ' + options.probe)
   const settings = path.resolve(options.settings || path.join(frontend, '../outputs/webui/settings.json'))
   const saved = JSON.parse(await fs.readFile(settings, 'utf8')), raw = saved.theme?.primary
   if (!/^#[0-9a-f]{6}$/i.test(raw || '')) throw new Error('settings.theme.primary必须是合法hex6；不得静默回退')
   const sourcePath = path.resolve(options['theme-source'] || path.join(frontend, 'src/theme.ts'))
   const buildTheme = loadTheme(sourcePath, await fs.readFile(sourcePath, 'utf8')), pairs = [], failures = []
   for (const dark of [false, true]) {
-    const t = buildTheme({ primary: raw, dark }), p = t.palette.primary, paper = t.palette.background.paper, page = t.palette.background.default
+    const t = buildTheme({ primary: raw, dark })
+    // 探针模拟运行期主色回退：只在内存把浅色正文主色设为卡片底色，由既有配对判定捕获1:1违规。
+    if (options.probe && !dark) t.palette.primary.main = t.palette.background.paper
+    const p = t.palette.primary, paper = t.palette.background.paper, page = t.palette.background.default
     const button = styles(t, 'MuiButton', 'containedPrimary'), outlined = styles(t, 'MuiButton', 'outlinedPrimary'), chip = styles(t, 'MuiChip', 'root', { variant: 'filled', color: 'primary' }), outlinedChip = styles(t, 'MuiChip', 'outlinedPrimary', { variant: 'outlined', color: 'primary' }), pagination = styles(t, 'MuiPaginationItem', 'textPrimary'), alert = styles(t, 'MuiAlert', 'standardInfo')
     // 按实际组件覆写优先取值；App.tsx顶栏使用primary.dark；未覆写槽沿MUI实际默认值。
     const roles = [
@@ -34,5 +38,5 @@ await main('G-b/runtime', async options => {
     ]
     for (const [role, fg, bg] of roles) { const ratio = getContrastRatio(fg, bg), item = { mode: dark ? 'dark' : 'light', role, raw, main: p.main, fill: p.dark, foreground: fg, background: bg, ratio, threshold: 4.5 }; if (!Number.isFinite(ratio)) throw new Error('无法计算配对: ' + JSON.stringify(item)); pairs.push(item); if (ratio < 4.5) failures.push(item) }
   }
-  return { checked: pairs.length, settings, sourcePath, pairs, failures }
+  return { checked: pairs.length, settings, sourcePath, ...(options.probe && { probe: 'runtime' }), pairs, failures }
 })
