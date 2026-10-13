@@ -130,7 +130,28 @@
 - 命令：`python -m webui`（启动）；`python -m unittest discover -s tests`（全量）；
   `python -m bank.cli {init,import,stats,search,paper,backup,restore,...}`。
 
-## 11. 已知未做 / 遗留风险
+## 11. 🔴 仓库拓扑：本仓库有**两条已分叉的线**（2026-10-13 查清）
+
+| | `main` | 本线 `workbuddy/main-14dd9452` |
+|---|---|---|
+| worktree | `D:/Open-source project/Localtopic-management` | `C:/Users/SOAP/WorkBuddy/Worktrees/Localtopic-management/main-14dd9452` |
+| 前端结构 | `AnimatedList` / `listMotion.ts` / `questionText.ts` / `routeTransitions.css` | `PageHeader` / `BreadcrumbBar` / `SectionCard` / `SlideOver` / `CommandPalette` / `routeMeta.ts` |
+| 入口 chunk | 21,832 B | **45,770 B** |
+| 首屏 JS / 请求数 | 1,058,331 B / 15 | **765,086 B / 6** |
+| 对比度配对 | 77 组 | **65 组** |
+| 前端测试 | 26 node:test + 340 vitest | 2 node:test 文件 + **341 vitest** |
+| 后端测试 | 436 | **543** |
+
+- merge-base `f3455f6`；`main` 独有 **40** 提交 / 本线独有 **28** 提交；`frontend/src` 差 **46 文件 / +5471 −1524**。
+- **两份设计文档（`UI设计评审与优化方案-2026-10-13.md`、`设计语言与人机交互规范-2026-10-13.md`）
+  只在 `main` 上**，其评审基线是 `main@f9ae867`。
+- ⚠️ **引用外部文档前必须先确认它在哪条线、基线是哪个提交**——否则会拿 `main` 的结论去改本线的代码。
+- 本线任务表：`deliverables/任务表-设计落地-本线校准-2026-10-13.md`（T01–T21 + R01–R12）。
+- 🔴 **规范与本线实现的 6 处冲突**（§2.2 字重 600/700、§2.4 按钮胶囊 999 vs radius.md=8、
+  §2.4 radius.lg=10 vs 本线 12/16/24、§4.1 阅读型 720 vs 本线 1200、§2.1 硬编码色 6 处、§4.4 入口 ≤30KB）
+  —— **均为"需拍板"项，未定之前不要单方面按任一方改**。
+
+## 12. 已知未做 / 遗留风险
 - **🔴 MathType 路径在打包后未实证（最大未知数）**：`pipeline/mtef_conv.py` 用 `multiprocessing` spawn，已按标准加 `freeze_support()`，但**本项目没有 MathType OLE 真实样例**，冻结后该分支**未端到端跑过**。源试卷约 80% 含 MathType。
 - 未做真实浏览器 UI 端到端（前端交互由 vitest 覆盖，后端由 HTTP 层覆盖）。
 - 未做代码签名（SmartScreen 会提示"未知发布者"）；`console=False` 首启无日志。
