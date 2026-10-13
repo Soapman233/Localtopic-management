@@ -1,0 +1,23 @@
+<!--
+  应用图标（favicon）。
+
+  为什么需要它（不是装饰）：
+  - 此前**整个应用没有任何 favicon**，浏览器每次加载都会请求 `/favicon.ico` → **404**；
+    这个 404 会被 `spike/acceptance/shoot_ui.py` 的「JS 错误」门禁抓到（③），
+    也会污染真实用户的控制台。补一个图标即从根上消除。
+  - 老师会长时间开着这个工具，**标签页图标**是识别它的最快线索。
+
+  设计：**纸面优先**（规范 §1）——品牌蓝底 + 白色 A4 纸（右上折角 + 三条文字线）。
+  ⚠️ 用 SVG 而不是 .ico：纯文本、可版本控制、体积极小，且现代浏览器均支持。
+
+  ⚠️ 颜色与 `frontend/src/theme.ts` 的 `tokens.primary`（#2F63EA）一致。
+  SVG 无法 import TS 常量，**改主色时这里要手动同步**（favicon 是静态资源，不参与主题派生）。
+-->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="32" height="32" role="img" aria-label="初中物理题库">
+  <rect width="32" height="32" rx="7" fill="#2F63EA" />
+  <path d="M9 6h10l5 5v15a1 1 0 0 1-1 1H9a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1z" fill="#FFFFFF" />
+  <path d="M19 6l5 5h-4a1 1 0 0 1-1-1V6z" fill="#C9D6F8" />
+  <rect x="11.5" y="15" width="9" height="1.6" rx="0.8" fill="#9FB3E0" />
+  <rect x="11.5" y="18.6" width="9" height="1.6" rx="0.8" fill="#9FB3E0" />
+  <rect x="11.5" y="22.2" width="6" height="1.6" rx="0.8" fill="#9FB3E0" />
+</svg>

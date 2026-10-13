@@ -3,6 +3,10 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <!-- 应用图标：**必须显式声明**。缺了它浏览器会去请求 /favicon.ico → 404
+         （既污染控制台，也会被 shoot_ui.py 的「JS 错误」门禁抓到）。
+         资源在 `frontend/public/favicon.svg`，构建时由 Vite 复制到 static 根。 -->
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <title>初中物理 · 题库与组卷</title>
   </head>
   <body>

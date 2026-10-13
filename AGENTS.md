@@ -11,7 +11,7 @@
 ## 0. 每次任务开始前（**必做**）
 
 ```bash
-# 1) 确认基线（当前应为 387 项通过 / 1 skip）
+# 1) 确认基线（当前应为 543 项：540 通过 / 2 既有失败 / 1 skip）
 python -m unittest discover -s tests
 
 # 2) 确认交付数据未被污染（当前 sha256 前缀应为 6905955734953c6c）
@@ -110,7 +110,17 @@ python -c "import hashlib;from pathlib import Path;print(hashlib.sha256(Path('ou
 # 项目全景（背景知识）
 > **用途**：供 AI 编程助手（Codex 等）快速建立项目上下文。
 > **最后更新**：2026-10-10
-> **当前基线**：后端 387 项（386 通过、1 skip），前端 240 项通过（26 node:test + 214 vitest）；交付库 sha256 `6905955734953c6c…`。T2/T3 新导出已通过 Word/WPS 实际改字符、保存、重开验证，详见 `outputs/backlog-20261010/README.md`。独立验收后的 A/B 实现与 C/D 方案见 `outputs/acceptance-followup-20261010/README.md`。导出 P0（内容守卫 / 分支实例 / 显式修订卷 / 局部版式）见 `outputs/handoff/D-导出P0最终交接.md`。
+> **当前基线（2026-10-13 实测，本 checkout = `workbuddy/main-14dd9452`）**：
+> 后端 **543 项（540 通过 / 2 既有失败 / 1 skip）**；前端 **34 node:test + 53 文件 / 406 vitest**；
+> 对比度门禁 **77 组**；入口 chunk **49,856 B**（预算 ≤54 KB，`npm run check:budget`）；
+> 首屏 JS **762 KB / 5 请求**；打包产物 **65.5 MB**；交付库 sha256 `6905955734953c6c…`。
+>
+> ⚠️ **这些数字是「本 checkout」的，不是全仓库统一值**——本仓库存在两条并行的线
+> （`main` 与 `workbuddy/main-14dd9452`），基线与入口体积都不同。
+> **任何以基线为依据的判断，都必须先确认自己在哪条线上，并以本轮实际输出为准**（不要照抄本文档）。
+>
+> 常用命令见下方「常用命令」；三道前端门禁：`npm run contrast` / `npm run check:colors` / `npm run check:budget`
+> （均已接入 `npm run build`）。视觉验收：`python spike/acceptance/shoot_ui.py [--dark] [--selftest]`。T2/T3 新导出已通过 Word/WPS 实际改字符、保存、重开验证，详见 `outputs/backlog-20261010/README.md`。独立验收后的 A/B 实现与 C/D 方案见 `outputs/acceptance-followup-20261010/README.md`。导出 P0（内容守卫 / 分支实例 / 显式修订卷 / 局部版式）见 `outputs/handoff/D-导出P0最终交接.md`。
 > **文档性质**：事实性交接文档 —— 记录**已完成的工作**、**当前架构**、**必须遵守的约定**与**已踩过的坑**。
 
 ---
@@ -143,7 +153,7 @@ python -m webui
 # 线上部署版（监听 0.0.0.0；详见 editions/online/README.md）
 set QB_EDITION=online && set QB_HOST=0.0.0.0 && python -m webui
 
-# 全量测试（当前基线 387 项：386 通过 / 1 skip）
+# 全量测试（当前基线 543 项：540 通过 / 2 既有失败 / 1 skip）
 python -m unittest discover -s tests
 
 # CLI 用法
@@ -156,7 +166,7 @@ python -m bank.cli export verify out.docx   # 验证公式可编辑性（Word+WP
 # 前端
 cd frontend && npm run build    # 产物写入 webui/static/（由后端托管）
 cd frontend && npx tsc --noEmit # 类型检查
-cd frontend && npm test        # 预览门禁/主题/公式显示/修复回归（node:test 26）+ 组件测试（vitest 179）
+cd frontend && npm test        # 预览门禁/主题/公式/硬编码颜色/动效令牌（node:test 34）+ 组件测试（vitest 406）
 ```
 
 ### 关键路径
@@ -435,7 +445,7 @@ SQLite 11 表 + FTS5；幂等导入；中文检索；题目版本；待复核队
 
 | 项 | 值 |
 |---|---|
-| 测试 | 后端 **387 项（386 通过、1 skip）**；前端 **240 项通过** |
+| 测试 | 后端 **543 项（540 通过、2 既有失败、1 skip）**；前端 **34 node:test + 406 vitest** |
 | `bank.db` | 累计实质修复64条；本轮13条／9题；sha256 `6905955734953c6c...`（64,815,104 字节）；新备份 `outputs/bank.backup-20261010-162607-rdt.db` 已核验 |
 | 前端构建 | `webui/static/`（最新代码） |
 | 单人本地可用性 | ✅ 达到生产级 |
@@ -492,7 +502,7 @@ SQLite 11 表 + FTS5；幂等导入；中文检索；题目版本；待复核队
 
 ## 10. 给 AI 助手的操作提示
 
-1. **改任何东西前先跑测试**：`python -m unittest discover -s tests`，当前基线 387 项（386 通过、1 skip），以本轮实际输出为准。
+1. **改任何东西前先跑测试**：`python -m unittest discover -s tests`，当前基线 543 项（540 通过 / 2 既有失败 / 1 skip），以本轮实际输出为准。
 2. **碰 `bank.db` 前先备份**，验证用副本。
 3. **改公式相关逻辑后，必须用 `python -m bank.cli export verify` 实测双端可编辑性。**
 4. **改排版/导出后，必须渲染出来看**（`export ... --pdf` → `pypdfium2` 转 PNG），不要只看代码。

@@ -206,9 +206,23 @@ def main() -> int:
                     ctx = b.new_context(viewport={"width": w, "height": h},
                                         device_scale_factor=1)
                     page = ctx.new_page()
+
+                    # 🔴 采集 `pageerror`（未捕获的 JS 异常）与 console error。
+                    #    这是评审用的硬指标（规范 §4.4「单页 pageerror = 0」），
+                    #    也是**唯一能发现"页面看着正常但脚本已经崩了"的手段**——
+                    #    截图看不出来。列表按页清空（见循环内），避免跨页串。
+                    page_errors: list[str] = []
+                    page.on("pageerror", lambda e: page_errors.append(f"pageerror: {e}"))
+                    page.on(
+                        "console",
+                        lambda m: page_errors.append(
+                            f"console.error: {m.text} @ {(m.location or {}).get('url', '?')}"
+                        ) if m.type == "error" else None,
+                    )
                     for idx, (path, name) in enumerate(pages):
                         if only and name not in only:
                             continue
+                        page_errors.clear()
                         # ⚠️ 项目用 **HashRouter**（`createHashRouter`）：必须走 `/#/path`，
                         #    直接请求 `/builder` 会命中后端的 404（实测踩过）。
                         #
@@ -360,9 +374,23 @@ def main() -> int:
                             dupValueCount: dupValues.length, dupValueSamples: dupValues.slice(0, 4),
                           };
                         }""")
-                        rec = {"page": name, "viewport": vp_tag, "dark": dark, **metrics}
+                        rec = {
+                            "page": name, "viewport": vp_tag, "dark": dark, **metrics,
+                            "pageErrors": list(page_errors),
+                        }
                         report.append(rec)
-                        flag = "溢出" if metrics["docW"] > metrics["viewW"] + 1 else "ok"
+                        flags = []
+                        if metrics["docW"] > metrics["viewW"] + 1:
+                            flags.append("溢出")
+                        if page_errors:
+                            flags.append(f"JS错误×{len(page_errors)}")
+                        if metrics["sameColorCount"]:
+                            flags.append(f"同色文字×{metrics['sameColorCount']}")
+                        if metrics["bareNumberChipCount"]:
+                            flags.append(f"裸数字语义Chip×{metrics['bareNumberChipCount']}")
+                        if metrics["dupValueCount"]:
+                            flags.append(f"同值重复×{metrics['dupValueCount']}")
+                        flag = " ".join(flags) if flags else "ok"
                         print(f"  [{vp_tag:7}] {name:18} 文档宽={metrics['docW']:5} "
                               f"视口宽={metrics['viewW']:5} 越界元素={metrics['overflowCount']:3} {flag}")
                     ctx.close()
@@ -377,9 +405,10 @@ def main() -> int:
     print()
     print(f"截图输出：{OUT}")
 
-    # ── 四项门禁汇总（**前三项硬失败**，第四项仅报告）──────────────────────────
+    # ── 五项门禁汇总（**前四项硬失败**，第五项仅报告）──────────────────────────
     over = [r for r in report if r["docW"] > r["viewW"] + 1]
     same = [r for r in report if r["sameColorCount"]]
+    errs = [r for r in report if r.get("pageErrors")]
     bare = [r for r in report if r["bareNumberChipCount"]]
     dup = [r for r in report if r["dupValueCount"]]
 
@@ -394,26 +423,33 @@ def main() -> int:
         for smp in r["sameColorSamples"]:
             print(f"  [{r['viewport']}] {r['page']} 对比度 {smp['ratio']}:1  {smp['text']!r}")
 
-    print(f"③ 语义色 Chip 却是裸数字（中性计数不该染语义色）：{len(bare)} / {len(report)}")
+    # ③ 规范 §4.4 要求单页 `pageerror = 0`。这也是**唯一能发现「页面看着正常、
+    #    脚本其实已经崩了」的手段**——截图看不出来。
+    print(f"③ JS 错误（pageerror / console.error）：{len(errs)} / {len(report)}")
+    for r in errs:
+        for e in r["pageErrors"][:3]:
+            print(f"  [{r['viewport']}] {r['page']} {e[:120]}")
+
+    print(f"④ 语义色 Chip 却是裸数字（中性计数不该染语义色）：{len(bare)} / {len(report)}")
     for r in bare:
         for smp in r["bareNumberChipSamples"]:
             print(f"  [{r['viewport']}] {r['page']} {smp['text']!r}")
 
-    # ④ 仅报告：真实数据里同值巧合（某题数恰等于某公式数）会误报，
+    # ⑤ 仅报告：真实数据里同值巧合（某题数恰等于某公式数）会误报，
     #    故**不作为失败条件**，只列出供人工判断——比"要么全信要么全弃"更有用。
-    print(f"④ 同一行内同值重复（**仅报告**，可能是数据巧合）：{len(dup)} / {len(report)}")
+    print(f"⑤ 同一行内同值重复（**仅报告**，可能是数据巧合）：{len(dup)} / {len(report)}")
     for r in dup[:6]:
         for smp in r["dupValueSamples"]:
             print(f"  · [{r['viewport']}] {r['page']} 值 {smp['value']} 出现 {smp['times']} 次")
 
-    failed = bool(over or same or bare)
+    failed = bool(over or same or errs or bare)
 
     # ── 门禁自检：三个探测器都必须抓到注入的缺陷 ──────────────────────────────
     if selftest:
         checks = {
             "① 横向溢出": len(over) > 0,
             "② 文字与背景同色": len(same) > 0,
-            "③ 裸数字语义 Chip": len(bare) > 0,
+            "④ 裸数字语义 Chip": len(bare) > 0,
         }
         print()
         print("=== 门禁自检（注入已知缺陷，三个探测器都必须报警）===")
@@ -425,8 +461,9 @@ def main() -> int:
         return 0 if good else 1
 
     print()
-    print(("门禁未通过" if failed else "门禁通过（①②③）")
-          + f"：①{len(over)} ②{len(same)} ③{len(bare)}；④ 仅报告 {len(dup)}")
+    print(("门禁未通过" if failed else "门禁通过（①②③④）")
+          + f"：①溢出 {len(over)} ②同色文字 {len(same)} ③JS错误 {len(errs)} ④裸数字语义Chip {len(bare)}"
+          + f"；⑤ 仅报告 {len(dup)}")
     return 1 if failed else 0
 
 
