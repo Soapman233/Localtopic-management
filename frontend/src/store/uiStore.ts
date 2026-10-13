@@ -49,6 +49,22 @@ interface UiState {
   builderView: BuilderView
   setBuilderView: (v: BuilderView) => void
 
+  /**
+   * 最近一次「编辑成功」的时间戳（规范 §4.5 第 3 条：自动保存明示）。
+   *
+   * ⚠️ **会话态，不持久化**（与门禁脏标记同一约定，见 `partialize`）：
+   * 老师关心的是「**这次**编辑有没有存住」，跨会话的旧时间戳没有意义、
+   * 反而会在冷启动时显示一个久远的「X 天前」造成误解。刷新后从「无编辑」重新计。
+   *
+   * 为什么不用后端字段：保存成功这一事实在**每个页面的 mutation 成功回调**里已经发生，
+   * 只是没有一个统一的可观测点；这里用一个会话时间戳把它收敛到一处，
+   * **不新建后端字段、不动 `bank.db`**（`QuestionDetailPage` 保存成功、
+   * `PaperBuilderPage` 各写操作成功后调用 {@link markEdited}）。
+   */
+  lastEditAt: number | null
+  /** 记录一次编辑成功（缺省用当前时间；可注入固定值便于测试）。 */
+  markEdited: (at?: number) => void
+
   // ----------------------------------------------------------------------- //
   // 导出门禁（P2，§5-Q3）
   // ----------------------------------------------------------------------- //
@@ -92,6 +108,10 @@ export const useUiStore = create<UiState>()(
       // 首次默认「排版视图」（用户决策 Q8）；之后跟随上次选择（持久化）。
       builderView: 'layout',
       setBuilderView: (v) => set({ builderView: v }),
+
+      // 自动保存明示（§4.5 第 3 条）：会话态时间戳，不持久化。
+      lastEditAt: null,
+      markEdited: (at) => set({ lastEditAt: at ?? Date.now() }),
 
       exportFormats: { docx: true, pdf: false },
       setExportFormats: (f) => set((s) => ({ exportFormats: { ...s.exportFormats, ...f } })),

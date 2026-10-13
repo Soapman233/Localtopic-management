@@ -27,6 +27,7 @@ import {
 import FilterListIcon from '@mui/icons-material/FilterList'
 import RestartAltIcon from '@mui/icons-material/RestartAlt'
 import { PageHeader } from '../components/PageHeader'
+import { ContinueLastPaper } from '../components/ContinueLastPaper'
 import { FilterSidebar } from '../components/FilterSidebar'
 import { CoverageBanner } from '../components/CoverageBanner'
 import { GradeGapNotice } from '../components/GradeGapNotice'
@@ -430,6 +431,9 @@ export default function SearchPage() {
           </>
         }
       />
+
+      {/* §4.5 第 4 条：从「找题」直接回到上次那份卷（有有效上次卷时才出现）。 */}
+      <ContinueLastPaper />
 
       <TextField
         size="small"

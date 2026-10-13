@@ -174,6 +174,10 @@ def _stop(proc: subprocess.Popen) -> None:
 def main() -> int:
     args = list(sys.argv[1:])
     dark = "--dark" in args
+    #: `--selftest`：**门禁自检**。运行时往页面注入三种**已知缺陷**，确认三个探测器都能抓到。
+    #: 为什么必须有：一个永远返回 0 的检查等于没有检查（项目铁律）。
+    #: 自检让「门禁有效」成为**可重复执行**的事实，而不是"我手工试过一次"。
+    selftest = "--selftest" in args
     only = {a for a in args if not a.startswith("--")}
 
     browser = _find_browser()
@@ -221,6 +225,27 @@ def main() -> int:
                             pass
                         page.wait_for_timeout(900)
 
+                        # `--selftest`：注入三种已知缺陷（同色文字 / 裸数字语义 Chip / 横向溢出），
+                        # 然后照常跑探测器——三个都必须报警，否则说明探测器坏了。
+                        if selftest:
+                            page.evaluate("""() => {
+                              const sc = document.createElement('span');
+                              sc.id = '__selftest_samecolor';
+                              sc.style.cssText = 'color: rgb(255,255,255); background-color: rgb(255,255,255)';
+                              sc.textContent = '反证同色文字';
+                              document.body.appendChild(sc);
+
+                              const chip = document.createElement('span');
+                              chip.className = 'MuiChip-root MuiChip-colorWarning';
+                              chip.textContent = '999';
+                              document.body.appendChild(chip);
+
+                              const wide = document.createElement('div');
+                              wide.style.cssText = 'width: 99999px; height: 1px';
+                              document.body.appendChild(wide);
+                            }""")
+                            page.wait_for_timeout(250)
+
                         shot = OUT / f"{prefix}{vp_tag}-{name}.png"
                         page.screenshot(path=str(shot), full_page=True)
 
@@ -230,7 +255,89 @@ def main() -> int:
                         #    （`anchor="right"` + `keepMounted`）停在 `translateX(100%)`，
                         #    天然「右边界超出视口」，但它不可见、不影响布局——不排除就会
                         #    每页稳定报 21 个假阳性，把真实信号淹掉。
-                        metrics = page.evaluate("""() => {
+                        # 🔴 这里同时跑**四项门禁**（评审 §5.3「把已发生的缺陷变成规则」）：
+                        #   ① 横向溢出 ② 文字与背景同色（F1 那一类：深色白底白字）
+                        #   ③ 语义色 Chip 的裸数字（F3：中性计数被染成警告橙）
+                        #   ④ 同一行内同值重复渲染（F3：知识点页「关联 2,378 条」+ 徽章「2378」）
+                        # 前三项是**硬失败**；④ 可能因数据巧合误报，仅统计并列出（见下方说明）。
+                        # ⚠️ 用 **raw 字符串**（`r"""`）：这段是 JS，里面有 `\(`、`\d`、`\u4e00`
+                        #    等正则转义。非 raw 时 Python 会把它们当自身转义处理
+                        #    （`\u4e00` 会变成真汉字、`\(` 触发 SyntaxWarning）——语义可能被悄悄改掉。
+                        metrics = page.evaluate(r"""() => {
+                          const CJK = /[\u4e00-\u9fff]/;
+
+                          /** 解析 `rgb(r, g, b)` / `rgba(...)` → [r,g,b,a]；透明返回 null。 */
+                          const parseColor = (c) => {
+                            const m = /rgba?\(([^)]+)\)/.exec(c || '');
+                            if (!m) return null;
+                            const p = m[1].split(',').map((x) => parseFloat(x));
+                            const a = p.length > 3 ? p[3] : 1;
+                            return a === 0 ? null : [p[0], p[1], p[2], a];
+                          };
+
+                          /** 相对亮度（WCAG）。 */
+                          const lum = ([r, g, b]) => {
+                            const f = (v) => { const c = v / 255; return c <= 0.03928 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4); };
+                            return 0.2126 * f(r) + 0.7152 * f(g) + 0.0722 * f(b);
+                          };
+
+                          /** 沿祖先链找最近的不透明背景（半透明按 alpha 叠到白/黑上近似）。 */
+                          const effectiveBg = (el) => {
+                            let node = el;
+                            while (node && node !== document.documentElement) {
+                              const c = parseColor(getComputedStyle(node).backgroundColor);
+                              if (c) {
+                                if (c[3] >= 0.999) return [c[0], c[1], c[2]];
+                                // 半透明：粗略叠到其父背景（再取一次不透明祖先）
+                                const parent = effectiveBg(node.parentElement || document.body);
+                                return [0, 1, 2].map((i) => c[i] * c[3] + parent[i] * (1 - c[3]));
+                              }
+                              node = node.parentElement;
+                            }
+                            return [255, 255, 255];
+                          };
+
+                          /** 对比度。 */
+                          const ratio = (a, b) => {
+                            const [hi, lo] = lum(a) >= lum(b) ? [lum(a), lum(b)] : [lum(b), lum(a)];
+                            return (hi + 0.05) / (lo + 0.05);
+                          };
+
+                          const sameColor = [];
+                          const bareNumberChips = [];
+                          const dupValues = [];
+
+                          // ② 文字与背景同色（只查有可见文本的最小元素）
+                          for (const el of document.querySelectorAll('body *')) {
+                            if (el.children.length > 0) continue;
+                            const text = (el.textContent || '').trim();
+                            if (!text) continue;
+                            const cs = getComputedStyle(el);
+                            if (cs.visibility === 'hidden' || cs.display === 'none' || cs.opacity === '0') continue;
+                            const fg = parseColor(cs.color);
+                            if (!fg) continue;
+                            const r = ratio([fg[0], fg[1], fg[2]], effectiveBg(el));
+                            if (r < 1.5) {
+                              sameColor.push({ text: text.slice(0, 30), ratio: Number(r.toFixed(2)) });
+                            }
+                          }
+
+                          // ③ 语义色 Chip 的文本必须含中文状态词（裸数字 = 中性计数，不该用语义色）
+                          for (const chip of document.querySelectorAll('.MuiChip-colorWarning, .MuiChip-colorError, .MuiChip-colorSuccess')) {
+                            const t = (chip.textContent || '').trim();
+                            if (!t) continue;
+                            if (!CJK.test(t)) bareNumberChips.push({ text: t.slice(0, 30), cls: chip.className.slice(0, 40) });
+                          }
+
+                          // ④ 同一行内同值重复（去掉千分位后比对 ≥3 位数字）
+                          for (const row of document.querySelectorAll('tr, li, .MuiCard-root')) {
+                            const t = row.textContent || '';
+                            const nums = (t.match(/\d[\d,]{2,}/g) || []).map((x) => x.replace(/,/g, ''));
+                            const seen = new Map();
+                            for (const n of nums) seen.set(n, (seen.get(n) || 0) + 1);
+                            for (const [n, c] of seen) if (c >= 2) dupValues.push({ value: n, times: c });
+                          }
+
                           const de = document.documentElement;
                           const over = [];
                           for (const el of document.querySelectorAll('*')) {
@@ -248,6 +355,9 @@ def main() -> int:
                           return {
                             docW: de.scrollWidth, viewW: de.clientWidth,
                             overflowCount: over.length, samples: over.slice(0, 5),
+                            sameColorCount: sameColor.length, sameColorSamples: sameColor.slice(0, 4),
+                            bareNumberChipCount: bareNumberChips.length, bareNumberChipSamples: bareNumberChips.slice(0, 4),
+                            dupValueCount: dupValues.length, dupValueSamples: dupValues.slice(0, 4),
                           };
                         }""")
                         rec = {"page": name, "viewport": vp_tag, "dark": dark, **metrics}
@@ -264,14 +374,60 @@ def main() -> int:
     name = "overflow-report-dark.json" if dark else "overflow-report.json"
     (OUT / name).write_text(
         json.dumps(report, ensure_ascii=False, indent=2), encoding="utf-8")
-    bad = [r for r in report if r["docW"] > r["viewW"] + 1]
-    print(f"\n截图输出：{OUT}")
-    print(f"横向溢出页面：{len(bad)} / {len(report)}")
-    for r in bad:
-        print(f"  ⚠️ [{r['viewport']}] {r['page']} 文档 {r['docW']} > 视口 {r['viewW']}")
-        for s in r["samples"]:
-            print(f"       越界: <{s['tag']} class=\"{s['cls']}\"> right={s['right']}")
-    return 0
+    print()
+    print(f"截图输出：{OUT}")
+
+    # ── 四项门禁汇总（**前三项硬失败**，第四项仅报告）──────────────────────────
+    over = [r for r in report if r["docW"] > r["viewW"] + 1]
+    same = [r for r in report if r["sameColorCount"]]
+    bare = [r for r in report if r["bareNumberChipCount"]]
+    dup = [r for r in report if r["dupValueCount"]]
+
+    print(f"① 横向溢出页面：{len(over)} / {len(report)}")
+    for r in over:
+        print(f"  [{r['viewport']}] {r['page']} 文档 {r['docW']} > 视口 {r['viewW']}")
+        for smp in r["samples"]:
+            print(f"       越界: <{smp['tag']} class={smp['cls']!r}> right={smp['right']}")
+
+    print(f"② 文字与背景同色：{len(same)} / {len(report)}（评审 F1 那一类缺陷）")
+    for r in same:
+        for smp in r["sameColorSamples"]:
+            print(f"  [{r['viewport']}] {r['page']} 对比度 {smp['ratio']}:1  {smp['text']!r}")
+
+    print(f"③ 语义色 Chip 却是裸数字（中性计数不该染语义色）：{len(bare)} / {len(report)}")
+    for r in bare:
+        for smp in r["bareNumberChipSamples"]:
+            print(f"  [{r['viewport']}] {r['page']} {smp['text']!r}")
+
+    # ④ 仅报告：真实数据里同值巧合（某题数恰等于某公式数）会误报，
+    #    故**不作为失败条件**，只列出供人工判断——比"要么全信要么全弃"更有用。
+    print(f"④ 同一行内同值重复（**仅报告**，可能是数据巧合）：{len(dup)} / {len(report)}")
+    for r in dup[:6]:
+        for smp in r["dupValueSamples"]:
+            print(f"  · [{r['viewport']}] {r['page']} 值 {smp['value']} 出现 {smp['times']} 次")
+
+    failed = bool(over or same or bare)
+
+    # ── 门禁自检：三个探测器都必须抓到注入的缺陷 ──────────────────────────────
+    if selftest:
+        checks = {
+            "① 横向溢出": len(over) > 0,
+            "② 文字与背景同色": len(same) > 0,
+            "③ 裸数字语义 Chip": len(bare) > 0,
+        }
+        print()
+        print("=== 门禁自检（注入已知缺陷，三个探测器都必须报警）===")
+        for k, v in checks.items():
+            print(f"  {'PASS' if v else 'FAIL'}  {k}")
+        good = all(checks.values())
+        print()
+        print("门禁自检" + ("通过：三个探测器均有效" if good else "未通过：存在失效的探测器"))
+        return 0 if good else 1
+
+    print()
+    print(("门禁未通过" if failed else "门禁通过（①②③）")
+          + f"：①{len(over)} ②{len(same)} ③{len(bare)}；④ 仅报告 {len(dup)}")
+    return 1 if failed else 0
 
 
 if __name__ == "__main__":

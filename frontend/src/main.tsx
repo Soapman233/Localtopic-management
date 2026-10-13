@@ -10,6 +10,14 @@ import { buildTheme } from './theme'
 import { getSettings } from './api/settings'
 import { qk } from './api/queryKeys'
 import { useSettingsStore } from './store/settingsStore'
+import { useThemeModeStore } from './store/themeStore'
+import {
+  SYSTEM_DARK_QUERY,
+  effectiveDark,
+  readStoredThemeMode,
+  resolveThemeMode,
+  systemPrefersDark,
+} from './lib/themeMode'
 import { notify } from './lib/feedback'
 import { AuthProvider } from './app/auth/AuthProvider'
 import ErrorBoundary from './components/ErrorBoundary'
@@ -34,10 +42,46 @@ const queryClient = new QueryClient({
   }),
 })
 
+/** 系统深色偏好（`matchMedia` 监听：系统切换时**实时**生效，无需刷新）。 */
+function useSystemDark(): boolean {
+  const [dark, setDark] = React.useState(systemPrefersDark)
+  React.useEffect(() => {
+    if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') return
+    const mql = window.matchMedia(SYSTEM_DARK_QUERY)
+    const onChange = (e: MediaQueryListEvent) => setDark(e.matches)
+    // 首挂载同步一次：首次渲染与订阅之间用户可能改过系统设置。
+    setDark(mql.matches)
+    // addEventListener 在旧 Safari 上不存在，回退 addListener。
+    if (typeof mql.addEventListener === 'function') {
+      mql.addEventListener('change', onChange)
+      return () => mql.removeEventListener('change', onChange)
+    }
+    mql.addListener(onChange)
+    return () => mql.removeListener(onChange)
+  }, [])
+  return dark
+}
+
 /** 设置保存后直接使用共享缓存；刷新页面也会恢复已保存主题。 */
 function ApplicationTheme() {
   const { data } = useQuery({ queryKey: qk.settings(), queryFn: getSettings })
-  const theme = React.useMemo(() => buildTheme(data?.theme), [data?.theme?.primary, data?.theme?.dark])
+  // §4.5 第 7 条：三态模式（localStorage）+ 系统深色 → 实际深浅。
+  const mode = useThemeModeStore((s) => s.mode)
+  const setMode = useThemeModeStore((s) => s.setMode)
+  const systemDark = useSystemDark()
+
+  // 旧安装迁移：设置首次到达、且本地**没有**三态偏好时，用后端旧布尔播种一次
+  // （`dark:true` 保留深色；`false`/缺失视为未选过 → 跟随系统）。理由见 `lib/themeMode.ts`。
+  React.useEffect(() => {
+    if (!data) return
+    if (readStoredThemeMode() == null) setMode(resolveThemeMode(null, data.theme?.dark))
+  }, [data, setMode])
+
+  const dark = effectiveDark(mode, systemDark)
+  const theme = React.useMemo(
+    () => buildTheme({ primary: data?.theme?.primary, dark }),
+    [data?.theme?.primary, dark],
+  )
   // P0-2：把设置镜像到 store，供 KatexFormula（渲染开关）与建卷（默认模板）消费。
   React.useEffect(() => {
     if (data) useSettingsStore.getState().syncFrom(data)

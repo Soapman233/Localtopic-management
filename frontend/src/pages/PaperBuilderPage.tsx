@@ -64,6 +64,8 @@ import { EmptyState } from '../components/EmptyState'
 import { ErrorState } from '../components/ErrorState'
 import { LoadingState } from '../components/LoadingState'
 import { FirstRunImportGuide } from '../components/FirstRunImportGuide'
+import { FirstRunFlowGuide } from '../components/FirstRunFlowGuide'
+import { AutosaveNotice } from '../components/AutosaveNotice'
 import { useFacetsQuery, useSearchQuery } from '../hooks/useSearch'
 import {
   addQuestions,
@@ -118,6 +120,8 @@ function usePaperMutations(paperId: number | null, onError: (error: unknown) => 
     qc.invalidateQueries({ queryKey: qk.exportDataRoot() })
     // ★ 强制预览门禁：任何影响内容的操作都重新锁定导出（§5-Q3②）。
     useUiStore.getState().invalidatePreview(paperId)
+    // §4.5 第 3 条：任意组卷写操作成功（加题 / 设分 / 重排 / 元数据…）都刷新自动保存时间戳。
+    useUiStore.getState().markEdited()
   }
   const opts = {
     onSuccess: invalidate,
@@ -253,6 +257,16 @@ export default function PaperBuilderPage() {
   useEffect(() => {
     usePaperStore.getState().validateTargetSection((paperQ.data?.sections ?? []).map((s) => s.id))
   }, [paperQ.data])
+
+  // §4.5 第 4 条安全回退：组卷页会自动恢复持久化的 `currentPaperId`；若那份卷**已被删除**，
+  // 它会指向一个不存在的 id（paperQ 报错、页面卡在一份加载不出来的卷上）。
+  // 这里在**试卷列表就绪后**校验：id 不在列表里 → 清空脏 id，回落到空态。
+  // （与 `ContinueLastPaper` 的守卫同口径，保证老师即使没进过那两页也能自愈。）
+  useEffect(() => {
+    const list = Array.isArray(papersQ.data) ? papersQ.data : null
+    if (currentPaperId == null || !papersQ.isSuccess || !list) return
+    if (!list.some((p) => p.id === currentPaperId)) setCurrentPaperId(null)
+  }, [currentPaperId, papersQ.data, papersQ.isSuccess, setCurrentPaperId])
 
   // 试卷列表加载完成后再启用增删动效（§5「首批加载关闭」）。
   useEffect(() => {
@@ -701,8 +715,14 @@ export default function PaperBuilderPage() {
         }
       />
 
+      {/* §4.5 第 3 条：常驻一行「已自动保存 · 上次编辑 X 分钟前」（本次会话编辑过后才出现）。 */}
+      <AutosaveNotice />
+
       {/* 首启引导（Phase 2.4）：题库为空时引导导入第一份旧卷（可关闭；有数据不显示）。 */}
       <FirstRunImportGuide />
+
+      {/* §4.5 第 5 条：题库非空、且从未走过完整流程时的一次性四步引导（与上面的空态引导互斥）。 */}
+      <FirstRunFlowGuide />
 
       {error && (
         <Alert severity="error" sx={{ mb: 1 }} onClose={() => setError(null)}>

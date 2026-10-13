@@ -20,8 +20,12 @@ import {
   Alert,
   Box,
   Button,
+  FormControl,
   FormControlLabel,
+  FormLabel,
   MenuItem,
+  Radio,
+  RadioGroup,
   Select,
   Stack,
   Switch,
@@ -40,6 +44,8 @@ import SectionCard from '../components/SectionCard'
 import { qk } from '../api/queryKeys'
 import { PRIMARY_MIN_CONTRAST, contrastRatio, tokens } from '../theme'
 import { GLOSSARY, describePrimaryContrast } from '../lib/glossary'
+import { useThemeModeStore } from '../store/themeStore'
+import { effectiveDark, systemPrefersDark, type ThemeMode } from '../lib/themeMode'
 
 interface FormState {
   db_path: string
@@ -48,7 +54,6 @@ interface FormState {
   katex_throw_on_error: boolean
   katex_strict: boolean
   theme_primary: string
-  theme_dark: boolean
 }
 
 function toForm(s: SettingsData): FormState {
@@ -60,7 +65,6 @@ function toForm(s: SettingsData): FormState {
     katex_strict: Boolean(s.katex?.strict),
     // P5-2：默认主色同步为文字安全值 #2F63EA（原 #3370FF 白字仅 4.28:1，未达 AA）。
     theme_primary: String(s.theme?.primary ?? '#2F63EA'),
-    theme_dark: Boolean(s.theme?.dark),
   }
 }
 
@@ -72,6 +76,11 @@ export default function SettingsPage() {
   const [toast, setToast] = useState<{ kind: 'success' | 'error'; text: string } | null>(null)
   // 高级项（公式渲染）默认只读，需显式解锁才可编辑。
   const [advancedEditing, setAdvancedEditing] = useState(false)
+
+  // §4.5 第 7 条：主题三态（跟随系统 / 浅色 / 深色）来自 store（localStorage），
+  // 默认「跟随系统」；用户显式选择后立即生效、并跨会话记住。
+  const themeMode = useThemeModeStore((s) => s.mode)
+  const setThemeMode = useThemeModeStore((s) => s.setMode)
 
   /**
    * 主色对比度（R02 = ③）：**与 `buildTheme` 的收敛口径保持一致**——
@@ -98,7 +107,10 @@ export default function SettingsPage() {
         export_dir: f.export_dir,
         default_template: f.default_template,
         katex: { throw_on_error: f.katex_throw_on_error, strict: f.katex_strict },
-        theme: { primary: f.theme_primary, dark: f.theme_dark },
+        // §4.5 第 7 条：后端只接受布尔 `dark`（无法表达第三态）。这里把三态**收敛**成
+        // 一个等价布尔写回，保持旧契约与旧消费方可用；真正的三态由 localStorage 承载。
+        // 「跟随系统」时写当前系统深浅，使后端值与界面一致。
+        theme: { primary: f.theme_primary, dark: effectiveDark(themeMode, systemPrefersDark()) },
       }),
     onSuccess: (res) => {
       setForm(toForm(res))
@@ -246,10 +258,35 @@ export default function SettingsPage() {
                   )}
                 </Stack>
               </Box>
-              <FormControlLabel
-                control={<Switch checked={form.theme_dark} onChange={(e) => set('theme_dark', e.target.checked)} />}
-                label="深色模式"
-              />
+              {/* §4.5 第 7 条：主题三态。默认「跟随系统」——客户端没有地址栏作参照，
+                  深色不一致会更刺眼；用户显式选过浅色 / 深色则以用户为准。 */}
+              <FormControl component="fieldset">
+                <FormLabel id="theme-mode-label" sx={{ fontSize: 12, color: 'text.secondary' }}>
+                  {GLOSSARY.themeModeLabel}
+                </FormLabel>
+                <RadioGroup
+                  row
+                  aria-labelledby="theme-mode-label"
+                  value={themeMode}
+                  onChange={(e) => setThemeMode(e.target.value as ThemeMode)}
+                >
+                  <FormControlLabel
+                    value="system"
+                    control={<Radio size="small" />}
+                    label={GLOSSARY.themeModeSystem}
+                  />
+                  <FormControlLabel
+                    value="light"
+                    control={<Radio size="small" />}
+                    label={GLOSSARY.themeModeLight}
+                  />
+                  <FormControlLabel
+                    value="dark"
+                    control={<Radio size="small" />}
+                    label={GLOSSARY.themeModeDark}
+                  />
+                </RadioGroup>
+              </FormControl>
             </Stack>
           </SectionCard>
         </Stack>

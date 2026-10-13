@@ -276,8 +276,8 @@ try {
 }
 
 // ─────────────────────────────────────────────────────────────────────────── //
-// 6. 设置页改主题（深色模式）
-//    断言：把「深色模式」打开并保存后，**body 背景色真的变了**（浅 → 深）。
+// 6. 设置页改主题（三态：跟随系统 / 浅色 / 深色）
+//    断言：把主题显式选为「深色」并保存后，**body 背景色真的变了**（浅 → 深）。
 //    实现：拦截 GET/PUT `/api/settings`（内存态），不写任何设置文件。
 // ─────────────────────────────────────────────────────────────────────────── //
 try {
@@ -301,7 +301,9 @@ try {
   await page.goto(`${BASE}/#/settings`, { waitUntil: 'domcontentloaded' })
   await page.waitForTimeout(3000)
   const bgLight = await page.evaluate(() => getComputedStyle(document.body).backgroundColor)
-  await page.getByLabel('深色模式').click()
+  // §4.5 第 7 条：设置页主题由「深色模式」开关改为**三态**（跟随系统 / 浅色 / 深色）。
+  // 这里显式选「深色」再保存，断言 body 背景真的变深。
+  await page.getByLabel('深色', { exact: true }).click()
   await page.getByRole('button', { name: '保存设置' }).click()
   await page.waitForTimeout(1200)
   const bgDark = await page.evaluate(() => getComputedStyle(document.body).backgroundColor)

@@ -258,6 +258,47 @@ export const GLOSSARY = {
    */
   builderNarrowHint: '当前窗口较窄，已折叠试卷面板；点右上角「试卷面板」按钮可打开。'
     + '拉宽至 1200px 以上可恢复双栏「边组边看」。',
+
+  // ---- 客户端外壳契约（规范 §4.5，前端侧 4 条）---------------------------- //
+  // ⚠️ 本节全部为**追加**，不重排、不删除既有键（约定见文件头）。
+
+  /** 自动保存提示的结论前缀（§4.5 第 3 条）。 */
+  autosaveSaved: '已自动保存',
+  /** 「上次编辑」字段标签（与 {@link autosaveSaved} 拼成一行）。 */
+  autosaveLastEditLabel: '上次编辑',
+
+  /** 相对时间：不足 1 分钟。 */
+  relativeJustNow: '刚刚',
+  /** 相对时间单位：分钟。 */
+  relativeMinutesUnit: '分钟前',
+  /** 相对时间单位：小时。 */
+  relativeHoursUnit: '小时前',
+  /** 相对时间单位：天。 */
+  relativeDaysUnit: '天前',
+
+  /** 「继续上次的卷」入口文案前缀（§4.5 第 4 条；试卷标题拼在其后）。 */
+  continueLastPaper: '继续上次的卷',
+
+  /** 首启四步引导标题（§4.5 第 5 条）。 */
+  flowGuideTitle: '四步上手：导入 → 找题 → 组卷 → 导出',
+  /** 首启四步引导说明。 */
+  flowGuideBody: '按这个顺序走一遍，就能把以前的旧卷变成一份能在 Word 里继续改的新卷。',
+  /** 首启引导四步（每步都可点击跳转）。 */
+  flowGuideStepImport: '1. 导入旧卷',
+  flowGuideStepSearch: '2. 找题',
+  flowGuideStepBuild: '3. 组卷',
+  flowGuideStepExport: '4. 导出',
+  /** 关闭首启引导的按钮文案。 */
+  flowGuideDismiss: '知道了',
+
+  /** 主题三态控件标签（§4.5 第 7 条）。 */
+  themeModeLabel: '主题',
+  /** 跟随系统深色。 */
+  themeModeSystem: '跟随系统',
+  /** 固定浅色。 */
+  themeModeLight: '浅色',
+  /** 固定深色。 */
+  themeModeDark: '深色',
 } as const
 
 /** 单题「快照锁定」提示（用于 Tooltip / 单行徽章）。 */
@@ -462,5 +503,66 @@ export function isDebugMode(): boolean {
   } catch {
     // 隐私模式 / 存储被禁用等情况下读取可能抛错，一律按「非 debug」处理。
     return false
+  }
+}
+
+// --------------------------------------------------------------------------- //
+// 客户端外壳契约（规范 §4.5）· 前端侧文案（**追加**，不改既有函数）
+// --------------------------------------------------------------------------- //
+
+const MINUTE_MS = 60_000
+const HOUR_MS = 60 * MINUTE_MS
+const DAY_MS = 24 * HOUR_MS
+
+/**
+ * 相对时间 → 教师语言（**纯函数**，便于单测；边界见 `tests/unit/relativeTime.test.ts`）。
+ *
+ * 分档（与规范 §4.5 第 3 条的「X 分钟前」一致）：
+ * - `< 1 分钟` → 「刚刚」；
+ * - `1–59 分钟` → 「X 分钟前」；
+ * - `1–23 小时` → 「X 小时前」；
+ * - `≥ 1 天` → 「X 天前」。
+ *
+ * `diffMs` 为负数（时钟回拨 / 客户端与后端时间不一致）时按「刚刚」处理，
+ * 避免出现「-3 分钟前」这类坏文案。
+ */
+export function describeRelativeTime(diffMs: number): string {
+  const ms = Number.isFinite(diffMs) ? diffMs : 0
+  if (ms < MINUTE_MS) return GLOSSARY.relativeJustNow
+  if (ms < HOUR_MS) return `${Math.floor(ms / MINUTE_MS)} ${GLOSSARY.relativeMinutesUnit}`
+  if (ms < DAY_MS) return `${Math.floor(ms / HOUR_MS)} ${GLOSSARY.relativeHoursUnit}`
+  return `${Math.floor(ms / DAY_MS)} ${GLOSSARY.relativeDaysUnit}`
+}
+
+/**
+ * 自动保存提示整行文案：「已自动保存 · 上次编辑 X 分钟前」（§4.5 第 3 条）。
+ *
+ * ⚠️ 只输出结论（已保存），不解释「保存到哪 / 存了什么」——老师只关心数据没丢。
+ */
+export function describeAutosave(diffMs: number): string {
+  return `${GLOSSARY.autosaveSaved} · ${GLOSSARY.autosaveLastEditLabel} ${describeRelativeTime(diffMs)}`
+}
+
+/** 「继续上次的卷」入口文案（§4.5 第 4 条；带试卷标题便于老师确认是那一份）。 */
+export function describeContinueLastPaper(title: string): string {
+  const t = title.trim()
+  return t ? `${GLOSSARY.continueLastPaper}「${t}」` : GLOSSARY.continueLastPaper
+}
+
+/** 首启四步引导的内容（标题 / 说明 / 四步及其跳转路径）。 */
+export function describeFlowGuide(): {
+  title: string
+  body: string
+  steps: { label: string; to: string }[]
+} {
+  return {
+    title: GLOSSARY.flowGuideTitle,
+    body: GLOSSARY.flowGuideBody,
+    steps: [
+      { label: GLOSSARY.flowGuideStepImport, to: '/import' },
+      { label: GLOSSARY.flowGuideStepSearch, to: '/search' },
+      { label: GLOSSARY.flowGuideStepBuild, to: '/builder' },
+      { label: GLOSSARY.flowGuideStepExport, to: '/export' },
+    ],
   }
 }

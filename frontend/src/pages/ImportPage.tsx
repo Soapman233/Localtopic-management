@@ -37,6 +37,7 @@ import { useJob } from '../hooks/useJob'
 import { ErrorState } from '../components/ErrorState'
 import { LoadingState } from '../components/LoadingState'
 import PageHeader from '../components/PageHeader'
+import { ContinueLastPaper } from '../components/ContinueLastPaper'
 import { ProgressStages } from '../components/ProgressStages'
 import {
   describeImportDisabled,
@@ -169,6 +170,9 @@ export default function ImportPage() {
         meta="导入是唯一的建库途径。"
         level="page"
       />
+
+      {/* §4.5 第 4 条：导入完顺手回到上次那份卷（有有效上次卷时才出现）。 */}
+      <ContinueLastPaper />
 
       {statusQ.isLoading && <LoadingState label="正在检查导入功能…" />}
       {statusQ.isError && (

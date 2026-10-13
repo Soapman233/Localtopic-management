@@ -9,9 +9,10 @@
     "test:unit": "vitest run",
     "dev": "vite",
     "contrast": "node scripts/check-contrast.mjs tests/visual/contrast-pairs.json",
-    "build": "tsc --noEmit && npm run contrast && node scripts/check-hardcoded-colors.mjs && vite build && node scripts/prune-stale-assets.mjs",
+    "build": "tsc --noEmit && npm run contrast && node scripts/check-hardcoded-colors.mjs && vite build && node scripts/prune-stale-assets.mjs && node scripts/check-budget.mjs",
     "preview": "vite preview",
-    "check:colors": "node scripts/check-hardcoded-colors.mjs"
+    "check:colors": "node scripts/check-hardcoded-colors.mjs",
+    "check:budget": "node scripts/check-budget.mjs"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.1.0",

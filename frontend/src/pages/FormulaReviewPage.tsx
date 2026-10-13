@@ -348,7 +348,15 @@ export default function FormulaReviewPage() {
                 label={
                   <Stack direction="row" spacing={0.5} alignItems="center">
                     <span>{STATUS_LABEL[t.key] ?? t.key}</span>
-                    <Chip size="small" label={t.count} color={tab === t.key ? 'warning' : 'default'} />
+                    {/*
+                      ⚠️ 2026-10-13（R07 = ③ / 规范 §2.1 铁律 2）：**选中态原为 `color="warning"`**——
+                      但 `t.count` 是**纯中性计数**（如「不支持 130」），而 `warning` 表达的是
+                      「需要立刻注意的状态」。**借用状态色表达「选中」会让真正的警告脱敏**
+                      （老师会学会忽略橙色）。选中是**选择态**，语义色应为 `primary`。
+                      🔴 这一处是**门禁③ 抓出来的**：我先手工读代码判定「剩下 5 处全是真状态、
+                      无需再改」，**漏了它**——规则比人工清点可靠。
+                    */}
+                    <Chip size="small" label={t.count} color={tab === t.key ? 'primary' : 'default'} />
                   </Stack>
                 }
               />

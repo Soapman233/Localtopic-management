@@ -45,12 +45,14 @@ import { VersionHistory } from '../components/VersionHistory'
 import { ErrorState } from '../components/ErrorState'
 import { LoadingState } from '../components/LoadingState'
 import { PageHeader } from '../components/PageHeader'
+import { AutosaveNotice } from '../components/AutosaveNotice'
 import { SlideOver } from '../components/SlideOver'
 import { ErrorCode, errorCodeOf, errorDataOf } from '../api/errors'
 import { qk } from '../api/queryKeys'
 import { describeMentionScope } from '../lib/glossary'
 import { stripEmbeddedAnswer } from '../lib/questionText'
 import { usePermissionGuard } from '../hooks/usePermission'
+import { useUiStore } from '../store/uiStore'
 
 /** 公式状态代码 → 中文（非 OK 状态不再直接暴露原始码，见 §3.4）。 */
 const FORMULA_STATUS_LABEL: Record<string, string> = {
@@ -117,6 +119,8 @@ export default function QuestionDetailPage() {
     onSuccess: (data) => {
       setEditing(false)
       setConflict(null)
+      // §4.5 第 3 条：保存成功即刷新「已自动保存 · 上次编辑 …」的会话时间戳。
+      useUiStore.getState().markEdited()
       qc.setQueryData(['question', questionId], data.question)
       qc.invalidateQueries({ queryKey: qk.question(questionId) })
       qc.invalidateQueries({ queryKey: qk.searchRoot() })
@@ -142,6 +146,8 @@ export default function QuestionDetailPage() {
   const difficultyMutation = useMutation({
     mutationFn: () => setDifficulty(questionId, level),
     onSuccess: (data) => {
+      // 难度标注同样是「编辑」，一并刷新自动保存时间戳。
+      useUiStore.getState().markEdited()
       qc.setQueryData(['question', questionId], data.question)
       qc.invalidateQueries({ queryKey: qk.question(questionId) })
       qc.invalidateQueries({ queryKey: qk.searchRoot() })
@@ -227,6 +233,9 @@ export default function QuestionDetailPage() {
           </>
         }
       />
+
+      {/* §4.5 第 3 条：常驻一行「已自动保存 · 上次编辑 X 分钟前」（本次会话编辑过后才出现）。 */}
+      <AutosaveNotice />
 
       {saveMsg && (
         <Alert severity="success" sx={{ mb: 2 }}>
