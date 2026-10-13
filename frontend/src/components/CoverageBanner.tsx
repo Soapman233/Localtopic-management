@@ -1,14 +1,18 @@
 /** 数据完整度提示条（P0-13 数据状态可见性）。
  *
- * 橙色、**非阻塞**、可关闭（PRD 4「提示条」/ 5.1）。
+ * **永久性数据说明**、非阻塞、可关闭（PRD 4「提示条」/ 5.1）。
  *
  * 设计（B2 §3.3）：默认**只占一行**——一句话说清「哪些维度未标全会漏题」，
  * 需要时才展开看六维数值与复核数。**不合算未经定义的完整度百分比**（不造总分）。
  * 折叠的只是「数值明细」，**影响当前筛选结果的漏题事实**由结果区的
  * {@link GradeGapNotice} 继续显露，不随这里一起藏掉。
+ *
+ * T08（规范 §3.3 反馈通道表）：这是**永久性数据说明**，不是「需要立刻行动」的告警，
+ * 因此**不得**用橙色 Alert 常驻。改为一行中性 caption + 「展开明细」按钮；
+ * 展开后的数值同样走中性色（语义色只留给需要立刻行动的告警）。
  */
 import { useState } from 'react'
-import { Alert, Box, Button, IconButton, Stack, Typography } from '@mui/material'
+import { Box, Button, IconButton, Stack, Typography } from '@mui/material'
 import CloseIcon from '@mui/icons-material/Close'
 import type { CoverageBucket, CoverageSummary } from '../api/types'
 
@@ -49,34 +53,30 @@ export function CoverageBanner({ coverage, dismissed, onDismiss }: CoverageBanne
   ]
 
   return (
-    <Alert
-      severity="warning"
-      sx={{ mb: 2, py: 0.25, alignItems: 'center' }}
-      action={
-        <Stack direction="row" spacing={0.5} alignItems="center">
-          <Button
-            size="small"
-            color="inherit"
-            onClick={() => setExpanded((v) => !v)}
-            aria-expanded={expanded}
-            data-testid="coverage-toggle"
-          >
-            {expanded ? '收起' : '展开明细'}
-          </Button>
-          <IconButton aria-label="关闭提示" size="small" onClick={onDismiss}>
-            <CloseIcon fontSize="small" />
-          </IconButton>
-        </Stack>
-      }
+    // T08：**不再是 Alert**。永久性说明用中性一行 caption（规范 §3.3 禁止橙色 Alert 常驻）。
+    <Box
+      data-testid="coverage-banner"
+      sx={{ mb: 2, p: 1, border: '1px solid', borderColor: 'divider', borderRadius: 1 }}
     >
-      {/* 默认一行：只说「按哪些维度筛会漏题」这一件事实，不铺开六维数值。 */}
-      <Stack direction="row" spacing={1} alignItems="baseline" flexWrap="wrap" useFlexGap>
-        <Typography variant="body2" component="span" fontWeight={600}>
+      <Stack direction="row" spacing={1} alignItems="center" flexWrap="wrap" useFlexGap>
+        {/* 默认一行：只说「按哪些维度筛会漏题」这一件事实，不铺开六维数值。 */}
+        <Typography variant="body2" component="span" fontWeight={500}>
           数据完整度
         </Typography>
-        <Typography variant="body2" component="span" color="text.secondary">
+        <Typography variant="body2" component="span" color="text.secondary" sx={{ flex: 1, minWidth: 0 }}>
           年级、教材、章节尚未标全，按这些维度筛选会漏掉未标注的题；「难度」需教研组人工标注，暂不能按难度筛选。
         </Typography>
+        <Button
+          size="small"
+          onClick={() => setExpanded((v) => !v)}
+          aria-expanded={expanded}
+          data-testid="coverage-toggle"
+        >
+          {expanded ? '收起' : '展开明细'}
+        </Button>
+        <IconButton aria-label="关闭提示" size="small" onClick={onDismiss}>
+          <CloseIcon fontSize="small" />
+        </IconButton>
       </Stack>
 
       {expanded && (
@@ -88,11 +88,12 @@ export function CoverageBanner({ coverage, dismissed, onDismiss }: CoverageBanne
               </Typography>
               {isUnannotated(it.bucket) ? (
                 // P0-5：0% 不等于"统计坏了"，要直说是"未标注"。
-                <Typography variant="body2" component="span" fontWeight={600} color="warning.main">
+                // T08：这里也只强调文字（不加语义色）——它同样是永久性说明。
+                <Typography variant="body2" component="span" fontWeight={500}>
                   未标注（{it.bucket?.total?.toLocaleString('zh-CN') ?? '0'} 题）
                 </Typography>
               ) : (
-                <Typography variant="body2" component="span" fontWeight={600}>
+                <Typography variant="body2" component="span" fontWeight={500}>
                   {fmtPct(it.bucket)}
                 </Typography>
               )}
@@ -102,13 +103,13 @@ export function CoverageBanner({ coverage, dismissed, onDismiss }: CoverageBanne
             <Typography variant="body2" component="span" color="text.secondary">
               待复核公式{' '}
             </Typography>
-            <Typography variant="body2" component="span" fontWeight={600}>
+            <Typography variant="body2" component="span" fontWeight={500}>
               {coverage.review_open?.toLocaleString('zh-CN') ?? '0'} 条
             </Typography>
           </Box>
         </Stack>
       )}
-    </Alert>
+    </Box>
   )
 }
 

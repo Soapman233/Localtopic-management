@@ -79,4 +79,14 @@ describe('CoverageBanner', () => {
     renderWithTheme(<CoverageBanner coverage={makeCoverage()} dismissed={false} onDismiss={vi.fn()} />)
     expect(screen.getByText(/暂不能按难度筛选/)).toBeInTheDocument()
   })
+
+  it('T08：永久性说明**不再是 Alert**（尤其不是橙色 warning），改为中性一行', () => {
+    const { container } = renderWithTheme(
+      <CoverageBanner coverage={makeCoverage()} dismissed={false} onDismiss={vi.fn()} />,
+    )
+    expect(screen.getByTestId('coverage-banner')).toBeInTheDocument()
+    // 规范 §3.3：永久性数据说明禁止用 Alert 常驻。
+    expect(container.querySelector('.MuiAlert-root')).toBeNull()
+    expect(container.querySelector('.MuiAlert-standardWarning')).toBeNull()
+  })
 })

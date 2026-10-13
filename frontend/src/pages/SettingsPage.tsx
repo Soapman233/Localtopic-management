@@ -291,11 +291,18 @@ export default function SettingsPage() {
               <Typography variant="caption" color="text.secondary">
                 默认模板
               </Typography>
+              {/* T07：原写法 `display:block` 让 Select 撑满容器，而 MUI 的内层展示 div
+                  （`.MuiSelect-select`）是 `box-sizing: content-box` + `width:100%`，
+                  它的 14px 左内边距 + 32px 右内边距会**加在 100% 之外**，使控件实际比容器宽 46px。
+                  当容器接近视口右缘时（`/settings` @1024 实测：容器右缘 983、控件右缘 1029）
+                  整页横向溢出 5px（`scrollWidth 1029 > clientWidth 1024`）。
+                  这里改用**受控宽度**（3 个模板选项不需要 700px 宽），控件不再越出容器。
+                  ⚠️ 宽度必须写带单位字符串/数字常量，不能写成会被当作 spacing 乘数的裸数字。 */}
               <Select
                 size="small"
                 value={form.default_template}
                 onChange={(e) => set('default_template', e.target.value)}
-                sx={{ display: 'block', minWidth: 200 }}
+                sx={{ display: 'block', minWidth: 200, maxWidth: 240 }}
               >
                 {TEMPLATES.map((t) => (
                   <MenuItem key={t} value={t}>

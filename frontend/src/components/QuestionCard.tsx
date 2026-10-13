@@ -12,6 +12,7 @@ import ArticleIcon from '@mui/icons-material/Article'
 import { useDraggable } from '@dnd-kit/core'
 import type { SearchItem } from '../api/types'
 import { AnswerBadge, AnalysisBadge, DifficultyBadge, ReviewBadge } from './StatusBadges'
+import { stripAnswerSections } from '../lib/questionText'
 
 export interface QuestionCardProps {
   item: SearchItem
@@ -28,8 +29,14 @@ export interface QuestionCardProps {
   onSelectChange?: (item: SearchItem, selected: boolean) => void
 }
 
+/** 结果卡的题干预览：只保留「题干 + 选项」。
+ *
+ * T05：部分来源文件的 `plain_text` 里内嵌了 `【答案】/【详解】…`（与 `answer`/`analysis`
+ * 同源），整段铺在列表里既冗余又误导。这里在**渲染期**剥离（不动数据），
+ * 答案/解析状态仍由卡片底部徽章表达。
+ */
 function previewText(item: SearchItem): string {
-  const t = (item.plain_text || '').replace(/\s+/g, ' ').trim()
+  const t = stripAnswerSections(item.plain_text).replace(/\s+/g, ' ').trim()
   return t || '（无题干文本）'
 }
 

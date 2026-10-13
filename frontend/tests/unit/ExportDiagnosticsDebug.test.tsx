@@ -177,3 +177,29 @@ describe('B1 诊断只读模式', () => {
     request.mockRestore()
   })
 })
+
+/** T08：通过（0 阻断 / 0 提示）时降级为**内联状态点**，不再用绿色 success 横幅，
+ * 且文案不自相矛盾（规范 §3.4-3「通过就是通过」——不再写「仍需逐项核对」）。 */
+describe('T08 导出诊断：通过时用内联状态点而非 Alert', () => {
+  const passed: ExportPayload = {
+    ...payload,
+    diagnostics: {
+      ...payload.diagnostics,
+      export_allowed: true,
+      blocker_count: 0,
+      warning_count: 0,
+      issues: [],
+      duplicate_groups: [],
+    },
+  }
+
+  it('通过路径：渲染状态点、无 success Alert、文案不再自相矛盾', () => {
+    const { container } = renderPanel(<ExportDiagnosticsPanel paperId={7} data={passed} />)
+    const text = container.textContent ?? ''
+    expect(container.querySelector('[data-testid="status-dot"]')).not.toBeNull()
+    expect(text).toContain('当前模式内容检查通过')
+    // 不再有绿色 success 横幅；也不再出现「仍需逐项核对」这类自相矛盾措辞。
+    expect(container.querySelector('.MuiAlert-standardSuccess')).toBeNull()
+    expect(text).not.toContain('仍需逐项核对')
+  })
+})

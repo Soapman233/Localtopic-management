@@ -146,10 +146,13 @@ function PaperExportPage({ paperId }: { paperId: number }) {
 
       {summary && (
         <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap sx={{ mb: 1 }}>
-          <Chip size="small" label={`题数 ${summary.item_count}`} />
-          <Chip size="small" label={`总分 ${summary.total_score}`} />
-          {summary.unscored_count > 0 && <Chip size="small" color="warning" label={`未设分 ${summary.unscored_count}`} />}
-          {noAnswerCount > 0 && <Chip size="small" color="warning" label={`无答案 ${noAnswerCount}`} />}
+          <Chip size="small" variant="outlined" label={`题数 ${summary.item_count}`} />
+          <Chip size="small" variant="outlined" label={`总分 ${summary.total_score}`} />
+          {/* T04：这两个是**试卷内的聚合计数**，不是需要立刻行动的状态 → 中性描边，
+              并补上单位（原为裸数字「无答案 4」，规范 §4.2 要求纯数字计数可读）。
+              真正要老师处理的场景由下方「答案解析版缺答案」的 Alert 显式提示。 */}
+          {summary.unscored_count > 0 && <Chip size="small" variant="outlined" label={`未设分 ${summary.unscored_count} 题`} />}
+          {noAnswerCount > 0 && <Chip size="small" variant="outlined" label={`无答案 ${noAnswerCount} 题`} />}
         </Stack>
       )}
 

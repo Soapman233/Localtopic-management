@@ -288,8 +288,10 @@ export default function StatsPage({ headingLevel = 1 }: { headingLevel?: 1 | 2 }
             处理进度只表示「已核对动作」的比例，<strong>不代表公式内容正确率</strong>。
           </Typography>
           <Stack direction="row" spacing={1} sx={{ mt: 1 }} flexWrap="wrap" useFlexGap>
+            {/* T04：这是**公式转换状态的聚合计数**，不是需要立刻行动的告警 → 用中性描边，
+                不再用警告橙（语义色只留给单项状态与真正的告警，见设计规范 §2.1 铁律 2）。 */}
             {Object.entries(s.review?.by_status ?? {}).map(([k, v]) => (
-              <Chip key={k} size="small" color="warning" variant="outlined" label={`${describeFormulaStatus(k)} ${v}`} />
+              <Chip key={k} size="small" variant="outlined" label={`${describeFormulaStatus(k)} ${v}`} />
             ))}
           </Stack>
 
@@ -298,9 +300,10 @@ export default function StatsPage({ headingLevel = 1 }: { headingLevel?: 1 | 2 }
             知识点关联复核状态
           </Typography>
           <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
-            <Chip size="small" color="warning" variant="outlined" label={`待复核 ${(s.label_status['待复核'] ?? 0).toLocaleString('zh-CN')}`} />
-            <Chip size="small" color="success" variant="outlined" label={`已确认 ${(s.label_status['已确认'] ?? 0).toLocaleString('zh-CN')}`} />
-            <Chip size="small" label={`已否决 ${(s.label_status['已否决'] ?? 0).toLocaleString('zh-CN')}`} />
+            {/* T04：同上——三个都是**关联条数**聚合计数 → 中性描边（语义色只给单项状态）。 */}
+            <Chip size="small" variant="outlined" label={`待复核 ${(s.label_status['待复核'] ?? 0).toLocaleString('zh-CN')}`} />
+            <Chip size="small" variant="outlined" label={`已确认 ${(s.label_status['已确认'] ?? 0).toLocaleString('zh-CN')}`} />
+            <Chip size="small" variant="outlined" label={`已否决 ${(s.label_status['已否决'] ?? 0).toLocaleString('zh-CN')}`} />
           </Stack>
           <Typography variant="caption" color="text.secondary" display="block" sx={{ mt: 0.5 }}>
             以上为「题-标签关联条数」，一道题可对应多个标签，<strong>不能</strong>与题目数直接相加。

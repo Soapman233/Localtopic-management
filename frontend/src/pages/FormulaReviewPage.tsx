@@ -50,6 +50,7 @@ import { EmptyState } from '../components/EmptyState'
 import { ErrorState } from '../components/ErrorState'
 import { LoadingState } from '../components/LoadingState'
 import { describeFormulaStatus, describeTechnicalInfo, isDebugMode } from '../lib/glossary'
+import { stripAnswerSections } from '../lib/questionText'
 import { qk } from '../api/queryKeys'
 
 const PAGE_SIZE = 50
@@ -154,7 +155,9 @@ export default function FormulaReviewPage({ headingLevel = 1 }: { headingLevel?:
   }, [selectedId])
 
   const current = items.find((it) => it.id === selectedId) ?? null
-  const currentText = current?.question_text ?? ''
+  // T05：复核项的题干同样来自 `questions.text`，可能内嵌 `【答案】/【详解】…`；
+  // 这里是**题干区**，只展示「题干 + 选项」，答案/解析不属于本页职责。
+  const currentText = stripAnswerSections(current?.question_text ?? '')
   const canExpandText = currentText.length > TEXT_CLAMP_CHARS
 
   /** 切换状态 / 已处理开关 / 翻页时清空选中，保证不串用旧详情。 */
@@ -193,7 +196,9 @@ export default function FormulaReviewPage({ headingLevel = 1 }: { headingLevel?:
                 label={
                   <Stack direction="row" spacing={0.5} alignItems="center">
                     <span>{describeFormulaStatus(t.key)}</span>
-                    <Chip size="small" label={t.count} color={tab === t.key ? 'warning' : 'default'} />
+                    {/* T04：这是**计数**不是状态 → 中性描边，不再把未选中的 tab 计数染成警告橙
+                        （选中态由 Tabs 自身的指示条表达）。 */}
+                    <Chip size="small" variant="outlined" label={t.count} />
                   </Stack>
                 }
               />
@@ -243,7 +248,9 @@ export default function FormulaReviewPage({ headingLevel = 1 }: { headingLevel?:
                   >
                     <Stack spacing={0.25} sx={{ minWidth: 0, flex: 1 }}>
                       <Stack direction="row" spacing={0.5} alignItems="center">
-                        <Chip size="small" color={it.resolved ? 'success' : 'warning'} label={describeFormulaStatus(it.status)} />
+                        {/* T04：**不再逐行渲染状态徽章**——列表已按状态 tab 过滤，130 行会堆叠出
+                            130 个同值橙色「不支持」徽章（F3 实测）。状态由当前 tab 与右侧详情表达。
+                            只保留「已处理」标记，用于区分同一 tab 内是否已核对。 */}
                         {it.resolved === 1 && <Chip size="small" variant="outlined" label="已处理" />}
                       </Stack>
                       <Typography variant="caption" color="text.secondary" noWrap>

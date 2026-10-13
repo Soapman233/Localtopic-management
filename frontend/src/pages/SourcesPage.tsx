@@ -20,6 +20,7 @@ import {
   DialogContent,
   DialogTitle,
   FormControlLabel,
+  Pagination,
   Paper,
   Stack,
   Switch,
@@ -52,6 +53,14 @@ function isMissing(v: string | null | undefined): boolean {
   const s = (v ?? '').trim()
   return s === '' || s === '待补充'
 }
+
+/** 每页渲染的行数（T06）。
+ *
+ * 实测：209 行全量渲染使页高达到 **9,788px**（1366）/ 13,009px（1024），
+ * 是全站最高页面的 5.8 倍。改为分页后每页 25 行，页高落到 2,000px 以内。
+ * 取 25（规范给的区间是 20–50）——既能一屏看完，又不至于翻页过频。
+ */
+const PAGE_SIZE = 25
 
 function pctText(bucket?: { n: number; total: number; pct: number } | null): string {
   if (!bucket) return '—'
@@ -301,6 +310,7 @@ export default function SourcesPage({ headingLevel = 1 }: { headingLevel?: 1 | 2
   const pageHeading = headingLevel === 1 ? 'h1' : 'h2'
   const [keyword, setKeyword] = useState('')
   const [onlyMissing, setOnlyMissing] = useState(false)
+  const [page, setPage] = useState(1)
   const [activeId, setActiveId] = useState<number | null>(null)
   const [toast, setToast] = useState<{ kind: 'success' | 'error'; text: string } | null>(null)
 
@@ -321,17 +331,19 @@ export default function SourcesPage({ headingLevel = 1 }: { headingLevel?: 1 | 2
     (r) => isMissing(r.grade) || isMissing(r.textbook),
   ).length
 
+  // T06：分页。筛选变化时回到第 1 页；`safePage` 兜底防止筛选后页码越界（不写状态、纯派生）。
+  const pageCount = Math.max(1, Math.ceil(rows.length / PAGE_SIZE))
+  const safePage = Math.min(page, pageCount)
+  const pagedRows = rows.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE)
+
   return (
     <Box>
       <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 1 }} flexWrap="wrap" useFlexGap>
         <Typography variant="h6" component={pageHeading}>来源文件管理</Typography>
-        <Chip size="small" label={`文件 ${totalFiles}`} />
-        <Chip
-          size="small"
-          color={missingFiles > 0 ? 'warning' : 'success'}
-          variant={missingFiles > 0 ? 'filled' : 'outlined'}
-          label={`元数据缺失 ${missingFiles}`}
-        />
+        <Chip size="small" variant="outlined" label={`文件 ${totalFiles}`} />
+        {/* T04：「元数据缺失 N」是**聚合计数**，不是需要立刻行动的状态 → 中性描边，
+            不再用橙色填充（语义色只留给单项状态，见设计规范 §2.1 铁律 2）。 */}
+        <Chip size="small" variant="outlined" label={`元数据缺失 ${missingFiles}`} />
       </Stack>
 
       {/* 主工具条：搜索 + 仅看缺失，保留 N/M 计数 */}
@@ -341,11 +353,22 @@ export default function SourcesPage({ headingLevel = 1 }: { headingLevel?: 1 | 2
             size="small"
             placeholder="按文件名筛选…"
             value={keyword}
-            onChange={(e) => setKeyword(e.target.value)}
+            onChange={(e) => {
+              setKeyword(e.target.value)
+              setPage(1)
+            }}
             sx={{ minWidth: 260 }}
           />
           <FormControlLabel
-            control={<Switch checked={onlyMissing} onChange={(e) => setOnlyMissing(e.target.checked)} />}
+            control={
+              <Switch
+                checked={onlyMissing}
+                onChange={(e) => {
+                  setOnlyMissing(e.target.checked)
+                  setPage(1)
+                }}
+              />
+            }
             label="仅看元数据缺失"
           />
           <Typography variant="body2" color="text.secondary">
@@ -385,11 +408,13 @@ export default function SourcesPage({ headingLevel = 1 }: { headingLevel?: 1 | 2
                 <TableCell>教材</TableCell>
                 <TableCell align="right">题量</TableCell>
                 <TableCell align="right">公式</TableCell>
-                <TableCell>元数据状态</TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
-              {rows.map((r: SourceRow) => {
+              {/* T06：只渲染当前页。缺失事实仍由「年级 / 教材」两列的 `—` 逐行表达
+                  （`MissingCell` 带可访问名），顶部「仅看元数据缺失」筛选保留；
+                  原「元数据状态」列 174/209 行同值（83%），逐行徽章不提供信息，已删除。 */}
+              {pagedRows.map((r: SourceRow) => {
                 const gMissing = isMissing(r.grade)
                 const tMissing = isMissing(r.textbook)
                 return (
@@ -411,19 +436,12 @@ export default function SourcesPage({ headingLevel = 1 }: { headingLevel?: 1 | 2
                     </TableCell>
                     <TableCell align="right">{r.questions_count}</TableCell>
                     <TableCell align="right">{r.formulas_count}</TableCell>
-                    <TableCell>
-                      {gMissing || tMissing ? (
-                        <Chip size="small" color="warning" variant="outlined" label="待补充元数据" />
-                      ) : (
-                        <Chip size="small" color="success" variant="outlined" label="完整" />
-                      )}
-                    </TableCell>
                   </TableRow>
                 )
               })}
               {rows.length === 0 && (
                 <TableRow>
-                  <TableCell colSpan={7}>
+                  <TableCell colSpan={6}>
                     <EmptyState
                       dense
                       title="没有匹配的来源文件"
@@ -436,6 +454,7 @@ export default function SourcesPage({ headingLevel = 1 }: { headingLevel?: 1 | 2
                       onAction={() => {
                         setKeyword('')
                         setOnlyMissing(false)
+                        setPage(1)
                       }}
                     />
                   </TableCell>
@@ -444,6 +463,16 @@ export default function SourcesPage({ headingLevel = 1 }: { headingLevel?: 1 | 2
             </TableBody>
           </Table>
         </TableContainer>
+      )}
+
+      {/* T06：分页（默认每页 25 行）。计数为 1 页时不渲染，避免占位噪音。 */}
+      {pageCount > 1 && (
+        <Stack direction="row" spacing={2} alignItems="center" justifyContent="center" sx={{ mt: 2 }}>
+          <Typography variant="caption" color="text.secondary">
+            第 {safePage} / {pageCount} 页 · 本页 {pagedRows.length} 行
+          </Typography>
+          <Pagination page={safePage} count={pageCount} onChange={(_e, p) => setPage(p)} color="primary" size="small" />
+        </Stack>
       )}
 
       <SourceDetailDialog

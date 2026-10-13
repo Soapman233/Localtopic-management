@@ -17,6 +17,19 @@ import {
   isDebugMode,
 } from '../../lib/glossary'
 
+/** 内联状态点（T08）。⚠️ 刻意**就近定义**在本文件、不放进共享的 `StatusBadges`：
+ * 本文件属于 `/export` 的懒加载 chunk，不在首屏；而共享 `StatusBadges` 会被组卷页
+ * （首屏）引用，往那里加代码会直接吃掉「首屏 ≤1,059,742 B」的硬门禁预算。
+ * 语义色一律走文字安全值（`*.main`），与规范 §3.3「操作成功 → 内联状态点」一致。 */
+function StatusDot({ tone, label }: { tone: 'success' | 'warning' | 'error'; label: string }) {
+  return (
+    <Stack direction="row" spacing={0.5} alignItems="center" component="span" data-testid="status-dot">
+      <Box component="span" sx={{ width: 8, height: 8, borderRadius: '50%', bgcolor: `${tone}.main`, flexShrink: 0 }} />
+      <Typography variant="caption" component="span" sx={{ color: `${tone}.main` }}>{label}</Typography>
+    </Stack>
+  )
+}
+
 export function IssueDetails({ issue }: { issue: ExportIssue }) {
   // P0-1：主导出流只给老师能懂的摘要 + 来源文件；原始技术字段（scan index / 快照摘要 /
   // 实例 id / 受影响模式）一律走 debug 开关，**默认不渲染**，维护者可开 `?debug=1` 查看。
@@ -82,10 +95,22 @@ export function ExportDiagnosticsPanel({ paperId, data, onRevised, readOnly = fa
     try { await navigator.clipboard.writeText(json); setMessage('完整诊断JSON已复制') }
     catch { setMessage('浏览器未允许自动复制，可在下方展开完整JSON手动复制。') }
   }
+  // T08：把「通过且 0 阻断 / 0 提示」从**绿色 success 横幅**降级为**内联状态点**
+  //      （规范 §3.3：操作成功但需复核 → 内联状态点；Alert 计数为 0 时不得渲染）。
+  //      同时修掉自相矛盾的文案（规范 §3.4-3「通过就是通过」）：原句是
+  //      「当前模式内容检查通过：0 个阻断条目；0 条提示。导出前需要处理的问题仍需逐项核对。」
+  //      —— 既然 0 项，就不该再写「仍需逐项核对」。只有真的有阻断/提示时才给 Alert。
+  const passed = d.export_allowed && d.blocker_count === 0 && d.warning_count === 0
   return <Box sx={{ mb: 1.5 }} data-testid="export-diagnostics">
-    <Alert severity={d.export_allowed ? (d.warning_count ? 'warning' : 'success') : 'error'}>
-      {d.export_allowed ? '当前模式内容检查通过' : '当前模式内容被阻断'}：{d.blocker_count} 个阻断条目；{d.warning_count} 条提示。{describeRevisionIssues()}仍需逐项核对。
-    </Alert>
+    {passed ? (
+      <StatusDot tone="success" label="当前模式内容检查通过（0 个阻断条目，0 条提示）" />
+    ) : (
+      <Alert severity={d.export_allowed ? 'warning' : 'error'}>
+        {d.export_allowed
+          ? `当前模式可导出，但有 ${d.warning_count} 条提示需要核对。${describeRevisionIssues()}见下方。`
+          : `当前模式内容被阻断：${d.blocker_count} 个阻断条目；${d.warning_count} 条提示。${describeRevisionIssues()}仍需逐项核对。`}
+      </Alert>
+    )}
     <Stack direction="row" spacing={1} sx={{ mt: 1 }}>
       {/* 复制原始诊断 JSON 是维护者工具，默认不暴露给老师。 */}
       {debug && <Button size="small" onClick={copy}>复制完整诊断JSON</Button>}

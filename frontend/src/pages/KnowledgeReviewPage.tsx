@@ -74,6 +74,43 @@ const STATUS_TABS: { key: string; label: string }[] = [
   { key: '已否决', label: '已否决' },
 ]
 
+/** 标签行的**复核状态点**（T04）。
+ *
+ * 只表达「这一行还需不需要人工处理」，**不重复左侧的关联条数**、不显示各状态计数
+ * （计数在右侧详情与顶部汇总里各出现一次）。优先级：待复核 > 已确认 > 已否决。
+ *
+ * ⚠️ 刻意**就近定义**、不放进共享的 `StatusBadges`：该组件被组卷页（首屏）引用，
+ * 往共享 chunk 里加代码会直接吃掉「首屏 ≤1,059,742 B」的硬门禁预算；
+ * 这里只用一个小圆点 + caption，语义色一律走文字安全值（`*.main`）。
+ */
+function LabelReviewDot({ row }: { row: LabelSummaryRow }) {
+  const tone: 'warning' | 'success' | 'neutral' =
+    row.pending > 0 ? 'warning' : row.confirmed > 0 ? 'success' : 'neutral'
+  const label = tone === 'warning' ? '待复核' : tone === 'success' ? '已确认' : '已否决'
+  const paletteKey = tone === 'neutral' ? 'text.secondary' : `${tone}.main`
+  return (
+    <Stack
+      direction="row"
+      spacing={0.5}
+      alignItems="center"
+      component="span"
+      sx={{ flexShrink: 0 }}
+      title={
+        tone === 'warning'
+          ? '该标签还有尚未人工复核的关联'
+          : tone === 'success'
+            ? '该标签的关联均已人工确认'
+            : '该标签的关联均已人工否决'
+      }
+    >
+      <Box component="span" sx={{ width: 8, height: 8, borderRadius: '50%', bgcolor: paletteKey }} />
+      <Typography variant="caption" component="span" sx={{ color: paletteKey }}>
+        {label}
+      </Typography>
+    </Stack>
+  )
+}
+
 /** P5 知识点复核页。 */
 /** 嵌入维护父页时主标题为 h2；独立使用保留 h1，不改变视觉排版。 */
 export default function KnowledgeReviewPage({ headingLevel = 1 }: { headingLevel?: 1 | 2 } = {}) {
@@ -239,9 +276,11 @@ export default function KnowledgeReviewPage({ headingLevel = 1 }: { headingLevel
     <Box>
       <Stack direction="row" alignItems="center" spacing={2} sx={{ mb: 1 }} flexWrap="wrap" useFlexGap>
         <Typography variant="h6" component={pageHeading}>知识点复核</Typography>
-        <Chip size="small" color="warning" variant="outlined" label={`待复核 ${(counts['待复核'] ?? 0).toLocaleString('zh-CN')} 条`} />
-        <Chip size="small" color="success" variant="outlined" label={`已确认 ${(counts['已确认'] ?? 0).toLocaleString('zh-CN')} 条`} />
-        <Chip size="small" label={`已否决 ${(counts['已否决'] ?? 0).toLocaleString('zh-CN')} 条`} />
+        {/* T04：顶部三个是**聚合计数**（题-标签关联条数），不是单项状态 → 一律中性描边，
+            不给语义色（语义色只留给「需要立刻行动」的状态，见设计规范 §2.1 颜色铁律 2）。 */}
+        <Chip size="small" variant="outlined" label={`待复核 ${(counts['待复核'] ?? 0).toLocaleString('zh-CN')} 条`} />
+        <Chip size="small" variant="outlined" label={`已确认 ${(counts['已确认'] ?? 0).toLocaleString('zh-CN')} 条`} />
+        <Chip size="small" variant="outlined" label={`已否决 ${(counts['已否决'] ?? 0).toLocaleString('zh-CN')} 条`} />
         <Box sx={{ flex: 1 }} />
         {/* CSV 导出 / 导入收进「批量处理」菜单 */}
         <Button
@@ -362,11 +401,11 @@ export default function KnowledgeReviewPage({ headingLevel = 1 }: { headingLevel
                   primary={l.label_name}
                   secondary={`关联 ${l.total.toLocaleString('zh-CN')} 条`}
                 />
-                <Stack direction="row" spacing={0.5}>
-                  {l.pending > 0 && <Chip size="small" color="warning" label={l.pending} />}
-                  {l.confirmed > 0 && <Chip size="small" color="success" variant="outlined" label={l.confirmed} />}
-                  {l.rejected > 0 && <Chip size="small" label={l.rejected} />}
-                </Stack>
+                {/* T04：原右侧「橙色填充徽章 + 裸数字」与左侧「关联 N 条」是**同一数值渲染两次**
+                    （实测 4/4 行：`压强 关联 2,378 条 [2378]`），且把中性计数染成了警告橙。
+                    现改为**行级状态点**：只表状态、不重复数字、不填充底色（规范 §4.2：
+                    某列同值率过高时不应作逐行徽章；纯数字计数不用 Chip）。 */}
+                <LabelReviewDot row={l} />
               </ListItemButton>
             ))}
           </List>

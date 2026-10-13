@@ -72,11 +72,16 @@ export default defineConfig({
               id.endsWith('/hooks/exportGateShared.ts') ||
               id.endsWith('/hooks/useJob.ts') ||
               id.endsWith('/api/export.ts')) return 'preview'
+          // T12：只把多处消费的theme.ts并入既有业务共享块，不吸收依赖或改vendor。
           // 显式分包后，恢复原有共用业务依赖的聚合，避免拆成多个极小请求。
           // 这些模块在旧首屏均已加载；不包含页面、分页或公式业务。
+          // P1/T05：`lib/questionText.ts`（题干内嵌答案区剥离）是**首屏就要用**的小工具
+          // （组卷页 → QuestionCard 直接依赖），但详情/复核/找题三个懒加载页也用它，
+          // 不归组就会被 Rollup 单独拆成一个首屏请求。并入 app-common（首屏已加载）
+          // 只是消除碎片请求、**不改变总字节**，不是把代码藏进 vendor。
           if (['/store/paperStore.ts', '/store/settingsStore.ts', '/lib/glossary.ts', '/components/ErrorState.tsx',
                '/api/client.ts', '/api/queryKeys.ts', '/api/errors.ts', '/api/papers.ts',
-               '/components/LoadingState.tsx'].some(path => id.endsWith(path))) return 'app-common'
+               '/components/LoadingState.tsx', '/lib/questionText.ts', '/theme.ts'].some(path => id.endsWith(path))) return 'app-common'
           // Rollup 的 CommonJS 互操作助手恢复至原 React 运行时分组，无业务代码进入 vendor。
           if (id.includes('commonjsHelpers')) return 'vendor-react'
           if (!id.includes('node_modules')) return undefined

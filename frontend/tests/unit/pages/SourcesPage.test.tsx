@@ -68,14 +68,42 @@ describe('SourcesPage 页面级集成', () => {
     expect(screen.getByRole('button', { name: /重试/ })).toBeInTheDocument()
   })
 
-  it('有数据 → 渲染表格行与元数据缺失徽标', async () => {
+  it('有数据 → 渲染表格行；缺失以行内「—」标记，不再有逐行元数据徽章（T06）', async () => {
     vi.stubGlobal('fetch', vi.fn(async () => jsonResponse(rowsFixture)))
     renderPage(<SourcesPage />)
 
     expect(await screen.findByText('八年级物理下册期末卷.docx')).toBeInTheDocument()
     expect(screen.getByText('未标注来源.docx')).toBeInTheDocument()
-    // 第 2 行年级/教材缺失 → 出现「待补充元数据」徽标。
-    expect(screen.getByText('待补充元数据')).toBeInTheDocument()
-    expect(screen.getByText('完整')).toBeInTheDocument()
+    // 第 2 行年级/教材缺失 → 该行渲染带可访问名的「—」标记（不只靠颜色）。
+    expect(screen.getByLabelText('年级缺失')).toBeInTheDocument()
+    expect(screen.getByLabelText('教材缺失')).toBeInTheDocument()
+    // T06：原「元数据状态」列（174/209 行同值）的逐行徽章已删除。
+    expect(screen.queryByText('待补充元数据')).not.toBeInTheDocument()
+    expect(screen.queryByText('完整')).not.toBeInTheDocument()
+    expect(screen.queryByText('元数据状态')).not.toBeInTheDocument()
+  })
+
+  it('行数超过每页上限 → 只渲染首页并出现分页器（T06）', async () => {
+    const many: SourceRow[] = Array.from({ length: 30 }, (_, i) => ({
+      id: i + 1,
+      file_name: `来源${String(i + 1).padStart(2, '0')}.docx`,
+      stage: '初中',
+      grade: '八年级下册',
+      subject: '物理',
+      textbook: '苏科版',
+      chapter: null,
+      questions_count: i,
+      formulas_count: 0,
+    }))
+    vi.stubGlobal('fetch', vi.fn(async () => jsonResponse(many)))
+    renderPage(<SourcesPage />)
+
+    expect(await screen.findByText('来源01.docx')).toBeInTheDocument()
+    // 每页 25 行：第 25 行在、第 26 行不在。
+    expect(screen.getByText('来源25.docx')).toBeInTheDocument()
+    expect(screen.queryByText('来源26.docx')).not.toBeInTheDocument()
+    // 分页器存在（2 页）。
+    expect(screen.getByRole('navigation')).toBeInTheDocument()
+    expect(screen.getByText(/第 1 \/ 2 页/)).toBeInTheDocument()
   })
 })

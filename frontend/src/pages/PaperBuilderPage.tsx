@@ -82,6 +82,8 @@ import { qk } from '../api/queryKeys'
 const PAGE_SIZE = 15
 /** 排版视图缩放（仅展示；测量层不受影响）。A4 宽 ≈ 794px × 0.72 ≈ 572px，适配右栏。 */
 const LAYOUT_SCALE = 0.72
+/** 窄屏提示的「不再提示」标记（T08）。本地持久化：老师关一次就不再打扰。 */
+const NARROW_NOTICE_KEY = 'qb_builder_narrow_notice'
 
 /** 组卷页所需的全部写操作（以后端返回整卷为准）。
  *
@@ -194,6 +196,23 @@ export default function PaperBuilderPage() {
   const compact = useMediaQuery('(max-width:1439px)')
   const [rightOpen, setRightOpen] = useState(false)
   const [filtersOpen, setFiltersOpen] = useState(() => !compact)
+  // T08：窄屏说明改为**一次性可关闭**的提示（规范 §3.3：窄屏态不用常驻横幅）。
+  // 关闭后写入 localStorage，刷新 / 再次变窄都不再打扰；隐私模式下读取失败按「未关闭」处理。
+  const [narrowNoticeDismissed, setNarrowNoticeDismissed] = useState(() => {
+    try {
+      return localStorage.getItem(NARROW_NOTICE_KEY) === '1'
+    } catch {
+      return false
+    }
+  })
+  const dismissNarrowNotice = () => {
+    setNarrowNoticeDismissed(true)
+    try {
+      localStorage.setItem(NARROW_NOTICE_KEY, '1')
+    } catch {
+      /* 存储不可用（隐私模式等）：本次会话内仍保持关闭即可 */
+    }
+  }
 
   // 检索条件状态（关键词防抖 / URL 同步 / query 与 facets 参数）——与检索页共用同一实现（§1.6）。
   const {
@@ -478,11 +497,33 @@ export default function PaperBuilderPage() {
         </Alert>
       )}
 
-      {/* 窄屏提示（P0-3）：<lg（<1200px）时右栏折叠为抽屉，给出轻提示避免困惑。 */}
-      {narrow && (
-        <Alert severity="info" sx={{ mb: 1, py: 0.25 }}>
-          当前窗口较窄，已折叠试卷面板；建议将窗口拉宽至 1200px 以上，使用双栏「边组边看」。
-        </Alert>
+      {/* 窄屏提示（P0-3）：<lg（<1200px）时右栏折叠为抽屉。
+          T08：原为**常驻蓝色 info Alert**，现降级为**一次性可关闭**的中性提示
+          （规范 §3.3：窄屏态不用常驻横幅；语义色只留给需要立刻行动的告警）。 */}
+      {narrow && !narrowNoticeDismissed && (
+        <Box
+          data-testid="narrow-notice"
+          sx={{
+            mb: 1,
+            px: 1,
+            py: 0.25,
+            border: '1px solid',
+            borderColor: 'divider',
+            borderRadius: 1,
+            display: 'flex',
+            alignItems: 'center',
+            gap: 1,
+          }}
+        >
+          <Typography variant="caption" color="text.secondary" sx={{ flex: 1, minWidth: 0 }}>
+            当前窗口较窄，已折叠试卷面板；建议将窗口拉宽至 1200px 以上，使用双栏「边组边看」。
+          </Typography>
+          {/* 关闭动作复用已引入的 Button（不额外引入 IconButton / 图标模块，
+              避免增加首屏字节——见门禁「首屏 ≤1,059,742 B」）。 */}
+          <Button size="small" sx={{ whiteSpace: 'nowrap' }} onClick={dismissNarrowNotice}>
+            不再提示
+          </Button>
+        </Box>
       )}
 
       {/* 顶部工具条（P3）：筛选 / 试卷面板 / 导出。试卷切换器已提升至全局顶栏（P1-6）。 */}

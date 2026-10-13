@@ -46,6 +46,7 @@ import { LoadingState } from '../components/LoadingState'
 import { ErrorCode, errorCodeOf, errorDataOf } from '../api/errors'
 import { qk } from '../api/queryKeys'
 import { describeMentionScope, describeFormulaStatus } from '../lib/glossary'
+import { stripAnswerSections } from '../lib/questionText'
 import { usePermissionGuard } from '../hooks/usePermission'
 
 /** 单条公式展示块。`fid` 退为**次级定位**（B2 §3.4）：小号灰字，不再是显眼的独立徽章；
@@ -201,8 +202,11 @@ export default function QuestionDetailPage() {
             <Typography variant="subtitle2" component="h2" color="text.secondary" gutterBottom>
               题干
             </Typography>
+            {/* T05：题干区只渲染「题干 + 选项」。部分来源文件的 `text` 里内嵌了
+                `【答案】D【详解】…`（与下方「答案」「解析」区块同源），若不剥离，
+                同一份内容会在本页出现三次。剥离只作用于展示，`q.text` 原值不改。 */}
             <Box sx={{ fontSize: 15, mb: 2 }}>
-              <FormulaText text={q.text} formulas={q.formulas} />
+              <FormulaText text={stripAnswerSections(q.text)} formulas={q.formulas} />
             </Box>
 
             {(q.images ?? []).length > 0 && (
