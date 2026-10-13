@@ -10,8 +10,8 @@ import { buildTheme, tokens } from '../../src/theme'
  * 从根上锁死「主题取值 ⇄ 达标」这一不变量。
  *
  * 覆盖范围：主色填充（按钮/顶栏）、语义色 main（outlined 文字/图标）与其 contrastText（filled 徽章）、
- * 以及浅色模式下主色作文字。**深色模式下主色作文字**是既有遗留（用户可配置主色，且需产品决策
- * 是否把深色顶栏改为浅底），已在 `tests/visual/contrast-pairs.json` 的 `knownIssues` 中记录，此处不重复断言。
+ * 以及**两种模式下**主色作文字。P0/T02 起主色不再「原样采用」，而是由 `buildTheme` 按模式收敛
+ * （浅色加深 / 深色提亮）到承载底上达标，故这里同时锁死「深色主色作文字」与「任意合法主色都达标」。
  * Alert 的 light/dark 派生色、CSS 里硬编码的排版预览 chrome 色由 JSON 门禁覆盖。
  */
 
@@ -50,16 +50,17 @@ describe('主题对比度（WCAG AA 4.5:1）', () => {
     const paper = theme.palette.background.paper
     const pageBg = theme.palette.background.default
 
-    it(`${name}·主色底上的文字（按钮/顶栏）达标`, () => {
-      expect(contrast(theme.palette.primary.contrastText, theme.palette.primary.main)).toBeGreaterThanOrEqual(4.5)
+    it(`${name}·主色底上的文字（顶栏/实心按钮/分页选中）达标`, () => {
+      // P0/T02：白字压主色的表面改用派生**填充安全值** `primary.dark`（恒按浅色底收敛），
+      // 而不是 `primary.main`（深色模式下它被提亮，白字不达标）。
+      expect(contrast(theme.palette.primary.contrastText, theme.palette.primary.dark)).toBeGreaterThanOrEqual(4.5)
     })
 
-    if (!dark) {
-      it('浅色·主色作文字在白卡片/页面底色上达标', () => {
-        expect(contrast(theme.palette.primary.main, paper)).toBeGreaterThanOrEqual(4.5)
-        expect(contrast(theme.palette.primary.main, pageBg)).toBeGreaterThanOrEqual(4.5)
-      })
-    }
+    it(`${name}·主色作文字在白卡片/页面底色上达标`, () => {
+      // P0/T02：浅色模式取深色卡片 `#FFFFFF`/页面底 `#F5F6F8`；深色模式取 `#1E1E1E`/`#121212`。
+      expect(contrast(theme.palette.primary.main, paper)).toBeGreaterThanOrEqual(4.5)
+      expect(contrast(theme.palette.primary.main, pageBg)).toBeGreaterThanOrEqual(4.5)
+    })
 
     for (const key of SEMANTIC) {
       it(`${name}·${key}：outlined 文字（main）在白卡片/页面底色上达标`, () => {
@@ -94,5 +95,23 @@ describe('主题对比度（WCAG AA 4.5:1）', () => {
     expect(contrast(tokens.neutral, tokens.bg)).toBeGreaterThanOrEqual(4.5)
     // 禁用态豁免（SC 1.4.3），仅作记录：应保持浅于文字值
     expect(luminance(tokens.neutralDisabled)).toBeGreaterThan(luminance(tokens.neutral))
+  })
+
+  it('任意合法主色（含历史 #3370FF）在两种模式下都被收敛到达标', () => {
+    // P0/T02 验收：`settings.json` 可能存着任意用户主色。这里对「达标色 / 历史 #3370FF /
+    // 预设色 / 极端色」逐一构建真实主题，断言三处关键组合全部 ≥4.5:1。
+    const candidates = ['#3370FF', '#2F63EA', '#0E7490', '#15803D', '#7C3AED', '#9A3412', '#FFFF00', '#FFFFFF', '#000000', '#808080']
+    for (const primary of candidates) {
+      for (const dark of [false, true]) {
+        const t = buildTheme({ primary, dark })
+        const { main, dark: fill, contrastText } = t.palette.primary
+        const label = `${primary}/${dark ? 'dark' : 'light'}`
+        // 作文字：承载底（卡片 + 页面底）上均达标
+        expect(contrast(main, t.palette.background.paper), label).toBeGreaterThanOrEqual(4.5)
+        expect(contrast(main, t.palette.background.default), label).toBeGreaterThanOrEqual(4.5)
+        // 压主色底的字（顶栏/实心按钮/分页选中）达标
+        expect(contrast(contrastText, fill), label).toBeGreaterThanOrEqual(4.5)
+      }
+    }
   })
 })

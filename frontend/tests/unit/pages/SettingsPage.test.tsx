@@ -68,4 +68,30 @@ describe('SettingsPage 页面级集成', () => {
     expect(await screen.findByDisplayValue('C:/qb/bank.db')).toBeInTheDocument()
     expect(screen.getByDisplayValue('C:/qb/exports')).toBeInTheDocument()
   })
+
+  // P0/T02：主色「原色」不达标必须**显式标注**（不能只是「看起来没问题」），并给出
+  // 一键切推荐主色的动作；点击只改表单值（不静默落盘），标注随之消失。
+  it('主色原色不达标 → 显式标注 + 一键切推荐主色；达标 → 不标注', async () => {
+    vi.stubGlobal('fetch', vi.fn(async () => jsonResponse(settingsFixture)))
+    renderPage(<SettingsPage />)
+
+    const alert = await screen.findByRole('alert')
+    expect(alert).toHaveTextContent('未达 WCAG AA 4.5:1')
+    expect(alert).toHaveTextContent('3.96:1')
+
+    fireEvent.click(screen.getByRole('button', { name: '使用推荐主色' }))
+    expect(screen.getByDisplayValue('#2F63EA')).toBeInTheDocument()
+    await waitFor(() => expect(screen.queryByText(/未达 WCAG AA/)).not.toBeInTheDocument())
+  })
+
+  it('主色原色达标时不显示不达标标注', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => jsonResponse({ ...settingsFixture, theme: { primary: '#2F63EA', dark: false } })),
+    )
+    renderPage(<SettingsPage />)
+
+    expect(await screen.findByDisplayValue('#2F63EA')).toBeInTheDocument()
+    expect(screen.queryByText(/未达 WCAG AA/)).not.toBeInTheDocument()
+  })
 })

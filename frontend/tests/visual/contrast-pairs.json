@@ -48,6 +48,9 @@
 
     "darkPaper": "#1E1E1E",
     "darkBg": "#121212",
+    "darkPrimaryDefault": "#5580ef",
+    "darkPrimaryLegacy": "#4b80ff",
+    "f2LegacyPrimaryFitted": "#2f68eb",
     "darkSuccessText": "#4ADE80",
     "darkWarningText": "#FBBF24",
     "darkErrorText": "#F87171",
@@ -97,6 +100,10 @@
     ["primary", "pageBg", 4.5, "浅色·主色文字 on 页面底色"],
     ["onSolid", "primary", 4.5, "浅色·主按钮/顶栏 白字 on 主色底"],
 
+    ["f2LegacyPrimaryFitted", "paper", 4.5, "浅色·历史主色 #3370FF 收敛后作文字 on 白卡片（P0/T02 F2）"],
+    ["f2LegacyPrimaryFitted", "pageBg", 4.5, "浅色·历史主色 #3370FF 收敛后作文字 on 页面底色（P0/T02 F2）"],
+    ["onSolid", "f2LegacyPrimaryFitted", 4.5, "浅色·白字压历史主色收敛底（顶栏/实心按钮，P0/T02 F2）"],
+
     ["presetTeal", "paper", 4.5, "浅色·设置页预设主色「青」文字 on 白卡片"],
     ["presetTeal", "pageBg", 4.5, "浅色·设置页预设主色「青」文字 on 页面底色"],
     ["onSolid", "presetTeal", 4.5, "浅色·预设主色「青」底 白字 on 底"],
@@ -139,6 +146,10 @@
     ["warningDark", "paper", 4.5, "浅色·ConfirmDialog 警示标题 warning.dark on 白卡片"],
 
     ["onSolid", "primary", 4.5, "深色·主按钮/顶栏 白字 on 主色底"],
+    ["darkPrimaryDefault", "darkPaper", 4.5, "深色·主色文字 on 深色卡片（P0/T02 收敛后的默认主色）"],
+    ["darkPrimaryDefault", "darkBg", 4.5, "深色·主色文字 on 深色页面底（P0/T02 收敛后的默认主色）"],
+    ["darkPrimaryLegacy", "darkPaper", 4.5, "深色·历史主色 #3370FF 收敛后作文字 on 深色卡片（P0/T02 F2）"],
+    ["darkPrimaryLegacy", "darkBg", 4.5, "深色·历史主色 #3370FF 收敛后作文字 on 深色页面底（P0/T02 F2）"],
     ["darkSuccessText", "darkPaper", 4.5, "深色·outlined 成功徽章文字 on 深色卡片"],
     ["darkWarningText", "darkPaper", 4.5, "深色·outlined 警示徽章文字 on 深色卡片"],
     ["darkErrorText", "darkPaper", 4.5, "深色·错误文字/图标 on 深色卡片"],
@@ -183,24 +194,23 @@
   "knownIssues": [
     {
       "scope": "深色模式 · color=\"primary\" 作文字（text/outlined 按钮、Typography color=primary、outlined primary Chip）",
-      "measured": "3.25:1（#2F63EA on #1E1E1E）/ 3.65:1（on #121212）",
+      "measured": "改前 3.25:1（#2F63EA on #1E1E1E）/ 3.65:1（on #121212）；用户存值 #3370FF 时 3.89:1 / 4.37:1",
+      "status": "**P0/T02 已修复**：`buildTheme` 不再「对合法 hex 原样采用」，而是把主色拆成两个派生槽——`.main`（文字安全值，按模式收敛：深色模式把 #2F63EA 提亮为 #5580ef，对 #1E1E1E 实测 4.54:1）与 `.dark`（填充安全值，恒按浅色底收敛，供顶栏/实心按钮/分页选中项，白字 ≥4.5:1）。顶栏仍为**深底白字**，品牌观感不变（与当时「改成浅底」的备选不同）。",
       "affected": [
         "所有 MUI 文本/描边按钮（Button 默认 variant=text、color=primary）",
         "Typography color=\"primary\"（PaperPanelItemRow、PaperBuilderPage「严格模式」）",
         "Chip variant=outlined color=primary（VersionHistory）"
       ],
-      "preExisting": "改前即不达标（旧主色 #3370FF on #1E1E1E 仅 3.89:1），**非本轮引入**；且深色模式非默认。",
-      "reason": "primary 由用户配置且同时作「填充底（顶栏/实心按钮）」与「文字」。数学上单值无法两全：白字可读要求亮度 ≤0.183，而该色作深底文字要求亮度 ≥0.232，两区间不相交。",
-      "recommended": "深色模式下把 palette.primary.main 取用户色的**浅化值**（MUI 深色主题的既有做法）并令 contrastText 为深色。代价：顶栏会由深底变浅底、实心按钮改深字——**改的是产品视觉身份，属产品决策**，本轮未擅自改动。",
-      "exemptFromGate": true
+      "exemptFromGate": false,
+      "verifiedBy": "tests/unit/ThemeContrast.test.ts「任意合法主色…」用例（复算 WCAG 对比度）+ 本文件新增的 4 组深色主色配对"
     },
     {
       "scope": "既有安装已保存的旧主色（outputs/webui/settings.json）",
-      "measured": "#3370FF on #FFFFFF 4.28:1 / on #1E1E1E 3.89:1（均 < 4.5）",
+      "measured": "#3370FF on #FFFFFF 4.28:1 / on #F5F6F8 3.96:1 / 白字压它 4.28:1（均 < 4.5）",
+      "status": "**P0/T02 已修复**：`buildTheme` 把用户主色按模式**收敛**（浅色作文字 → #2f68eb；深色作文字 → #4b80ff；白字压主色的顶栏/实心按钮恒用 #2f68eb），存值**不动**（仍不做静默迁移）。设置页对原色不达标给出显式标注 + 一键切推荐主色 `#2F63EA`。",
       "affected": ["AppBar 底色、实心按钮、primary 文字"],
-      "reason": "settings.json 里存着旧默认 #3370FF。它既可能是旧默认值、也可能是用户**主动选过**的值，**无法区分**，静默改写用户运行期配置是更糟的行为。",
-      "recommended": "不做自动迁移。已有安装若曾保存过主色，请在设置页重新选一次（或删除 outputs/webui/settings.json 让主题回落到新默认 #2F63EA）。",
-      "exemptFromGate": true
+      "exemptFromGate": false,
+      "verifiedBy": "运行时对比度探针（settings.json 保持 #3370FF，5 路由 × 2 主题，11 类元素全 ≥4.5:1）"
     },
     {
       "scope": "禁用态文字 text.disabled",

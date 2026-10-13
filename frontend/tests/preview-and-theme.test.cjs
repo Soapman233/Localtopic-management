@@ -147,9 +147,13 @@ test('门禁和请求版本不持久化，刷新后必须重新预览', () => {
 test('主题按保存值构建深色/主色，历史非法颜色安全回退', () => {
   const dark = buildTheme({ dark: true, primary: '#123abc' })
   assert.equal(dark.palette.mode, 'dark')
-  assert.equal(dark.palette.primary.main, '#123abc')
   assert.equal(dark.palette.background.paper, '#1E1E1E')
+  // P0/T02：主色不再「原样采用」——按模式收敛到与承载底对比度 ≥4.5 的派生值
+  // （深色模式提亮、浅色模式加深）。此处断言「已收敛」而非相等，避免把修复后的行为锁回旧契约；
+  // 收敛后的达标性由 vitest `ThemeContrast.test.ts` 复算 WCAG 对比度来锁。
+  assert.notEqual(dark.palette.primary.main, '#123abc')
   // 回退主色 = `tokens.primary`（P5-2 起为 WCAG AA 文字安全值；断言引用 token，避免改色时硬编码字面量漂移）。
+  // 浅色模式下它本身达标，收敛为恒等变换，故仍是原值。
   assert.equal(buildTheme({ primary: 'invalid' }).palette.primary.main, tokens.primary)
   assert.equal(buildTheme().palette.mode, 'light')
 })

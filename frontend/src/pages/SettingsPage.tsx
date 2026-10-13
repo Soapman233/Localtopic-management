@@ -34,12 +34,14 @@ import {
 } from '@mui/material'
 import SaveIcon from '@mui/icons-material/Save'
 import EditIcon from '@mui/icons-material/Edit'
+import { getContrastRatio } from '@mui/material/styles'
 import { getSettings, updateSettings } from '../api/settings'
 import { TEMPLATES } from '../api/types'
 import type { SettingsData } from '../api/types'
 import { ErrorState } from '../components/ErrorState'
 import { LoadingState } from '../components/LoadingState'
 import { qk } from '../api/queryKeys'
+import { tokens } from '../theme'
 
 interface FormState {
   db_path: string
@@ -63,6 +65,23 @@ const PRIMARY_PRESETS: { hex: string; label: string }[] = [
   { hex: '#7C3AED', label: '紫' },
   { hex: '#9A3412', label: '棕' },
 ]
+
+/** 推荐主色（与 `tokens.primary` 同源，避免两处字面量漂移）。 */
+const RECOMMENDED_PRIMARY = tokens.primary
+
+/**
+ * 主色**原色**的最小对比度（UI 评审 F2 定义的三处关键组合，浅色基准）：
+ * 白字压主色 / 主色作文字压白卡片 / 压页面底色。
+ *
+ * P0/T02：`settings.json` 可能存着旧默认或用户自选的不达标主色（如 `#3370FF` 白字仅 4.28:1、
+ * 压页面底色仅 3.96:1），必须**显式标注**——不能「看起来没问题」。
+ * 格式非法时返回达标值（合法性由后端 `validate_settings` 兜底）。
+ */
+function minPrimaryContrast(hex: string): number {
+  if (!/^#[0-9a-fA-F]{6}$/.test(hex)) return 21
+  // 白卡片比页面底色亮，故「压白卡片」恒高于「压页面底色」，取后两者即可覆盖三种组合。
+  return Math.min(getContrastRatio('#FFFFFF', hex), getContrastRatio(hex, tokens.bg))
+}
 
 function toForm(s: SettingsData): FormState {
   return {
@@ -238,6 +257,30 @@ export default function SettingsPage() {
                 sx={{ width: 140 }}
               />
             </Stack>
+
+            {/* P0/T02：对**当前值不达标**给出显式标注 + 一键切到推荐主色。
+                不做静默迁移——只有用户点按钮才改选择；且改的是表单值，仍需「保存外观设置」才落盘。 */}
+            {minPrimaryContrast(form.theme_primary) < 4.5 && (
+              <Alert
+                severity="warning"
+                sx={{ mb: 1 }}
+                action={
+                  <Button
+                    size="small"
+                    color="inherit"
+                    sx={{ whiteSpace: 'nowrap' }}
+                    onClick={() => set('theme_primary', RECOMMENDED_PRIMARY)}
+                  >
+                    使用推荐主色
+                  </Button>
+                }
+              >
+                当前主色 <strong>{form.theme_primary}</strong> 未达 WCAG AA 4.5:1
+                （最低 {minPrimaryContrast(form.theme_primary).toFixed(2)}:1）。
+                保存后界面会自动收敛到达标渲染；若想保留稳定的原色观感，建议切换到推荐主色{' '}
+                <strong>{RECOMMENDED_PRIMARY}</strong>。
+              </Alert>
+            )}
 
             <FormControlLabel
               control={<Switch checked={form.theme_dark} onChange={(e) => set('theme_dark', e.target.checked)} />}

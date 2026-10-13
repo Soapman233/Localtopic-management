@@ -211,9 +211,12 @@ export default function App() {
       >
         跳到主内容
       </Box>
+      {/* P0/T02：顶栏底色改用派生**填充安全值** `primary.dark`——它恒按浅色底收敛，
+          保证「白字压主色」≥4.5:1（任意合法主色，含历史 #3370FF）。浅色模式下它与
+          `primary.main` 恒等，视觉零变化；深色模式下仍为深底白字，保持品牌观感。 */}
       <AppBar
         position="fixed"
-        sx={{ zIndex: (t) => t.zIndex.drawer + 1, bgcolor: 'primary.main' }}
+        sx={{ zIndex: (t) => t.zIndex.drawer + 1, bgcolor: 'primary.dark' }}
       >
         <Toolbar variant="dense" sx={{ gap: 1 }}>
           {isNarrowNav && (

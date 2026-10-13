@@ -1,4 +1,4 @@
-import { createTheme } from '@mui/material/styles'
+import { createTheme, getContrastRatio } from '@mui/material/styles'
 
 /**
  * 设计令牌单一来源（Single Source of Truth）。
@@ -31,6 +31,9 @@ export const tokens = {
    * 主色（**文字安全值**）。作主按钮/顶栏底色时白字 5.13:1；
    * 作浅底上的文字：白卡片 5.13:1 / 页面底色 `#F5F6F8` 4.74:1（如「严格模式」caption 直接落在页面底上）。
    * 原值 `#3370FF` 白字仅 4.28:1；团队候选 `#3268F5` 在**页面底色**上仅 4.38:1，故再下调一档。
+   *
+   * ⚠️ P0/T02 起本值只是**默认值**：`buildTheme` 会把**任意**合法用户主色按模式收敛到
+   * 达标区间（见 `fitPrimary`），不再「原样采用」。
    */
   primary: '#2F63EA',
   /**
@@ -114,14 +117,70 @@ const ON_VIVID_FILL = 'rgba(0, 0, 0, 0.87)'
 /**
  * 浅色填充底上的白色文字（用于 filled 主按钮、顶栏等）。
  * 语义色的 `.main` 已是深色，白字实测 4.84–5.02:1；主色白字 4.74:1。
+ * 深色模式下主色被**提亮**，白字不再达标，故那里改用 `ON_VIVID_FILL`（深字压浅底）。
  */
 const ON_SOLID_FILL = '#FFFFFF'
+
+/** 深色模式的页面底色 / 卡片底色。同时是主色收敛的目标底，集中定义避免两处字面量漂移。 */
+const DARK_BG = '#121212'
+const DARK_PAPER = '#1E1E1E'
+
+/** 把 hex 的每个通道朝黑（`toBlack`）或白方向线性混合 `k`，返回 hex。 */
+function mixStep(c: string, toBlack: boolean, k: number): string {
+  const target = toBlack ? 0 : 255
+  return (
+    '#' +
+    [1, 3, 5]
+      .map((i) =>
+        Math.round(parseInt(c.slice(i, i + 2), 16) * (1 - k) + target * k)
+          .toString(16)
+          .padStart(2, '0'),
+      )
+      .join('')
+  )
+}
+
+/**
+ * P0/T02：把**任意**合法主色收敛到「与承载底色 `bg` 对比度 ≥ 4.5:1」的派生值。
+ *
+ * 背景（UI 评审 F2）：`settings.json` 可能存着旧默认 / 用户自选主色（如 `#3370FF`），
+ * 原实现「对合法 hex 原样采用」→ 白字压主色仅 4.28:1，作文字在白底 4.28:1 / 页面底 3.96:1 /
+ * 深色卡片 3.89:1 —— **11 类元素不达 WCAG AA**。此处不再原样采用：
+ * - 承载底偏亮（浅色模式 `#F5F6F8`）→ 逐步**加深**；
+ * - 承载底偏暗（深色模式 `#1E1E1E`）→ 逐步**提亮**。
+ *
+ * 浅色模式下该值同时满足「白字压主色」：收敛后亮度 ≤ 0.164 ⇒ 白字对比度 ≈ 4.9:1
+ * （故 `primaryFill` 直接复用它按浅色底收敛的结果）。
+ * 用户保存的**原值不改动**（不做静默迁移），只改变渲染取值。
+ */
+function fitPrimary(color: string, bg: string): string {
+  const toBlack = getContrastRatio('#000000', bg) > getContrastRatio('#ffffff', bg)
+  let out = color
+  for (let i = 0; i < 40 && getContrastRatio(out, bg) < 4.5; i += 1) out = mixStep(out, toBlack, 0.04)
+  return out
+}
 
 /** 读取已保存偏好；历史非法主色安全回退，避免主题构建导致白屏。 */
 export function buildTheme(preferences?: { primary?: string; dark?: boolean }) {
   const dark = preferences?.dark === true
   const color = preferences?.primary ?? ''
-  const primary = /^#[0-9a-fA-F]{6}$/.test(color) ? color : tokens.primary
+  const raw = /^#[0-9a-fA-F]{6}$/.test(color) ? color : tokens.primary
+  /**
+   * P0/T02：主色拆成「文字」与「填充」两个派生槽，使**任意**合法主色都达标
+   * （不再对合法 hex 原样采用）：
+   *
+   * - `.main` = **文字安全值**：按当前模式的承载底收敛（浅色模式加深 / 深色模式提亮）。
+   *   供 primary 文字 / 图标 / 描边 / 焦点环使用。
+   * - `.dark` = **填充安全值**：恒按**浅色底**收敛（即加深到白字 ≥4.9:1），
+   *   供「白字压主色」的表面使用（顶栏、实心主按钮、分页选中项）。
+   *   浅色模式下与 `.main` 恒等 → 顶栏/实心按钮**视觉零变化**；深色模式下它是深色底，
+   *   顶栏仍为深底白字（保持品牌观感），只有作文字时才用提亮后的 `.main`。
+   *
+   * 数学背景：单一取值无法同时满足「白字压它可读」（亮度 ≤0.183）与「它作深底文字可读」
+   * （亮度 ≥0.232）。故必须分槽，而不是把顶栏改成浅底。
+   */
+  const primary = fitPrimary(raw, dark ? DARK_PAPER : tokens.bg)
+  const primaryFill = fitPrimary(raw, tokens.bg)
   /**
    * 语义色 `.main` 按模式取「文字安全值」：
    * - 浅色模式取深色值（白底/浅底上作文字/图标/描边达标）；
@@ -137,11 +196,11 @@ export function buildTheme(preferences?: { primary?: string; dark?: boolean }) {
   return createTheme({
     palette: {
       mode: dark ? 'dark' : 'light',
-      primary: { main: primary, contrastText: ON_SOLID_FILL },
+      primary: { main: primary, dark: primaryFill, contrastText: ON_SOLID_FILL },
       success: { main: semantic.success, contrastText: dark ? ON_VIVID_FILL : ON_SOLID_FILL },
       warning: { main: semantic.warning, contrastText: dark ? ON_VIVID_FILL : ON_SOLID_FILL },
       error: { main: semantic.error, contrastText: dark ? ON_VIVID_FILL : ON_SOLID_FILL },
-      background: dark ? { default: '#121212', paper: '#1E1E1E' } : { default: tokens.bg, paper: '#FFFFFF' },
+      background: dark ? { default: DARK_BG, paper: DARK_PAPER } : { default: tokens.bg, paper: '#FFFFFF' },
     },
     shape: {
       borderRadius: tokens.radius,
@@ -176,9 +235,26 @@ export function buildTheme(preferences?: { primary?: string; dark?: boolean }) {
               outlineOffset: 2,
             },
           }),
+          /**
+           * P0/T02：「白字压主色」的**实心主按钮**改用填充安全值 `primary.dark`。
+           * MUI 原逻辑底色取 `palette.<color>.main`（深色模式下那是被提亮的文字值 → 白字不达标），
+           * 这里把底色换成恒按浅色底收敛的 `primary.dark`（白字 ≥4.5:1）。
+           * hover 用的正是 `palette.primary.dark`，无需另写。浅色模式下两者恒等 → 视觉零变化。
+           */
+          containedPrimary: { backgroundColor: primaryFill },
         },
       },
       MuiPaper: { styleOverrides: { root: { backgroundImage: 'none' } } },
+      /**
+       * P0/T02：分页**选中项**同理改用填充安全值（MUI 默认取 `primary.main` 作底 + `contrastText` 作字，
+       * 深色模式下会变成白字压浅底）。`textPrimary` 是 `variant=text + color=primary` 的槽位名
+       * （见 `@mui/material/PaginationItem/PaginationItem.js:27` 的 overridesResolver）。
+       */
+      MuiPaginationItem: {
+        styleOverrides: {
+          textPrimary: { '&.Mui-selected': { backgroundColor: primaryFill } },
+        },
+      },
       MuiChip: {
         styleOverrides: {
           /**
@@ -191,10 +267,13 @@ export function buildTheme(preferences?: { primary?: string; dark?: boolean }) {
            *
            * 这里把 filled 徽章的**底色**回填鲜艳填充值、文字用深色——filled 徽章视觉与改动前一致，
            * 同时 outlined 徽章自动用上文字安全色。实测深字压鲜艳底 9.22 / 9.78 / 5.58:1，均 ≥ 4.5:1。
-           * 仅对 success/warning/error 生效；`default`/`primary` 等走 MUI 原逻辑（已达标）。
+           *
+           * P0/T02：filled `primary` 徽章（如筛选栏选中的「全部」）底色改用**填充安全值** `primary.dark`
+           * 并配白字——MUI 原逻辑取 `primary.main`，深色模式下那是被提亮的文字值，白字会掉到 3.6:1。
            */
           root: ({ ownerState }: { ownerState: { variant?: string; color?: string } }) => {
             if (ownerState.variant !== 'filled') return {}
+            if (ownerState.color === 'primary') return { backgroundColor: primaryFill, color: ON_SOLID_FILL }
             const fill: Partial<Record<string, string>> = {
               success: tokens.success,
               warning: tokens.warning,
