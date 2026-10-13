@@ -12,6 +12,7 @@
  */
 import type { ReactNode } from 'react'
 import { Alert, AlertTitle, Box, Card, CardContent, Typography } from '@mui/material'
+import { ErrorState } from './ErrorState'
 
 /** 与登录页一致的外层居中容器，避免两个提示各写一份样式。 */
 function CenteredCard({ children }: { children: ReactNode }) {
@@ -33,26 +34,44 @@ function CenteredCard({ children }: { children: ReactNode }) {
   )
 }
 
-/** 鉴权服务不可用（`auth_mode === 'error'`）。 */
+/** 鉴权服务不可用（`auth_mode === 'error'`）。
+ *
+ * 语义确为「错误」→ **复用统一 `<ErrorState/>`**（§4.2 四态强制复用），
+ * 而非再手写一套 `Alert severity="error"`：统一「标题 + 可读说明 + 重试 + 技术细节默认折叠」。
+ *
+ * ⚠️ 这里没有真实抛出的 Error 对象（是后端状态而非请求异常），故用 `new Error(文案)`
+ * 承载主说明——`ErrorState` 对普通 `Error` 会经 `describeApiError` 原样返回 message
+ * （与 `PaperPanel` 的 `error={new Error(error)}` 同法）。
+ * ⚠️ 首段的 `<strong>` 强调在纯文本 message 中丢失（文字本身完整保留）；次段的
+ * `outputs/webui/auth.db` 走 `description`（ReactNode）保留 `<code>`。 */
 export function AuthServiceUnavailable() {
   return (
     <CenteredCard>
-      <Alert severity="error" role="alert">
-        <AlertTitle>鉴权服务不可用</AlertTitle>
-        <Typography variant="body2" component="p">
-          后端已启用用户体系，但<strong>鉴权数据库无法读取</strong>（可能损坏、权限不足或缺表）。
-          为保证安全，系统已拒绝所有需要登录的操作。
-        </Typography>
-        <Typography variant="body2" component="p" sx={{ mt: 1 }}>
-          请管理员检查鉴权库文件（默认位于 <code>outputs/webui/auth.db</code>）是否完好、可读，
-          修复后刷新本页重试。
-        </Typography>
-      </Alert>
+      <ErrorState
+        title="鉴权服务不可用"
+        error={
+          new Error(
+            '后端已启用用户体系，但鉴权数据库无法读取（可能损坏、权限不足或缺表）。为保证安全，系统已拒绝所有需要登录的操作。',
+          )
+        }
+        description={
+          <>
+            请管理员检查鉴权库文件（默认位于 <code>outputs/webui/auth.db</code>）是否完好、可读，修复后刷新本页重试。
+          </>
+        }
+        onRetry={() => window.location.reload()}
+        retryLabel="刷新页面"
+      />
     </CenteredCard>
   )
 }
 
-/** 尚未初始化管理员（`needs_setup`）。 */
+/** 尚未初始化管理员（`needs_setup`）。
+ *
+ * ⚠️ **刻意不复用 `<ErrorState/>`**：本态语义是**中性/警告**（系统正常，只是「还没有账号」），
+ * 不是错误；且需承载**自定义 CLI 建号指引 + 命令代码块**（`ErrorState` 的 message 为纯文本，
+ * 无此能力）。强行套 `severity="error"` 会扭曲语义、误导运维「系统坏了」——故如实保留。
+ */
 export function AuthSetupRequired() {
   return (
     <CenteredCard>

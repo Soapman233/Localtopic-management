@@ -204,10 +204,14 @@ export function PaperPanel({
 
       {/* 大题与条目 */}
       <Box sx={{ flex: 1, overflow: 'auto', pr: 0.5 }}>
+        {/* 复用统一空态（§4.2 四态强制复用）：不再手写裸文案空态；
+            `description` 即 §3.2 要求的「下一步引导」（从左侧题库加入 / 拖拽）。 */}
         {items.length === 0 && (
-          <Box sx={{ p: 3, textAlign: 'center', color: 'text.secondary' }}>
-            <Typography variant="body2">试卷为空。从左侧题库点「加入」或拖拽题目到此处。</Typography>
-          </Box>
+          <EmptyState
+            dense
+            title="试卷为空"
+            description="从左侧题库点「加入」或拖拽题目到此处。"
+          />
         )}
         {groups.map((g, groupIndex) => {
           const groupIds = g.items.map((i) => `item-${i.id}`)
