@@ -19,7 +19,7 @@
  * 说明：``review_queue.preview`` 为源 DOCX 包内的预览媒体路径（如 ``media/image17.wmf``），
  * 后端提供源图直链并转换为 PNG；转换失败时显示明确提示与修复入口。
  */
-import { useEffect, useState } from 'react'
+import { useEffect, useState, type ReactElement } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   Alert,
@@ -38,6 +38,7 @@ import {
   Tab,
   Tabs,
   Toolbar,
+  Tooltip,
   Typography,
   useMediaQuery,
   useTheme,
@@ -56,11 +57,23 @@ import { ErrorState } from '../components/ErrorState'
 import { LoadingState } from '../components/LoadingState'
 import { describeFormulaStatus, describeTechnicalInfo, isDebugMode } from '../lib/glossary'
 import { stripAnswerSections } from '../lib/questionText'
+import { usePermission } from '../hooks/usePermission'
+import { describeDenied } from '../lib/permissions'
 import { qk } from '../api/queryKeys'
 
 const PAGE_SIZE = 50
 /** 题干折叠阈值：超过该长度才显示「展开全文」。 */
 const TEXT_CLAMP_CHARS = 80
+
+/** 只读态包装（§3.2/§4.2）：无权限时用 Tooltip 说明「为什么不能操作」，
+ *  有权限时**原样返回子元素**（DOM 与布局零变化）。⚠️ 子元素须自行 `disabled`。 */
+function hint(node: ReactElement, reason?: string): ReactElement {
+  return reason == null ? node : (
+    <Tooltip title={reason}>
+      <span style={{ display: 'inline-flex' }}>{node}</span>
+    </Tooltip>
+  )
+}
 
 /** 加载失败仍给出处理入口，不把缺失图伪装成可用预览。 */
 function ReviewPreview({ item }: { item: ReviewItem }) {
@@ -106,6 +119,10 @@ export default function FormulaReviewPage({ headingLevel = 1 }: { headingLevel?:
   const theme = useTheme()
   const narrow = useMediaQuery(theme.breakpoints.down('lg'))
   const [listOpen, setListOpen] = useState(false)
+
+  // T25 只读态：只读账号无 `governance.review` → 「标记已处理 / 恢复待处理」不可用并说明原因。
+  const canReview = usePermission('governance.review')
+  const reviewDenied = canReview ? undefined : describeDenied('governance.review')
 
   const summaryQ = useQuery({
     queryKey: qk.reviewSummary(),
@@ -331,24 +348,30 @@ export default function FormulaReviewPage({ headingLevel = 1 }: { headingLevel?:
                       </Button>
                     )}
                     {current.resolved ? (
-                      <Button
-                        size="small"
-                        startIcon={<ReplayIcon />}
-                        disabled={resolveMut.isPending}
-                        onClick={() => resolveMut.mutate({ rqId: current.id, resolved: false })}
-                      >
-                        恢复待处理
-                      </Button>
+                      hint(
+                        <Button
+                          size="small"
+                          startIcon={<ReplayIcon />}
+                          disabled={!canReview || resolveMut.isPending}
+                          onClick={() => resolveMut.mutate({ rqId: current.id, resolved: false })}
+                        >
+                          恢复待处理
+                        </Button>,
+                        reviewDenied,
+                      )
                     ) : (
-                      <Button
-                        size="small"
-                        variant="contained"
-                        startIcon={<CheckIcon />}
-                        disabled={resolveMut.isPending}
-                        onClick={() => resolveMut.mutate({ rqId: current.id, resolved: true })}
-                      >
-                        标记已处理
-                      </Button>
+                      hint(
+                        <Button
+                          size="small"
+                          variant="contained"
+                          startIcon={<CheckIcon />}
+                          disabled={!canReview || resolveMut.isPending}
+                          onClick={() => resolveMut.mutate({ rqId: current.id, resolved: true })}
+                        >
+                          标记已处理
+                        </Button>,
+                        reviewDenied,
+                      )
                     )}
                   </Stack>
 

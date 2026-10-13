@@ -25,7 +25,7 @@
  * ``/api/labels/decision/preview`` 预检影响条数，再以 ``confirm=true`` 提交；
  * 默认批量**只处理待复核项，绝不覆盖已有决定**。
  */
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState, type ReactElement } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   Alert,
@@ -50,6 +50,7 @@ import {
   Switch,
   TextField,
   Toolbar,
+  Tooltip,
   Typography,
   useMediaQuery,
   useTheme,
@@ -74,6 +75,8 @@ import { EmptyState } from '../components/EmptyState'
 import { ErrorState } from '../components/ErrorState'
 import { LoadingState } from '../components/LoadingState'
 import { describeMentionScope } from '../lib/glossary'
+import { usePermission } from '../hooks/usePermission'
+import { describeDenied } from '../lib/permissions'
 import { qk } from '../api/queryKeys'
 
 const ITEM_PAGE_SIZE = 50
@@ -85,6 +88,16 @@ const STATUS_TABS: { key: string; label: string }[] = [
   { key: '已确认', label: '已确认' },
   { key: '已否决', label: '已否决' },
 ]
+
+/** 只读态包装（§3.2/§4.2）：无权限时用 Tooltip 说明「为什么不能操作」，
+ *  有权限时**原样返回子元素**（DOM 与布局零变化）。⚠️ 子元素须自行 `disabled`。 */
+function hint(node: ReactElement, reason?: string): ReactElement {
+  return reason == null ? node : (
+    <Tooltip title={reason}>
+      <span style={{ display: 'inline-flex' }}>{node}</span>
+    </Tooltip>
+  )
+}
 
 /** 标签行的**复核状态点**（T04）。
  *
@@ -153,6 +166,11 @@ export default function KnowledgeReviewPage({ headingLevel = 1 }: { headingLevel
   const theme = useTheme()
   // T24a：窄屏（<1200，MUI `lg`）左栏折叠为抽屉，与组卷页同一断点口径（规范 §2.8）。
   const narrow = useMediaQuery(theme.breakpoints.down('lg'))
+
+  // T25 只读态：只读账号无 `governance.review` → 复核决定（确认/否决/批量/CSV 导入）不可用，
+  // 并给出「为什么」的说明（§3.2 只读态 / §4.2 disabled 需 Tooltip）。
+  const canReview = usePermission('governance.review')
+  const reviewDenied = canReview ? undefined : describeDenied('governance.review')
 
   const [selected, setSelected] = useState<string | null>(null)
   const [itemStatus, setItemStatus] = useState<string>('待复核')
@@ -454,7 +472,7 @@ export default function KnowledgeReviewPage({ headingLevel = 1 }: { headingLevel
             导出待复核 CSV
           </MenuItem>
           <MenuItem
-            disabled={importMut.isPending}
+            disabled={importMut.isPending || !canReview}
             onClick={() => {
               setBatchMenuAnchor(null)
               fileRef.current?.click()
@@ -537,27 +555,41 @@ export default function KnowledgeReviewPage({ headingLevel = 1 }: { headingLevel
                   </Typography>
                 )}
                 <Box sx={{ flex: 1 }} />
-                <Button
-                  size="small"
-                  color="success"
-                  variant="outlined"
-                  startIcon={<CheckCircleOutlineIcon />}
-                  disabled={decideMut.isPending}
-                  onClick={() => openBatch('确认')}
-                >
-                  批量确认待复核
-                </Button>
-                <Button
-                  size="small"
-                  color="error"
-                  variant="outlined"
-                  startIcon={<CancelOutlinedIcon />}
-                  disabled={decideMut.isPending}
-                  onClick={() => openBatch('否决')}
-                >
-                  批量否决待复核
-                </Button>
+                {hint(
+                  <Button
+                    size="small"
+                    color="success"
+                    variant="outlined"
+                    startIcon={<CheckCircleOutlineIcon />}
+                    disabled={!canReview || decideMut.isPending}
+                    onClick={() => openBatch('确认')}
+                  >
+                    批量确认待复核
+                  </Button>,
+                  reviewDenied,
+                )}
+                {hint(
+                  <Button
+                    size="small"
+                    color="error"
+                    variant="outlined"
+                    startIcon={<CancelOutlinedIcon />}
+                    disabled={!canReview || decideMut.isPending}
+                    onClick={() => openBatch('否决')}
+                  >
+                    批量否决待复核
+                  </Button>,
+                  reviewDenied,
+                )}
               </Stack>
+
+              {/* T25 只读态：无复核权限时，逐条按钮一律禁用；在此**一处**说明原因，
+                  避免为上百行各挂一个 Tooltip（§4.2「为什么」讲清一次即可）。 */}
+              {!canReview && (
+                <Typography variant="caption" color="text.secondary" display="block" sx={{ mb: 1 }}>
+                  {reviewDenied}
+                </Typography>
+              )}
 
               <Stack direction="row" spacing={1} sx={{ mb: 1 }}>
                 {STATUS_TABS.map((t) => (
@@ -603,7 +635,7 @@ export default function KnowledgeReviewPage({ headingLevel = 1 }: { headingLevel
                       <Button
                         size="small"
                         color="success"
-                        disabled={decideMut.isPending || it.review_status === '已确认'}
+                        disabled={!canReview || decideMut.isPending || it.review_status === '已确认'}
                         onClick={() =>
                           decideMut.mutate({ label_name: selected, decision: '确认', question_id: it.question_id })
                         }
@@ -613,7 +645,7 @@ export default function KnowledgeReviewPage({ headingLevel = 1 }: { headingLevel
                       <Button
                         size="small"
                         color="error"
-                        disabled={decideMut.isPending || it.review_status === '已否决'}
+                        disabled={!canReview || decideMut.isPending || it.review_status === '已否决'}
                         onClick={() =>
                           decideMut.mutate({ label_name: selected, decision: '否决', question_id: it.question_id })
                         }

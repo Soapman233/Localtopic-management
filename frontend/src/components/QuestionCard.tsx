@@ -12,6 +12,7 @@
  *
  * 可拖拽（P1-10）：拖到右栏试卷即加入（由组卷页的 DndContext 处理）。
  */
+import type { ReactElement } from 'react'
 import { Box, Button, Card, CardActions, CardContent, Checkbox, Chip, Stack, Tooltip, Typography } from '@mui/material'
 import { tokens } from '../theme'
 import DragIndicatorIcon from '@mui/icons-material/DragIndicator'
@@ -43,6 +44,21 @@ export interface QuestionCardProps {
   selected?: boolean
   /** P1-3：勾选变化回调。 */
   onSelectChange?: (item: SearchItem, selected: boolean) => void
+  /**
+   * 只读态（T25，规范 §3.2 只读态 / §4.2「disabled 必须有 Tooltip 说明为什么」）：
+   * 无权限时传入「为什么不能加入」的教师语言说明 → 「加入」按钮 `disabled` + Tooltip；
+   * 有权限时不传（本地版即此路径，DOM 与布局零变化）。
+   */
+  addDisabledReason?: string
+  /** 只读态：无权限时传入「为什么不能标注难度」的说明。 */
+  annotateDisabledReason?: string
+}
+
+/** 只读态包装：无权限时用 Tooltip 说明「为什么不能操作」，有权限时**原样返回子元素**
+ *（DOM 与布局零变化）。⚠️ 子元素须自行 `disabled`；MUI Tooltip 对 disabled 子元素
+ * 不触发事件，故无权限分支用 `<span>` 承接。 */
+function hint(node: ReactElement, reason?: string): ReactElement {
+  return reason == null ? node : <Tooltip title={reason}><span>{node}</span></Tooltip>
 }
 
 /** 结果卡的题干预览：只保留「题干 + 选项」。
@@ -93,6 +109,8 @@ export function QuestionCard({
   selectable,
   selected,
   onSelectChange,
+  addDisabledReason,
+  annotateDisabledReason,
 }: QuestionCardProps) {
   const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
     id: `lib-${item.id}`,
@@ -183,34 +201,40 @@ export function QuestionCard({
         {item.difficulty && item.difficulty !== '未标注' ? (
           <DifficultyBadge difficulty={item.difficulty} />
         ) : onAnnotate ? (
-          <Button
-            size="small"
-            variant="text"
-            onClick={() => onAnnotate(item)}
-            sx={{ minWidth: 0, px: 0.75, fontSize: 12 }}
-          >
-            标注难度
-          </Button>
+          hint(
+            <Button
+              size="small"
+              variant="text"
+              disabled={!!annotateDisabledReason}
+              onClick={() => onAnnotate(item)}
+              sx={{ minWidth: 0, px: 0.75, fontSize: 12 }}
+            >
+              标注难度
+            </Button>,
+            annotateDisabledReason,
+          )
         ) : null}
         {item.needs_review && <ReviewBadge />}
         <Box sx={{ flex: 1 }} />
-        {onAdd && (
+        {onAdd &&
           // F10/T11 卡片 CTA 降权（最高频页面 /builder）：一屏曾有 8+ 个同权的蓝色 filled「加入」，
           // 把唯一主操作的视觉权重稀释掉（规范 §4.2「contained 一屏 ≤1」）。
           // 默认降为 **outlined**（次级），仅在 **hover / 卡片选中** 时升为 filled 观感，
           // 使「加入」仍一眼可见但不再常驻抢占主层级。
           // ⚠️ 不做整卡点击——本卡是 dnd-kit 可拖拽节点，整卡点击会与拖拽加题冲突。
-          <Button
-            size="small"
-            variant="outlined"
-            startIcon={<AddIcon />}
-            onClick={() => onAdd(item)}
-            disabled={adding}
-            sx={selected ? CTA_FILLED : { '&:hover': CTA_FILLED }}
-          >
-            加入
-          </Button>
-        )}
+          hint(
+            <Button
+              size="small"
+              variant="outlined"
+              startIcon={<AddIcon />}
+              onClick={() => onAdd(item)}
+              disabled={adding || !!addDisabledReason}
+              sx={selected ? CTA_FILLED : { '&:hover': CTA_FILLED }}
+            >
+              加入
+            </Button>,
+            addDisabledReason,
+          )}
         {onDetail && (
           <Button size="small" startIcon={<ArticleIcon />} onClick={() => onDetail(item)}>
             详情

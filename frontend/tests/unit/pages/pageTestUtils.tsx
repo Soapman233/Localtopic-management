@@ -20,6 +20,7 @@ import { ThemeProvider } from '@mui/material/styles'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { MemoryRouter } from 'react-router-dom'
 import { buildTheme } from '../../../src/theme'
+import { AuthProvider } from '../../../src/app/auth/AuthProvider'
 
 /** 新建测试专用 QueryClient：关闭重试（否则失败态用例会重试很久），不缓存、不标记为新鲜。 */
 export function makeTestQueryClient(): QueryClient {
@@ -31,14 +32,22 @@ export function makeTestQueryClient(): QueryClient {
   })
 }
 
-/** 用 QueryClientProvider + MUI 主题 + MemoryRouter 包裹渲染页面。 */
+/** 用 QueryClientProvider + MUI 主题 + MemoryRouter 包裹渲染页面。
+ *
+ * T25：额外包一层 `AuthProvider`——被测页面（如 SourcesPage / FormulaReviewPage）现已使用
+ * `usePermission`（读 `useAuth`），缺 Provider 会**抛错**（刻意的安全失败模式）。
+ * 测试环境未注入 `VITE_DEPLOY_MODE` → `IS_ONLINE=false` → 角色恒为 `admin`（本地版语义），
+ * 与生产默认形态一致，且**不发任何请求**。
+ */
 export function renderPage(ui: ReactElement, options: { route?: string } = {}) {
   const client = makeTestQueryClient()
   const theme = buildTheme()
   const wrapper = ({ children }: { children: ReactNode }) => (
     <QueryClientProvider client={client}>
       <ThemeProvider theme={theme}>
-        <MemoryRouter initialEntries={[options.route ?? '/']}>{children}</MemoryRouter>
+        <AuthProvider>
+          <MemoryRouter initialEntries={[options.route ?? '/']}>{children}</MemoryRouter>
+        </AuthProvider>
       </ThemeProvider>
     </QueryClientProvider>
   )

@@ -4,7 +4,7 @@
  * P0-5（只读版本历史，无回滚按钮）、P1-1~P1-5（在线编辑题干/答案/解析/元数据/公式）、
  * P1-4（难度标注）、P1-11（自动留版）。
  */
-import { useState } from 'react'
+import { useState, type ReactElement } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   Accordion,
@@ -22,6 +22,7 @@ import {
   Paper,
   Select,
   Stack,
+  Tooltip,
   Typography,
 } from '@mui/material'
 import ArrowBackIcon from '@mui/icons-material/ArrowBack'
@@ -47,7 +48,18 @@ import { ErrorCode, errorCodeOf, errorDataOf } from '../api/errors'
 import { qk } from '../api/queryKeys'
 import { describeMentionScope, describeFormulaStatus } from '../lib/glossary'
 import { stripAnswerSections } from '../lib/questionText'
-import { usePermissionGuard } from '../hooks/usePermission'
+import { usePermission } from '../hooks/usePermission'
+import { describeDenied } from '../lib/permissions'
+
+/** 只读态包装（§3.2/§4.2）：无权限时用 Tooltip 说明「为什么不能操作」，
+ *  有权限时**原样返回子元素**（DOM 与布局零变化）。⚠️ 子元素须自行 `disabled`。 */
+function hint(node: ReactElement, reason?: string): ReactElement {
+  return reason == null ? node : (
+    <Tooltip title={reason}>
+      <span style={{ display: 'inline-flex' }}>{node}</span>
+    </Tooltip>
+  )
+}
 
 /** 单条公式展示块。`fid` 退为**次级定位**（B2 §3.4）：小号灰字，不再是显眼的独立徽章；
  * 非 OK 状态经 `describeFormulaStatus` 中文化。 */
@@ -86,8 +98,10 @@ export default function QuestionDetailPage() {
     enabled: Number.isFinite(questionId),
   })
 
-  // 阶段 4：只读账号保存时给出教师语言提示（服务端也会拒，这里先拦住以免白跑一趟）。
-  const guardEdit = usePermissionGuard('question.edit')
+  // T25 只读态：只读账号无 `question.edit` → 编辑 / 标注难度 / 保存一律不可用，
+  // 并给出「为什么」的说明（§3.2 只读态 / §4.2 disabled 需 Tooltip），而不是点了才被后端 403 拒绝。
+  const canEdit = usePermission('question.edit')
+  const editDenied = canEdit ? undefined : describeDenied('question.edit')
 
   const saveMutation = useMutation({
     mutationFn: (patch: QuestionPatchBody) => updateQuestion(questionId, patch),
@@ -162,14 +176,19 @@ export default function QuestionDetailPage() {
         {q.qtype && <Chip size="small" label={q.qtype} variant="outlined" />}
         {/* B2 §3.4：顶部只保留两个**主要状态**——难度与待复核风险。
             答案/解析状态移到各自正文标题旁（见下）。 */}
-        <DifficultyBadge difficulty={q.difficulty} onAnnotate={() => setAnnotateOpen(true)} />
+        {hint(
+          <DifficultyBadge difficulty={q.difficulty} onAnnotate={() => setAnnotateOpen(true)} annotateDisabled={!canEdit} />,
+          editDenied,
+        )}
         {needsReviewCount > 0 && <ReviewBadge count={needsReviewCount} />}
         <Box sx={{ flex: 1 }} />
-        {!editing && (
-          <Button variant="contained" startIcon={<EditIcon />} onClick={() => setEditing(true)}>
-            编辑
-          </Button>
-        )}
+        {!editing &&
+          hint(
+            <Button variant="contained" startIcon={<EditIcon />} disabled={!canEdit} onClick={() => setEditing(true)}>
+              编辑
+            </Button>,
+            editDenied,
+          )}
       </Stack>
 
       {/* 默认来源摘要只显示文件名（B2 §3.4）；六项完整来源放进「更多信息」。 */}
@@ -195,7 +214,7 @@ export default function QuestionDetailPage() {
               setEditing(false)
               setConflict(null)
             }}
-            onSave={(patch) => guardEdit(() => saveMutation.mutate(patch))}
+            onSave={(patch) => canEdit && saveMutation.mutate(patch)}
           />
         ) : (
           <>
@@ -348,7 +367,7 @@ export default function QuestionDetailPage() {
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setAnnotateOpen(false)}>取消</Button>
-          <Button variant="contained" disabled={difficultyMutation.isPending} onClick={() => difficultyMutation.mutate()}>
+          <Button variant="contained" disabled={!canEdit || difficultyMutation.isPending} onClick={() => difficultyMutation.mutate()}>
             确定
           </Button>
         </DialogActions>

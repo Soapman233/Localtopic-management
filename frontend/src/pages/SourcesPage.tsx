@@ -8,7 +8,7 @@
  * 关键产品约束（PRD 3.2 / Q3）：年级、教材是**文件级**字段——改一题 = 改该来源文件下全部题。
  * 故保存前必须先经 ``/api/sources/{id}/impact`` 预检影响题数，并二次确认（``confirm=true``）。
  */
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useState, type ReactElement } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   Alert,
@@ -46,7 +46,19 @@ import { ConfirmDialog } from '../components/ConfirmDialog'
 import { EmptyState } from '../components/EmptyState'
 import { ErrorState } from '../components/ErrorState'
 import { LoadingState } from '../components/LoadingState'
+import { usePermission } from '../hooks/usePermission'
+import { describeDenied } from '../lib/permissions'
 import { qk } from '../api/queryKeys'
+
+/** 只读态包装（§3.2/§4.2）：无权限时用 Tooltip 说明「为什么不能操作」，
+ *  有权限时**原样返回子元素**（DOM 与布局零变化）。⚠️ 子元素须自行 `disabled`。 */
+function hint(node: ReactElement, reason?: string): ReactElement {
+  return reason == null ? node : (
+    <Tooltip title={reason}>
+      <span style={{ display: 'inline-flex' }}>{node}</span>
+    </Tooltip>
+  )
+}
 
 /** 判断文件级字段是否缺失（``NULL`` / 空串 / 哨兵值「待补充」）。 */
 function isMissing(v: string | null | undefined): boolean {
@@ -90,6 +102,9 @@ function SourceDetailDialog({
 }) {
   const navigate = useAppNavigate()
   const qc = useQueryClient()
+  // T25 只读态：只读账号无 `source.edit` → 文件级元数据回填不可用并说明原因。
+  const canEdit = usePermission('source.edit')
+  const editDenied = canEdit ? undefined : describeDenied('source.edit')
   const [grade, setGrade] = useState('')
   const [textbook, setTextbook] = useState('')
   const [inited, setInited] = useState(false)
@@ -227,6 +242,7 @@ function SourceDetailDialog({
                     <TextField
                       size="small"
                       value={grade}
+                      disabled={!canEdit}
                       onChange={(e) => setGrade(e.target.value)}
                       placeholder="如 八年级下册"
                       sx={{ display: 'block', minWidth: 180 }}
@@ -242,6 +258,7 @@ function SourceDetailDialog({
                     <TextField
                       size="small"
                       value={textbook}
+                      disabled={!canEdit}
                       onChange={(e) => setTextbook(e.target.value)}
                       placeholder="如 苏科版"
                       sx={{ display: 'block', minWidth: 180 }}
@@ -250,13 +267,16 @@ function SourceDetailDialog({
                       当前来源：{src.textbook_source ?? '（无）'}
                     </Typography>
                   </Box>
-                  <Button
-                    variant="contained"
-                    disabled={saveMut.isPending}
-                    onClick={handleSave}
-                  >
-                    保存文件级元数据
-                  </Button>
+                  {hint(
+                    <Button
+                      variant="contained"
+                      disabled={!canEdit || saveMut.isPending}
+                      onClick={handleSave}
+                    >
+                      保存文件级元数据
+                    </Button>,
+                    editDenied,
+                  )}
                 </Stack>
               </Paper>
 

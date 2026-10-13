@@ -74,6 +74,11 @@ import { usePaperStore } from '../store/paperStore'
 import { usePaperLibraryStore } from '../store/paperLibraryStore'
 import { useUiStore } from '../store/uiStore'
 import { useQuestionFilters } from '../hooks/useQuestionFilters'
+// T25 只读态：权限原语（`useAuth` / `roleCan` / `describeDenied` / `useNotify`）均已随
+// `App.tsx → SessionControls` 进入**入口 chunk**，此处复用它们不会新增首屏请求；
+// 若改用 `hooks/usePermission`（独立 chunk）会把首屏请求从 15 抬到 16，违反首屏预算。
+import { useAuth } from '../app/auth/AuthProvider'
+import { describeDenied, roleCan } from '../lib/permissions'
 import { ErrorCode, errorCodeOf, errorDataOf } from '../api/errors'
 import type { ExportDiagnostics } from '../api/types'
 import type { SearchItem } from '../api/types'
@@ -88,8 +93,11 @@ const NARROW_NOTICE_KEY = 'qb_builder_narrow_notice'
 /** 组卷页所需的全部写操作（以后端返回整卷为准）。
  *
  * **每次写操作成功后都会重新锁定导出门禁**（`invalidatePreview`），这是「强制预览」的关键。
+ *
+ * T25 只读态：`canEdit=false`（线上版只读账号）时，所有写操作**在发起请求前**即被拒绝，
+ * 并抛出教师语言说明（由 `onError` 显示为内联 Alert）——不再发一个注定被后端 403 拒绝的请求。
  */
-function usePaperMutations(paperId: number | null, onError: (error: unknown) => void) {
+function usePaperMutations(paperId: number | null, onError: (error: unknown) => void, denied?: string) {
   const qc = useQueryClient()
   const invalidate = () => {
     if (paperId == null) return
@@ -103,6 +111,11 @@ function usePaperMutations(paperId: number | null, onError: (error: unknown) => 
   const opts = {
     onSuccess: invalidate,
     onError: (e: unknown) => onError(e),
+    // T25 只读账号守卫：`onMutate` 早于 `mutationFn` 执行，无写权限时在此直接拒绝，
+    // 从而**不发出**注定被后端 403 的请求；错误经 `onError` 以教师语言内联提示（§3.2 只读态）。
+    onMutate: () => {
+      if (denied) throw new Error(denied)
+    },
   }
   const add = useMutation({
     mutationFn: (v: { ids: number[]; sectionId?: number | null; position?: number | null }) => {
@@ -173,6 +186,9 @@ export default function PaperBuilderPage() {
   const theme = useTheme()
   const { currentPaperId, targetSectionId, setCurrentPaperId, setTargetSectionId } = usePaperStore()
   const { strictKp, setStrictKp, builderView, setBuilderView } = useUiStore()
+  // T25 只读态：线上版只读账号无 `paper.edit` → 写操作禁用并说明（本地版 role 恒为 admin，行为不变）。
+  const canEdit = roleCan(useAuth().role, 'paper.edit')
+  const denied = canEdit ? undefined : describeDenied('paper.edit')
 
   const [error, setError] = useState<string | null>(null)
   const [errorDiagnostics, setErrorDiagnostics] = useState<ExportDiagnostics | null>(null)
@@ -275,7 +291,7 @@ export default function PaperBuilderPage() {
     setErrorDiagnostics(errorCodeOf(e) === ErrorCode.ExportContentBlocked
       ? (errorDataOf(e) as ExportDiagnostics)
       : null)
-  })
+  }, denied)
 
   // 门禁状态（响应式订阅，供顶部提示 / 诊断）。
   const previewFresh = useUiStore((s) => (paperId != null ? s.previewFresh[paperId] ?? false : false))
@@ -412,7 +428,7 @@ export default function PaperBuilderPage() {
           </Button>
         </>}
       </Stack>
-      {paperQ.data && <PaperSettings key={paperId} paper={paperQ.data} onUpdate={actions.updatePaper}
+      {paperQ.data && <PaperSettings key={paperId} paper={paperQ.data} onUpdate={actions.updatePaper} canEdit={canEdit}
         targetSectionId={targetSectionId} onTargetSectionChange={setTargetSectionId} onOpenLibrary={openPaperLibrary} />}
       {exportDataQ.isError && <Alert severity="error" action={<Button onClick={() => exportDataQ.refetch()}>重试</Button>}>内容检查失败：{(exportDataQ.error as Error).message}</Alert>}
       {paperId != null && exportDataQ.data && diagnosticsOpen && <Box id="builder-diagnostics" sx={{ maxHeight: '35vh', overflow: 'auto' }}>
@@ -445,7 +461,7 @@ export default function PaperBuilderPage() {
         </>}
         {/* 清单态仅不画页面，测量层仍是缩放容器的兄弟，不能放进 display:none。 */}
         {paperId != null && exportDataQ.data && <LivePreviewPanel
-          paperId={paperId} data={exportDataQ.data} editable scale={LAYOUT_SCALE}
+          paperId={paperId} data={exportDataQ.data} editable={canEdit} scale={LAYOUT_SCALE}
           toolbarMode="hidden" showPages={builderView === 'layout' && exportDataQ.data.sections.some(s => s.questions.length > 0)}
           onPageSummary={receivePageSummary} onScoreChange={(itemId, score) => mut.score.mutate({ itemId, score })}
           onRemove={handleRemove} />}
@@ -617,8 +633,9 @@ export default function PaperBuilderPage() {
                   <QuestionCard
                     key={item.id}
                     item={item}
-                    draggable
+                    draggable={canEdit}
                     onAdd={handleAdd}
+                    addDisabledReason={denied}
                     onDetail={(it) => navigate(`/question/${it.id}`)}
                   />
                 ))}

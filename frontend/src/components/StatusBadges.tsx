@@ -49,13 +49,19 @@ export const DIFFICULTY_COLOR: Record<string, ChipProps['color']> = {
   难: 'error',
 }
 
-/** 难度徽章：未标注=灰描边（**绝不空白**）+ 可选「标注」按钮。 */
+/** 难度徽章：未标注=灰描边（**绝不空白**）+ 可选「标注」按钮。
+ *
+ * `annotateDisabled`（T25 只读态）：无写权限时传 `true` → 「标注」按钮 `disabled`；
+ * 「为什么不能标注」的 Tooltip 由**调用方**（QuestionDetailPage）负责（§4.2），
+ * 本组件保持精简（它在首屏 chunk 里，体积敏感）。 */
 export function DifficultyBadge({
   difficulty,
   onAnnotate,
+  annotateDisabled,
 }: {
   difficulty?: string | null
   onAnnotate?: () => void
+  annotateDisabled?: boolean
 }) {
   const isUnlabeled = !difficulty || difficulty === '未标注'
   if (isUnlabeled) {
@@ -68,7 +74,7 @@ export function DifficultyBadge({
           sx={{ color: 'text.secondary', borderColor: tokens.neutralBorder }}
         />
         {onAnnotate && (
-          <Button size="small" onClick={onAnnotate} sx={{ minWidth: 0, px: 0.75, fontSize: 12 }}>
+          <Button size="small" disabled={annotateDisabled} onClick={onAnnotate} sx={{ minWidth: 0, px: 0.75, fontSize: 12 }}>
             标注
           </Button>
         )}

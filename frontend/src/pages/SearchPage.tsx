@@ -3,7 +3,7 @@
  * 覆盖需求：P0-1（关键词检索 + 分页）、P0-2（左侧固定筛选栏）、P0-3（结果卡 + 状态徽章）、
  * P0-13（数据状态可见性：覆盖率提示 + 待补充桶 + 徽章）、P1-6（严格模式）、P1-4（难度标注入口）。
  */
-import { useEffect, useState } from 'react'
+import { useEffect, useState, type ReactElement } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import {
   Alert,
@@ -21,6 +21,7 @@ import {
   Stack,
   TextField,
   Toolbar,
+  Tooltip,
   Typography,
   useMediaQuery,
   useTheme,
@@ -43,12 +44,23 @@ import { usePaperStore } from '../store/paperStore'
 import { useUiStore } from '../store/uiStore'
 import { useSettingsStore } from '../store/settingsStore'
 import { notify } from '../lib/feedback'
-import { usePermissionGuard } from '../hooks/usePermission'
+import { usePermission } from '../hooks/usePermission'
+import { describeDenied } from '../lib/permissions'
 import { useQuestionFilters } from '../hooks/useQuestionFilters'
 import { isDebugMode } from '../lib/glossary'
 import { qk } from '../api/queryKeys'
 
 const PAGE_SIZE = 20
+
+/** 只读态包装（§3.2/§4.2）：无权限时用 Tooltip 说明「为什么不能操作」，
+ *  有权限时**原样返回子元素**（DOM 与布局零变化）。⚠️ 子元素须自行 `disabled`。 */
+function hint(node: ReactElement, reason?: string): ReactElement {
+  return reason == null ? node : (
+    <Tooltip title={reason}>
+      <span style={{ display: 'inline-flex' }}>{node}</span>
+    </Tooltip>
+  )
+}
 
 /** 难度标注对话框（P1-4 单题入口）。 */
 function DifficultyDialog({
@@ -231,33 +243,33 @@ export default function SearchPage() {
     onError: (err) => notify.errorFrom(err, { persist: false }),
   })
 
-  // 阶段 4：只读账号点「加入」时给出教师语言提示，而不是发一个注定被服务端拒绝的请求。
+  // T25 只读态：只读账号下「加入 / 标注难度」控件直接 `disabled` 并给出说明（§3.2 / §4.2），
+  // 不再"点了才被拒"（原为 `usePermissionGuard` 的点击后提示）。
   // ⚠️ 这只是体验层——**真正的强制在后端**（服务端会以 403 拒绝写操作）。
-  const guardAdd = usePermissionGuard('paper.edit')
+  const canAdd = usePermission('paper.edit')
+  const canAnnotate = usePermission('question.edit')
+  const addDenied = canAdd ? undefined : describeDenied('paper.edit')
+  const annotateDenied = canAnnotate ? undefined : describeDenied('question.edit')
 
   const handleAdd = (item: SearchItem) => {
-    guardAdd(() => {
-      if (currentPaperId) {
-        addMutation.mutate({ paperId: currentPaperId, questionIds: [item.id] })
-      } else {
-        setPendingAddIds([item.id])
-        setPickOpen(true)
-      }
-    })
+    if (currentPaperId) {
+      addMutation.mutate({ paperId: currentPaperId, questionIds: [item.id] })
+    } else {
+      setPendingAddIds([item.id])
+      setPickOpen(true)
+    }
   }
 
   /** P1-3：把已勾选的题目一次性加入当前试卷。 */
   const handleAddSelected = () => {
     if (selectedIds.size === 0) return
     const ids = [...selectedIds]
-    guardAdd(() => {
-      if (currentPaperId) {
-        addMutation.mutate({ paperId: currentPaperId, questionIds: ids })
-      } else {
-        setPendingAddIds(ids)
-        setPickOpen(true)
-      }
-    })
+    if (currentPaperId) {
+      addMutation.mutate({ paperId: currentPaperId, questionIds: ids })
+    } else {
+      setPendingAddIds(ids)
+      setPickOpen(true)
+    }
   }
 
   const toggleSelect = (item: SearchItem, checked: boolean) =>
@@ -411,15 +423,18 @@ export default function SearchPage() {
               icon={false}
               action={
                 <Stack direction="row" spacing={1} alignItems="center">
-                  <Button
-                    size="small"
-                    variant="contained"
-                    disabled={addMutation.isPending}
-                    onClick={handleAddSelected}
-                    data-testid="add-selected"
-                  >
-                    加入所选（{selectedIds.size}）
-                  </Button>
+                  {hint(
+                    <Button
+                      size="small"
+                      variant="contained"
+                      disabled={!canAdd || addMutation.isPending}
+                      onClick={handleAddSelected}
+                      data-testid="add-selected"
+                    >
+                      加入所选（{selectedIds.size}）
+                    </Button>,
+                    addDenied,
+                  )}
                   <Button
                     size="small"
                     disabled={addMutation.isPending}
@@ -442,8 +457,10 @@ export default function SearchPage() {
               key={item.id}
               item={item}
               onAdd={handleAdd}
+              addDisabledReason={addDenied}
               onDetail={(it) => navigate(`/question/${it.id}`)}
               onAnnotate={(it) => setAnnotateTarget(it)}
+              annotateDisabledReason={annotateDenied}
               selectable
               selected={selectedIds.has(item.id)}
               onSelectChange={toggleSelect}
