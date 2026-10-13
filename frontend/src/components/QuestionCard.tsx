@@ -6,6 +6,10 @@
  * T20/T23：难度与章节在源数据里几乎恒定缺失（100% / 64.6%），逐卡渲染恒定值无信息量
  * → 二者改为**按条件渲染**（仅真实值才显示）；有数据时自动恢复，不硬删组件逻辑。
  *
+ * T20 补充裁示：**难度「标注」能力保留**——未标注时渲染一个 `text` 行内动作按钮（非徽章、
+ * 无恒定文案），已标注时按真实值显示徽章。§4.2 禁的是「同值率 >60% 的列作逐行徽章」，
+ * 不是取消标注能力。
+ *
  * 可拖拽（P1-10）：拖到右栏试卷即加入（由组卷页的 DndContext 处理）。
  */
 import { Box, Button, Card, CardActions, CardContent, Checkbox, Chip, Stack, Tooltip, Typography } from '@mui/material'
@@ -25,10 +29,10 @@ export interface QuestionCardProps {
   /**
    * 单题难度标注入口（P1-4）。
    *
-   * ⚠️ T20 之后本卡**不再渲染难度徽章**（难度实测 100%「未标注」，逐卡渲染恒定值无信息量），
-   * 而 `DifficultyBadge` 只在「未标注」时才给出「标注」按钮 → 该回调在结果卡上**已不可达**，
-   * 因此本卡不再消费它。**保留该 prop 仅为不破坏调用方**（`SearchPage` 仍在传），
-   * 难度标注入口仍在单题详情页可用。若未来恢复逐卡标注，再接回 `DifficultyBadge` 即可。
+   * T20 补充裁示：本卡**不再逐卡渲染恒定「未标注」徽章**（难度实测 100% 未标注，逐卡徽章
+   * 无信息量，违反 §4.2「同值率 >60% 的列不得作逐行徽章」）；但**标注能力保留**：
+   * 难度缺失时渲染一个 `text` 行内动作按钮，点击后由调用方打开标注弹窗；难度为真实值时
+   * 改渲染真实值徽章。绝不写「未知」之类新文案来掩盖恒定值。
    */
   onAnnotate?: (item: SearchItem) => void
   draggable?: boolean
@@ -81,6 +85,7 @@ export function QuestionCard({
   item,
   onAdd,
   onDetail,
+  onAnnotate,
   // 布尔开关一律按 `undefined` 即「关」处理（不写 `= false` 默认值）：
   // 本组件位于**首屏共享 chunk**（组卷页会加载），省下的每个字节都直接算进首屏预算。
   draggable,
@@ -170,13 +175,23 @@ export function QuestionCard({
       <CardActions sx={{ px: 2, pb: 1.5, pt: 0, flexWrap: 'wrap', gap: 0.5 }}>
         {hasAnswer !== undefined && <AnswerBadge hasAnswer={hasAnswer} />}
         {hasAnalysis !== undefined && <AnalysisBadge hasAnalysis={hasAnalysis} />}
-        {/* T20：难度实测 100%「未标注」（7,945/7,945，源数据无标注、项目刻意不编造）
-            → 逐卡渲染一个恒定的「未标注」徽章无信息量、纯噪音。改为**按条件渲染**：
-            仅当难度为**真实标注值**时才渲染；未来补录难度后自动恢复显示，不硬删组件逻辑。
-            刻意**不**改成「未知」之类新文案来掩盖（那只是换个恒定值）。 */}
-        {item.difficulty && item.difficulty !== '未标注' && (
+        {/* T20（含补充裁示）：难度实测 100%「未标注」（7,945/7,945，源数据无标注、项目刻意不编造）
+            → **不再**逐卡渲染一个恒定的「未标注」徽章（无信息量、纯噪音，违反 §4.2
+            「同值率 >60% 的列不得作逐行徽章」）。但**标注能力保留**：未标注时渲染一个
+            `text` 行内动作按钮（非徽章、不渲染任何恒定文案），已标注时按真实值显示徽章。
+            未来补录难度后自动恢复徽章，不硬删组件逻辑；也**不**改成「未知」之类新文案来掩盖。 */}
+        {item.difficulty && item.difficulty !== '未标注' ? (
           <DifficultyBadge difficulty={item.difficulty} />
-        )}
+        ) : onAnnotate ? (
+          <Button
+            size="small"
+            variant="text"
+            onClick={() => onAnnotate(item)}
+            sx={{ minWidth: 0, px: 0.75, fontSize: 12 }}
+          >
+            标注难度
+          </Button>
+        ) : null}
         {item.needs_review && <ReviewBadge />}
         <Box sx={{ flex: 1 }} />
         {onAdd && (
