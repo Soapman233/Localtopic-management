@@ -117,7 +117,12 @@ export function ExportDiagnosticsPanel({ paperId, data, onRevised, readOnly = fa
       {!readOnly && <Button size="small" variant="outlined" onClick={() => { setExcluded([...d.revision_proposal.exclude_item_ids]); setTitle(`${String(data.paper.title ?? '未命名试卷')}（修订）`); setToken(d.diagnostic_digest); setMessage(''); setOpen(true) }}>查看{describeRevisionIssues()}</Button>}
     </Stack>
     {message && <Alert severity="info" sx={{ mt: 1 }}>{message}</Alert>}
-    <Box component="details" sx={{ mt: 1 }}><summary>逐条问题与来源（{d.issues.length}）</summary>{d.issues.map((issue, i) => <IssueDetails key={i} issue={issue} />)}</Box>
+    {/* T09：零值区块不渲染——规范 §4.2「Alert 门槛」：计数为 0 时不得渲染。
+        原写法恒渲染 `<details>`，即使 `issues.length === 0` 也会出现「逐条问题与来源（0）」占位噪音。
+        仅在有真实问题时才给出可展开列表。 */}
+    {d.issues.length > 0 && (
+      <Box component="details" sx={{ mt: 1 }}><summary>逐条问题与来源（{d.issues.length}）</summary>{d.issues.map((issue, i) => <IssueDetails key={i} issue={issue} />)}</Box>
+    )}
     {d.duplicate_groups.map(g => <Typography variant="caption" display="block" key={g.question_id}>第 {g.seqs.join(' / ')} 题内容重复（可能是有意重复，可保留）。{debug ? `（qid ${g.question_id}；items ${g.item_ids.join(' / ')}）` : ''}</Typography>)}
     {/* 完整诊断 JSON 含 snapshot_digest / scan index 等原始字段，仅 debug 可见。 */}
     {debug && <Box component="details"><summary>{describeTechnicalInfo()}</summary><Box component="pre" sx={{ whiteSpace: 'pre-wrap', overflowWrap: 'anywhere', fontSize: 11 }}>{JSON.stringify(d, null, 2)}</Box></Box>}

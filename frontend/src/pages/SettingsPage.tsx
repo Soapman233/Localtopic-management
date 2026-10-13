@@ -243,13 +243,36 @@ export default function SettingsPage() {
                   </Button>
                 )
               })}
-              <input
-                type="color"
-                value={form.theme_primary}
-                onChange={(e) => set('theme_primary', e.target.value)}
+              {/* T10：自定义主色入口。原实现是裸 `<input type="color">`——只有 `aria-label`、**无可见标签**，
+                  且原生控件是 48×32、直角、比预设色块宽约一倍的「长条」，与 5 个预设按钮
+                  （39×31、圆角 10）形状不一致，观感像渲染错误（UI 评审 F9）。此处保留取色能力，改为：
+                  ① 复用 MUI `Button`（`small` + `outlined`）→ 圆角 / 高度 / 描边与预设**同形状**；
+                  ② 补**可见标签**「自定义」，让老师看得出这是做什么的；
+                  ③ 原生 `input[type=color]` 退化为按钮内的色块，尺寸写**带单位字符串**（避免被当 spacing 乘数）。 */}
+              <Button
+                component="label"
+                size="small"
+                variant="outlined"
                 aria-label="自定义主色"
-                style={{ width: 48, height: 32, border: 'none', background: 'none' }}
-              />
+                sx={{ minWidth: 0, px: 1, gap: 0.5 }}
+              >
+                <Box
+                  component="input"
+                  type="color"
+                  value={form.theme_primary}
+                  onChange={(e) => set('theme_primary', e.target.value)}
+                  sx={{
+                    width: '20px',
+                    height: '20px',
+                    p: 0,
+                    border: 'none',
+                    borderRadius: `${tokens.radius}px`,
+                    bgcolor: 'transparent',
+                    cursor: 'pointer',
+                  }}
+                />
+                自定义
+              </Button>
               <TextField
                 size="small"
                 value={form.theme_primary}

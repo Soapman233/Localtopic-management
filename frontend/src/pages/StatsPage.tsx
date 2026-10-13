@@ -308,9 +308,10 @@ export default function StatsPage({ headingLevel = 1 }: { headingLevel?: 1 | 2 }
           <Typography variant="caption" color="text.secondary" display="block" sx={{ mt: 0.5 }}>
             以上为「题-标签关联条数」，一道题可对应多个标签，<strong>不能</strong>与题目数直接相加。
           </Typography>
-          <Button size="small" sx={{ mt: 1 }} onClick={() => navigate('/manage/knowledge')}>
-            去知识点复核 →
-          </Button>
+          {/* T09：收敛重复入口——本面板与上方 KPI 卡「待处理（待复核公式）」重复了同一份公式处理进度，
+              原先这里还挂了一个「去知识点复核 →」，使同屏出现两个并列的「去… →」行动入口（UI 评审 F8）。
+              现只保留 KPI 卡的「去处理 →」为**唯一**行动入口；知识点复核仍可从「数据维护」的
+              「知识点复核」页签一键进入，此处不再重复提供入口。 */}
         </Paper>
       </Stack>
 

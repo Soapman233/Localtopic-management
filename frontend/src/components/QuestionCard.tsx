@@ -57,6 +57,14 @@ function resolveAnswerFlags(item: SearchItem): { hasAnswer?: boolean; hasAnalysi
   return { hasAnswer, hasAnalysis }
 }
 
+/** F10/T11：卡片 CTA 的「filled」观感（hover / 卡片选中态）。
+ *
+ * 刻意**不**升级为 `contained` variant——批量条的「加入所选」必须保持为页面**唯一**的
+ * contained 主按钮（规范 §4.2「一屏 ≤1 个主操作」）；这里用填充色表达强调即可。
+ * 提到模块级复用同一对象，避免在 sx 里重复字面量、平白增大首屏 chunk。
+ */
+const CTA_FILLED = { bgcolor: 'primary.dark', color: 'primary.contrastText', borderColor: 'primary.dark' } as const
+
 /** 结果卡片。 */
 export function QuestionCard({
   item,
@@ -149,7 +157,19 @@ export function QuestionCard({
         {item.needs_review && <ReviewBadge />}
         <Box sx={{ flex: 1 }} />
         {onAdd && (
-          <Button size="small" variant="contained" startIcon={<AddIcon />} onClick={() => onAdd(item)} disabled={adding}>
+          // F10/T11 卡片 CTA 降权（最高频页面 /builder）：一屏曾有 8+ 个同权的蓝色 filled「加入」，
+          // 把唯一主操作的视觉权重稀释掉（规范 §4.2「contained 一屏 ≤1」）。
+          // 默认降为 **outlined**（次级），仅在 **hover / 卡片选中** 时升为 filled 观感，
+          // 使「加入」仍一眼可见但不再常驻抢占主层级。
+          // ⚠️ 不做整卡点击——本卡是 dnd-kit 可拖拽节点，整卡点击会与拖拽加题冲突。
+          <Button
+            size="small"
+            variant="outlined"
+            startIcon={<AddIcon />}
+            onClick={() => onAdd(item)}
+            disabled={adding}
+            sx={selected ? CTA_FILLED : { '&:hover': CTA_FILLED }}
+          >
             加入
           </Button>
         )}
