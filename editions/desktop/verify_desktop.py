@@ -132,26 +132,96 @@ class _FakeWindow:
         self.destroyed = True
 
 
+class _FakeTray:
+    """假托盘：只记录 notify 调用（不需要真 GUI）。"""
+
+    def __init__(self) -> None:
+        self.notified: list[str] = []
+
+    def notify(self, message: str, title=None) -> bool:  # noqa: ANN001
+        self.notified.append(message)
+        return True
+
+    def start(self) -> bool:
+        return True
+
+    def stop(self) -> None:
+        pass
+
+
 def verify_closing_handler() -> None:
     print("\n[契约②] 关闭 × → 最小化到托盘（逻辑层；托盘交互见下方人工项）")
     with tempfile.TemporaryDirectory(prefix="qb-closing-") as tmp:
         st = mod.ClientState(mod.client_state_path(Path(tmp)))
         st.set("quit_requested", "0")
         w = _FakeWindow()
-        handler = mod.make_closing_handler(w, st, tray=None)
+        tray = _FakeTray()
+        handler = mod.make_closing_handler(w, st, tray, can_tray=True)
 
         ret = handler()
-        check("默认：返回 False（取消关闭）", ret is False, f"ret={ret!r}")
-        check("默认：调用了 hide（最小化到托盘）", w.hidden is True)
-        check("默认：没有 destroy（未退出）", w.destroyed is False)
-        check("默认：记录了窗口几何", st.get_window_geometry().get("width") == 800)
+        check("托盘可用：返回 False（取消关闭）", ret is False, f"ret={ret!r}")
+        check("托盘可用：调用了 hide（最小化到托盘）", w.hidden is True)
+        check("托盘可用：没有 destroy（未退出）", w.destroyed is False)
+        check("托盘可用：记录了窗口几何", st.get_window_geometry().get("width") == 800)
+        check("首次最小化会**通知用户**（否则 Win11 折叠区里找不到）", len(tray.notified) == 1)
+
+        # 第二次最小化不应重复打扰
+        w3 = _FakeWindow()
+        mod.make_closing_handler(w3, st, tray, can_tray=True)()
+        check("第二次最小化不再重复通知", len(tray.notified) == 1)
 
         # 托盘「退出」置位后，必须允许真正关闭
         st.request_quit()
         w2 = _FakeWindow()
-        ret2 = mod.make_closing_handler(w2, st, tray=None)()
+        ret2 = mod.make_closing_handler(w2, st, tray, can_tray=True)()
         check("置位退出后：返回 True（允许关闭）", ret2 is True, f"ret={ret2!r}")
         check("置位退出后：不再 hide", w2.hidden is False)
+
+
+def verify_no_trap_when_tray_unavailable() -> None:
+    """🔴 回归：**托盘不可用时必须真正关闭**，绝不能把窗口藏起来让用户找不到。
+
+    这是实测踩到的真实故障：第一版即使 `tray.start()` 失败也照样 `hide()`，
+    于是用户点完 × 就**再也找不到页面**（Win11 还会把新托盘图标收进折叠区 `^`）。
+    """
+    print("\n[契约②·反例] 托盘不可用时**必须真正关闭**（不许困住用户）")
+    with tempfile.TemporaryDirectory(prefix="qb-notrap-") as tmp:
+        st = mod.ClientState(mod.client_state_path(Path(tmp)))
+        st.set("quit_requested", "0")
+        w = _FakeWindow()
+        # `can_tray=False` 模拟托盘启动失败
+        ret = mod.make_closing_handler(w, st, tray=None, can_tray=False)()
+        check("托盘不可用：返回 True（真正关闭）", ret is True, f"ret={ret!r}")
+        check("托盘不可用：**没有** hide（窗口不会被藏起来）", w.hidden is False)
+
+
+def verify_tray_availability() -> None:
+    """托盘**能否真的启动**（图标是否可见仍需人工看）。
+
+    ⚠️ 只能验到「图标线程活着、notify 不报错」；
+    「任务栏右下角有没有出现图标」必须人眼确认——Win11 默认把新图标收进折叠区。
+    """
+    print("\n[契约②·前置] 托盘图标能否启动")
+    try:
+        import pystray  # noqa: F401
+    except Exception as exc:  # noqa: BLE001
+        check("pystray 可用", False, str(exc))
+        return
+    tray = mod.TrayController(on_show=lambda: None, on_quit=lambda: None)
+    ok = tray.start()
+    check("托盘启动成功（线程存活 + 图标已注册到 shell）", ok is True, tray.last_error or "")
+    if ok:
+        # 比"线程还活着"强得多：查真实 OS 句柄（pystray win32 后端暴露 _hwnd/_icon_handle）
+        check("图标句柄非空（真的进了系统托盘）", tray.registered() is True)
+        check("notify 不抛异常", isinstance(tray.notify("验收测试：题库已最小化到托盘"), bool))
+    tray.stop()
+    check("stop 后不再 registered", tray.registered() is False)
+
+
+def verify_focus_helper() -> None:
+    print("\n[契约①·辅助] 按标题聚焦窗口")
+    # 不存在的标题必须**安全返回 False**，不能抛异常
+    check("无匹配窗口时安全返回 False", mod.focus_window_by_title("绝对不存在的窗口标题-验收") is False)
 
 
 # ── 真实开窗（GUI）─────────────────────────────────────────────────────────
@@ -196,6 +266,9 @@ def main() -> int:
     verify_client_state()
     verify_single_instance()
     verify_closing_handler()
+    verify_no_trap_when_tray_unavailable()
+    verify_tray_availability()
+    verify_focus_helper()
 
     if "--no-window" not in args:
         verify_window_opens()
