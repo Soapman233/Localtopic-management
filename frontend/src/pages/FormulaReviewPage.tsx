@@ -42,7 +42,7 @@ import CheckIcon from '@mui/icons-material/Check'
 import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutline'
 import OpenInNewIcon from '@mui/icons-material/OpenInNew'
 import ReplayIcon from '@mui/icons-material/Replay'
-import { useNavigate } from 'react-router-dom'
+import { useAppNavigate } from '../hooks/useAppNavigate'
 import { getReviewQueueSummary, listReview, resolveReview } from '../api/review'
 import type { ReviewItem } from '../api/types'
 import { KatexFormula } from '../components/KatexFormula'
@@ -82,7 +82,7 @@ const STATUS_HINT: Record<string, string> = {
 /** 嵌入维护父页时主标题为 h2；独立使用保留 h1，不改变视觉排版。 */
 export default function FormulaReviewPage({ headingLevel = 1 }: { headingLevel?: 1 | 2 } = {}) {
   const pageHeading = headingLevel === 1 ? 'h1' : 'h2'
-  const navigate = useNavigate()
+  const navigate = useAppNavigate()
   const qc = useQueryClient()
 
   const [tab, setTab] = useState<string>('UNSUPPORTED')

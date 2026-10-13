@@ -27,7 +27,8 @@ import {
 import ArrowBackIcon from '@mui/icons-material/ArrowBack'
 import EditIcon from '@mui/icons-material/Edit'
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore'
-import { useNavigate, useParams } from 'react-router-dom'
+import { useParams } from 'react-router-dom'
+import { useAppNavigate } from '../hooks/useAppNavigate'
 import {
   getQuestion,
   mediaUrl,
@@ -70,7 +71,7 @@ function FormulaRow({ formula }: { formula: Formula }) {
 export default function QuestionDetailPage() {
   const { id } = useParams<{ id: string }>()
   const questionId = Number(id)
-  const navigate = useNavigate()
+  const navigate = useAppNavigate()
   const qc = useQueryClient()
   const [editing, setEditing] = useState(false)
   const [conflict, setConflict] = useState<string | null>(null)

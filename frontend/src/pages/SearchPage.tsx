@@ -21,7 +21,8 @@ import {
   TextField,
   Typography,
 } from '@mui/material'
-import { useNavigate } from 'react-router-dom'
+import { useAppNavigate } from '../hooks/useAppNavigate'
+import { AnimatedList } from '../components/AnimatedList'
 import { FilterSidebar } from '../components/FilterSidebar'
 import { CoverageBanner } from '../components/CoverageBanner'
 import { GradeGapNotice } from '../components/GradeGapNotice'
@@ -164,7 +165,7 @@ function PickPaperDialog({
 
 /** P1 检索页。 */
 export default function SearchPage() {
-  const navigate = useNavigate()
+  const navigate = useAppNavigate()
   const qc = useQueryClient()
   const { currentPaperId, targetSectionId, setCurrentPaperId } = usePaperStore()
   const { coverageDismissed, setCoverageDismissed, strictKp, setStrictKp } = useUiStore()
@@ -190,6 +191,14 @@ export default function SearchPage() {
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set())
   const [addedPaperId, setAddedPaperId] = useState<number | null>(null)
 
+  /** 批量条隐藏前把其键盘焦点交给仍存在的首张题卡；业务不等待动画结束。 */
+  const clearSelection = () => {
+    const bar = document.querySelector('[data-testid="search-selection-motion"]')
+    if (bar?.contains(document.activeElement)) {
+      document.querySelector<HTMLElement>('[data-testid="search-results-motion"] input[type="checkbox"]')?.focus({ preventScroll: true })
+    }
+    setSelectedIds(new Set())
+  }
   const searchQ = useSearchQuery(queryParams)
   const facetsQ = useFacetsQuery(facetsParams)
   const coverageQ = useCoverageQuery()
@@ -205,7 +214,7 @@ export default function SearchPage() {
       // 加入即改变试卷内容 → 重新锁定导出（§5-Q3②）。
       useUiStore.getState().invalidatePreview(vars.paperId)
       setAddedPaperId(vars.paperId)
-      setSelectedIds(new Set())
+      clearSelection()
     },
     onError: (err) => notify.errorFrom(err, { persist: false }),
   })
@@ -359,6 +368,8 @@ export default function SearchPage() {
           {/* P1-3：批量加题工具条——**仅在勾选了题目时出现**（B2 §3.3）。
               未选题时不再常驻一条「加入所选（0）」，减少对结果区的干扰；
               题卡复选框始终可用，勾选后本工具条才出现。 */}
+          <AnimatedList scope={JSON.stringify(queryParams)} stable={!searchQ.isLoading && !searchQ.isFetching && !searchQ.isError && !searchQ.isPlaceholderData}
+            ids={selectedIds.size > 0 ? ['selection'] : []} toolbar testId="search-selection-motion">
           {selectedIds.size > 0 && (
             <Alert
               severity="info"
@@ -378,7 +389,7 @@ export default function SearchPage() {
                   <Button
                     size="small"
                     disabled={addMutation.isPending}
-                    onClick={() => setSelectedIds(new Set())}
+                    onClick={clearSelection}
                   >
                     清空
                   </Button>
@@ -389,6 +400,9 @@ export default function SearchPage() {
             </Alert>
           )}
 
+          </AnimatedList>
+          <AnimatedList scope={JSON.stringify(queryParams)} stable={!searchQ.isLoading && !searchQ.isFetching && !searchQ.isError && !searchQ.isPlaceholderData}
+            ids={items.map(item => item.id)} testId="search-results-motion">
           {items.map((item) => (
             <QuestionCard
               key={item.id}
@@ -402,6 +416,8 @@ export default function SearchPage() {
               adding={addMutation.isPending && (addMutation.variables?.questionIds ?? []).includes(item.id)}
             />
           ))}
+
+          </AnimatedList>
 
           {pageCount > 1 && (
             <Stack alignItems="center" sx={{ mt: 2 }}>

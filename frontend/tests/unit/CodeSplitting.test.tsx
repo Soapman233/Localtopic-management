@@ -4,7 +4,7 @@
  * 背景：改前 `router.tsx` 同步 import 全部 9 个页面，入口单 chunk 达 1.12 MB，
  * 首屏被迫下载并解析全部页面（含 4 个低频治理页）。本测试从两个层面守住这次优化：
  * 1. **配置不变量**（读源码）：`router.tsx` 不得再出现静态页面 import，9 个页面必须
- *    全部走 `lazy(() => import(...))`；`App.tsx` 的 `<Suspense>` 必须包住 `<Outlet/>`
+ *    全部走 React.lazy + 动态import（builder直接加载，其他经routePages二层延迟）；`App.tsx` 的 `<Suspense>` 必须包住 `<Outlet/>`
  *    且仍在 `ErrorBoundary` 之内。
  * 2. **真实行为**：挂一个懒加载子路由，验证「先出现统一加载态、外壳不消失、随后渲染页面」。
  *
@@ -21,6 +21,7 @@ import App from '../../src/App'
 // （无需 Node fs，也避免 tsconfig 未引入 node 类型的问题）。
 import routerSrc from '../../src/router.tsx?raw'
 import appSrc from '../../src/App.tsx?raw'
+import routePagesSrc from '../../src/app/routePages.ts?raw'
 import { renderWithTheme } from './testUtils'
 
 /** 9 个页面组件文件名（与 `router.tsx` 的 lazy 目标一一对应）。 */
@@ -45,7 +46,7 @@ describe('路由级代码分割：配置不变量', () => {
 
   it('页面全部使用 React.lazy + 动态 import（不得存在同步 import）', () => {
     for (const page of PAGE_FILES) {
-      expect(routerSrc).toContain(`lazy(() => import('./pages/${page}'))`)
+      expect(page === 'PaperBuilderPage' ? routerSrc : routePagesSrc).toContain(page === 'PaperBuilderPage' ? `lazy(() => import('./pages/${page}'))` : `import('../pages/${page}')`)
     }
     // 不变量：**不得**存在对 `./pages/` 的同步 import——那会让该页面回到首屏 chunk，
     // 把代码分割的收益吃掉。
@@ -53,10 +54,12 @@ describe('路由级代码分割：配置不变量', () => {
     // ⚠️ 这里刻意**不断言懒加载的数量**：阶段 4 新增了 `LoginPage` 也走懒加载，
     // 若把数量写死（原来是 9），每加一个页面就要改测试——而"数量"根本不是我们要守的性质。
     expect(routerSrc).not.toMatch(/^import\s+\w+\s+from\s+'\.\/pages\//m)
+    expect(routePagesSrc).not.toMatch(/^import\s+\w+\s+from\s+'\.\.\/pages\//m)
   })
 
   it('登录页（阶段 4）同样走懒加载（本地版永不下载它）', () => {
-    expect(routerSrc).toContain("lazy(() => import('./pages/LoginPage'))")
+    expect(routerSrc).toContain("const LoginPage = page('LoginPage')")
+    expect(routePagesSrc).toContain("import('../pages/LoginPage')")
   })
 
   it('默认落地页仍是 /builder（代码分割不得改变落地行为）', () => {

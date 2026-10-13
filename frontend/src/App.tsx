@@ -24,7 +24,9 @@ import SearchIcon from '@mui/icons-material/Search'
 import EditNoteIcon from '@mui/icons-material/EditNote'
 import ChecklistIcon from '@mui/icons-material/Checklist'
 import SettingsIcon from '@mui/icons-material/Settings'
-import { Outlet, useLocation, useNavigate } from 'react-router-dom'
+import { Outlet, useLocation } from 'react-router-dom'
+import { isSafeMotionPath, useAppNavigate } from './hooks/useAppNavigate'
+import { useReducedMotion } from './hooks/useReducedMotion'
 import api from './api/client'
 import { qk } from './api/queryKeys'
 import ErrorBoundary from './components/ErrorBoundary'
@@ -121,7 +123,8 @@ function HealthBanner() {
 
 export default function App() {
   const location = useLocation()
-  const navigate = useNavigate()
+  const navigate = useAppNavigate()
+  const reducedMotion = useReducedMotion()
   const theme = useTheme()
   // P1-1 响应式：窄屏（<md，即 <900px）时侧栏改为临时抽屉（汉堡菜单开合），
   // 避免 232px 固定侧栏挤占内容区。桌面（≥md）保持常驻侧栏。
@@ -318,7 +321,10 @@ export default function App() {
               外层保留 ErrorBoundary：懒加载 chunk 拉取失败（动态 import reject）会作为
               渲染错误冒泡到它，走项目既有的错误 UI，而不是卡在加载态。 */}
           <Suspense fallback={<LoadingState label="页面加载中…" />}>
-            <Outlet />
+            {/* 测量页与reduce明确none；稳定容器不改key，不加transform或DOM进出动画。 */}
+            <div style={{ viewTransitionName: !reducedMotion && isSafeMotionPath(location.pathname) ? 'route-content' : 'none' }}>
+              <Outlet />
+            </div>
           </Suspense>
         </ErrorBoundary>
       </Box>

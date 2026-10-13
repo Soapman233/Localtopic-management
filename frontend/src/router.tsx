@@ -5,7 +5,8 @@ import RequireAuth from './app/auth/RequireAuth'
 import LoginLoadBoundary from './components/LoginLoadBoundary'
 
 /** 登录页（阶段 4）。同样走懒加载——本地版永远不会访问它。 */
-const LoginPage = lazy(() => import('./pages/LoginPage'))
+const page = (name: import('./app/routePages').DeferredPage) => lazy(() => import('./app/routePages').then(module => module.loadPage(name)))
+const LoginPage = page('LoginPage')
 
 // 使用 HashRouter：FastAPI StaticFiles 静态托管无需服务端 history fallback。
 //
@@ -21,20 +22,21 @@ const LoginPage = lazy(() => import('./pages/LoginPage'))
 // 改前：9 个页面全部**同步 import**，入口 chunk 单文件达 1.12 MB；首屏必须下载并
 // 解析**全部页面**（含 4 个低频治理页）的代码，Vite 持续告警「Some chunks are
 // larger than 500 kB」。
-// 改后：每个页面改用 `React.lazy` 动态 `import()`，各自产出独立 chunk，
+// 改后：每个页面仍用React.lazy；builder直接动态import，其余经routePages按需映射，
+// 不把低频路由的预加载映射与增强CSS放进默认工作台入口。页面各自产出独立chunk，
 // **仅在访问对应路由时才下载**（老师 90% 时间只在组卷 / 找题 / 导出之间切换，
 // 治理页代码不再进首屏）。加载态的呈现由 `App.tsx` 中包裹 `<Outlet/>` 的
 // `<Suspense>` 统一负责（fallback 复用全站统一的 `LoadingState`），此处无需重复处理。
-const SearchPage = lazy(() => import('./pages/SearchPage'))
-const QuestionDetailPage = lazy(() => import('./pages/QuestionDetailPage'))
+const SearchPage = page('SearchPage')
+const QuestionDetailPage = page('QuestionDetailPage')
 const PaperBuilderPage = lazy(() => import('./pages/PaperBuilderPage'))
-const ExportPage = lazy(() => import('./pages/ExportPage'))
-const KnowledgeReviewPage = lazy(() => import('./pages/KnowledgeReviewPage'))
-const FormulaReviewPage = lazy(() => import('./pages/FormulaReviewPage'))
-const SourcesPage = lazy(() => import('./pages/SourcesPage'))
-const StatsPage = lazy(() => import('./pages/StatsPage'))
-const DataMaintenancePage = lazy(() => import('./pages/DataMaintenancePage'))
-const SettingsPage = lazy(() => import('./pages/SettingsPage'))
+const ExportPage = page('ExportPage')
+const KnowledgeReviewPage = page('KnowledgeReviewPage')
+const FormulaReviewPage = page('FormulaReviewPage')
+const SourcesPage = page('SourcesPage')
+const StatsPage = page('StatsPage')
+const DataMaintenancePage = page('DataMaintenancePage')
+const SettingsPage = page('SettingsPage')
 
 export const PAGES: Record<string, ReactElement> = {
   search: <SearchPage />,

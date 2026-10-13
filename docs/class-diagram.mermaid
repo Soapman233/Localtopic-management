@@ -1,0 +1,199 @@
+%% 题库应用「本地客户端化」——数据模型与服务类关系图
+%% 说明：本图为设计蓝图，供工程师评估工作量与开工使用，非最终实现。
+%% 原则：新增「外壳层（desktop shell）」+「客户端状态层（client state）」，
+%%       原样复用 webui/bank/pipeline 内核，业务代码零分叉。
+
+classDiagram
+    direction LR
+
+    %% ===================== 一、新增：桌面外壳层 =====================
+    class DesktopShell {
+        +str shell_name = "desktop"
+        +Path app_root
+        +Path data_dir
+        +BackendSupervisor backend
+        +SingleInstanceGuard guard
+        +TrayController tray
+        +int resolved_port
+        +run() int
+        -_acquire_single_instance() bool
+        -_notify_existing_and_exit() void
+        -_resolve_port() int
+        -_start_backend() bool
+        -_wait_healthy(timeout_s) bool
+        -_open_window() void
+        -_on_close() void  %% 默认最小化到托盘
+        -_on_quit() void
+        -_show_error_page(code, msg) void
+    }
+
+    class BackendSupervisor {
+        +str host
+        +int port
+        +Path db_path
+        +Process proc
+        +start() bool
+        +is_healthy(timeout_s) bool
+        +stop() void
+        +url() str
+        -_spawn_uvicorn() void
+    }
+
+    class SingleInstanceGuard {
+        +str mutex_name
+        +int control_port
+        +acquire() bool
+        +notify_existing(cmd) void
+        +serve_control(handler) void
+        +release() void
+    }
+
+    class PortAllocator {
+        +int preferred
+        +resolve() int
+        +is_our_instance(port) bool
+        -_probe_free(start, count) int
+    }
+
+    class TrayController {
+        +TrayController(shell)
+        +init() void
+        +on_open_main() void
+        +on_open_export_dir() void
+        +on_quit() void
+        +bubble(title, msg) void
+    }
+
+    class WindowBridge {
+        +str title
+        +str url
+        +create() Window
+        +load(url) void
+        +set_title(text) void
+        +evaluate_js(script) void
+        -_bind_close_handler() void
+    }
+
+    %% ===================== 二、新增：客户端状态层（后端） =====================
+    class ClientStateStore {
+        +Path db_path  %% outputs/webui/client_state.db（独立于 bank.db）
+        +ensure_schema() void
+        +save_draft(target_type, target_id, payload) DraftRecord
+        +get_draft(target_type, target_id) DraftRecord
+        +clear_draft(target_type, target_id) void
+        +record_export(rec) ExportRecord
+        +list_exports(limit) list~ExportRecord~
+        +save_preview_footprint(fp) PreviewFootprint
+        +get_preview_footprint(paper_id) PreviewFootprint
+        +save_search_context(ctx) void
+        +get_search_context() SearchContext
+    }
+
+    class DraftRecord {
+        +str target_type  %% question | paper
+        +int target_id
+        +str payload_json
+        +str updated_at
+    }
+
+    class ExportRecord {
+        +int id
+        +int paper_id
+        +str paper_title
+        +str out_path
+        +str format
+        +str answer_mode
+        +str template
+        +str exported_at
+    }
+
+    class PreviewFootprint {
+        +int paper_id
+        +str last_previewed_at
+        +str content_digest   %% sha256(导出 payload)
+        +str settings_key     %% JSON[answerMode, template]
+        +str app_version
+        +str editor_sdk_version
+        +bool unlocks_export = false  %% 只读足迹：永不参与解锁
+    }
+
+    class SearchContext {
+        +str keyword
+        +str filters_json
+        +int page
+    }
+
+    %% ===================== 三、原样复用：现有内核（不改） =====================
+    class WebuiApp {
+        <<existing>>
+        +create_app() FastAPI
+        +app FastAPI
+    }
+
+    class WebuiConfig {
+        <<existing>>
+        +get_db_path() Path
+        +get_export_dir() Path
+        +environment_report() dict
+    }
+
+    class WebuiEdition {
+        <<existing>>
+        +current_edition() str
+        +resolve_host() str
+        +resolve_port() int
+        +auth_enabled() bool
+    }
+
+    class BankExport {
+        <<existing>>
+        +build_export_payload(...) dict
+        +export_docx(...) dict
+        +export_pdf(...) dict
+        +verify_cross_client(...) dict
+    }
+
+    class BankPaper {
+        <<existing>>
+        +list_papers() list
+        +get_paper(paper_id) dict
+    }
+
+    class UiStore {
+        <<frontend>>
+        +previewFresh Map  %% 会话态，不持久化（门禁解锁条件）
+        +previewDegradedOk Map
+        +invalidatePreview(paperId) void
+        +markPreviewFresh(ticket, digest) bool
+        +isExportUnlocked(paperId, settingsKey) bool
+    }
+
+    class PersistedFootprint {
+        <<frontend>>
+        +lastPreviewFootprint Map  %% 只读足迹（参与 UI 提示，不参与解锁）
+    }
+
+    %% ===================== 四、关系 =====================
+    DesktopShell "1" --> "1" BackendSupervisor : 管理生命周期
+    DesktopShell "1" --> "1" SingleInstanceGuard : 单实例
+    DesktopShell "1" --> "1" TrayController : 托盘
+    DesktopShell "1" --> "1" WindowBridge : 承载窗口
+    DesktopShell "1" --> "1" PortAllocator : 端口自愈
+    PortAllocator ..> SingleInstanceGuard : is_our_instance
+    BackendSupervisor ..> WebuiApp : 起 uvicorn(app)
+    BackendSupervisor ..> WebuiEdition : 读 host/port
+    BackendSupervisor ..> WebuiConfig : 读 db_path/export_dir
+    WindowBridge ..> BackendSupervisor : 指向 url()
+
+    ClientStateStore "1" o-- "*" DraftRecord
+    ClientStateStore "1" o-- "*" ExportRecord
+    ClientStateStore "1" o-- "*" PreviewFootprint
+    ClientStateStore "1" o-- "1" SearchContext
+
+    WebuiApp ..> ClientStateStore : 新增 /api/client-state/* 读写
+    WebuiApp ..> BankExport : 复用导出
+    WebuiApp ..> BankPaper : 复用组卷
+
+    UiStore ..> PersistedFootprint : 展示提示条（不解锁）
+    PersistedFootprint ..> ClientStateStore : 经 API 持久化
+    UiStore ..> BankExport : 触发导出（仍以会话态门禁为准）

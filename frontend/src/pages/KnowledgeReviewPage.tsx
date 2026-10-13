@@ -48,7 +48,7 @@ import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutline'
 import CancelOutlinedIcon from '@mui/icons-material/CancelOutlined'
 import FileDownloadIcon from '@mui/icons-material/FileDownload'
 import FileUploadIcon from '@mui/icons-material/FileUpload'
-import { useNavigate } from 'react-router-dom'
+import { useAppNavigate } from '../hooks/useAppNavigate'
 import {
   decideLabel,
   exportReviewUrl,
@@ -79,7 +79,7 @@ const STATUS_TABS: { key: string; label: string }[] = [
 export default function KnowledgeReviewPage({ headingLevel = 1 }: { headingLevel?: 1 | 2 } = {}) {
   const pageHeading = headingLevel === 1 ? 'h1' : 'h2'
   const sectionHeading = headingLevel === 1 ? 'h2' : 'h3'
-  const navigate = useNavigate()
+  const navigate = useAppNavigate()
   const qc = useQueryClient()
   const fileRef = useRef<HTMLInputElement>(null)
 

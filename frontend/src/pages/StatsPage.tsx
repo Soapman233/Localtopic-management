@@ -24,7 +24,7 @@ import {
   Stack,
   Typography,
 } from '@mui/material'
-import { useNavigate } from 'react-router-dom'
+import { useAppNavigate } from '../hooks/useAppNavigate'
 import { getStats } from '../api/stats'
 import type { CountRow, CoverageBucket, StatsData } from '../api/types'
 import { describeFormulaStatus } from '../lib/glossary'
@@ -172,7 +172,7 @@ function DistributionList({ title, rows, onItemClick, headingLevel = 1, initialV
 export default function StatsPage({ headingLevel = 1 }: { headingLevel?: 1 | 2 } = {}) {
   const pageHeading = headingLevel === 1 ? 'h1' : 'h2'
   const sectionHeading = headingLevel === 1 ? 'h2' : 'h3'
-  const navigate = useNavigate()
+  const navigate = useAppNavigate()
   const statsQ = useQuery({ queryKey: qk.stats(), queryFn: () => getStats() })
 
   if (statsQ.isLoading) {

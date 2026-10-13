@@ -38,7 +38,7 @@ import ExpandMoreIcon from '@mui/icons-material/ExpandMore'
 import Accordion from '@mui/material/Accordion'
 import AccordionSummary from '@mui/material/AccordionSummary'
 import AccordionDetails from '@mui/material/AccordionDetails'
-import { useNavigate } from 'react-router-dom'
+import { useAppNavigate } from '../hooks/useAppNavigate'
 import { getSource, getSourceImpact, listSources, updateSourceMetadata } from '../api/sources'
 import type { SourceDetail, SourceFileMeta, SourceRow } from '../api/types'
 import { ConfirmDialog } from '../components/ConfirmDialog'
@@ -79,7 +79,7 @@ function SourceDetailDialog({
   onClose: () => void
   onToast: (kind: 'success' | 'error', text: string) => void
 }) {
-  const navigate = useNavigate()
+  const navigate = useAppNavigate()
   const qc = useQueryClient()
   const [grade, setGrade] = useState('')
   const [textbook, setTextbook] = useState('')

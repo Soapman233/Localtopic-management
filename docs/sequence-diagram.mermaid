@@ -1,0 +1,95 @@
+%% 题库应用「本地客户端化」——关键流程时序图
+%% 覆盖：① 首次启动  ② 重复双击（单实例）  ③ 关闭窗口=最小化托盘  ④ 重开秒级恢复
+%%       ⑤ 导出（含门禁 + 只读足迹）  ⑥ 服务起不来（应用内错误页）
+
+sequenceDiagram
+    autonumber
+    actor 老师
+    participant 图标 as 桌面图标
+    participant Shell as DesktopShell
+    participant Guard as SingleInstanceGuard
+    participant Port as PortAllocator
+    participant Sup as BackendSupervisor
+    participant Uvicorn as uvicorn(webui.app)
+    participant CS as ClientStateStore
+    participant Win as WindowBridge(WebView2)
+    participant Tray as TrayController
+
+    %% ---------------- ① 首次启动 ----------------
+    Note over 老师,Tray: ① 首次启动（双击桌面图标）
+    老师->>图标: 双击「题库组卷」
+    图标->>Shell: 启动（无 cmd 黑窗）
+    Shell->>Guard: acquire()
+    Guard-->>Shell: true（无既有实例）
+    Shell->>CS: ensure_schema()（client_state.db 幂等建表）
+    Shell->>Port: resolve()（默认 8720，被占则换端口）
+    Port-->>Shell: resolved_port
+    Shell->>Sup: start(host=127.0.0.1, port)
+    Sup->>Uvicorn: 起服务（幂等迁移 → 环境自检）
+    Uvicorn-->>Sup: 就绪
+    Shell->>Sup: is_healthy(timeout=5s)（轮询 /api/health）
+    Sup-->>Shell: true
+    alt 健康
+        Shell->>Win: create() + load(http://127.0.0.1:port/#/builder)
+        Win-->>老师: 主窗口（自带标题栏、无地址栏）
+        Shell->>Tray: init()
+        opt 无 settings.json（首次）
+            Win-->>老师: 欢迎页（本机存储 / 自动保存 / 不会丢）
+        end
+    else 起不来
+        %% ---------------- ⑥ 服务起不来 ----------------
+        Shell->>Win: load(internal://error?code=...)
+        Win-->>老师: 应用内错误页（原因 + 一键处理：换端口重试/排障/退出）
+    end
+
+    %% ---------------- ② 重复双击（单实例） ----------------
+    Note over 老师,Tray: ② 再次双击图标（已有实例在运行）
+    老师->>图标: 双击「题库组卷」
+    图标->>Shell: 启动第二个进程
+    Shell->>Guard: acquire()
+    Guard-->>Shell: false（已存在）
+    Shell->>Guard: notify_existing("show")
+    Guard->>Shell: （首实例控制端口收到）
+    Shell->>Win: 还原窗口并置前
+    Win-->>老师: 聚焦已有窗口（不新起服务、不冲突 8720）
+
+    %% ---------------- ③ 关闭窗口 = 最小化托盘 ----------------
+    Note over 老师,Tray: ③ 点 × 关闭窗口
+    老师->>Win: 点 ×
+    Win->>Shell: _on_close()
+    alt 默认语义（最小化到托盘）
+        Shell->>Win: hide()
+        Shell->>Tray: 常驻（首次气泡提示）
+        Note over Sup: 服务继续运行，bank.db 不受影响
+    else 设置为「直接退出」
+        Shell->>Sup: stop()
+        Shell->>Guard: release()
+    end
+
+    %% ---------------- ④ 重开秒级恢复 ----------------
+    Note over 老师,Tray: ④ 再次双击图标（服务仍在，秒级恢复）
+    老师->>图标: 双击
+    图标->>Shell: 启动第二个进程
+    Shell->>Guard: acquire() → false
+    Shell->>Guard: notify_existing("show")
+    Shell->>Win: 还原并置前（≤2s）
+    Win-->>老师: 试卷题目/题序/分值完全一致（数据在 bank.db）
+
+    %% ---------------- ⑤ 导出（门禁 + 只读足迹） ----------------
+    Note over 老师,CS: ⑤ 导出（含门禁与「不白干」补偿）
+    老师->>Win: 打开导出页
+    Win->>CS: GET /api/client-state/preview-footprint/{paperId}
+    CS-->>Win: {lastPreviewedAt, contentDigest, settingsKey}（只读足迹）
+    Win-->>老师: 提示条「上次已预览（时间）。为保证一致，请重新预览」+「重新预览」CTA
+    Note over Win: 门禁仍锁定：previewFresh[paperId] 为会话态，不因足迹解锁
+    老师->>Win: 点「重新预览」
+    Win->>Uvicorn: 触发像素预览 job（editor_sdk + Word/WPS）
+    Uvicorn-->>Win: job done（返回 returnedDigest）
+    Win->>Win: markPreviewFresh(ticket, returnedDigest)（校验 revision/digest）
+    Win->>CS: PUT /api/client-state/preview-footprint（记录新足迹，不解锁）
+    Win-->>老师: 导出按钮解锁
+    老师->>Win: 点「导出」
+    Win->>Uvicorn: POST /api/export（复用现有导出门禁）
+    Uvicorn-->>Win: 产物路径
+    Win->>CS: POST /api/client-state/export-record（导出历史）
+    Win->>老师: 用系统默认程序（Word/WPS）打开产物 + 「打开导出目录」

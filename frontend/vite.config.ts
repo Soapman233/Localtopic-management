@@ -81,6 +81,8 @@ export default defineConfig({
           if (id.includes('commonjsHelpers')) return 'vendor-react'
           if (!id.includes('node_modules')) return undefined
           if (id.endsWith('.css')) return undefined
+          // AutoAnimate独立lazy，不落入首屏已预加载的vendor-misc。
+          if (id.includes('@formkit/auto-animate')) return 'auto-animate'
           if (id.includes('@mui') || id.includes('@emotion')) return 'vendor-mui'
           if (id.includes('katex')) return 'vendor-katex'
           if (id.includes('@tanstack') || id.includes('zustand') || id.includes('@dnd-kit')) {
