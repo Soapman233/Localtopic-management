@@ -31,6 +31,7 @@ function loadTs(file) {
 
 const { useUiStore, previewSettingsKey } = loadTs('src/store/uiStore.ts')
 const { buildTheme, tokens } = loadTs('src/theme.ts')
+const { contrastRatio } = loadTs('src/theme.ts')
 const { formulaDisplay } = loadTs('src/components/formulaDisplay.ts')
 const katex = require('katex')
 const { GradeGapNotice } = loadTs('src/components/GradeGapNotice.tsx')
@@ -144,12 +145,32 @@ test('门禁和请求版本不持久化，刷新后必须重新预览', () => {
   }
 })
 
-test('主题按保存值构建深色/主色，历史非法颜色安全回退', () => {
+test('主题按保存值构建：达标值原样采用、不达标值按模式收敛、非法值安全回退', () => {
+  // ① 达标值 → **原样采用**（不无谓改动用户的选择）
+  const light = buildTheme({ primary: tokens.primary })
+  assert.equal(light.palette.mode, 'light')
+  assert.equal(light.palette.primary.main, tokens.primary)
+  assert.equal(light.palette.background.paper, '#FFFFFF')
+
+  // ② 不达标值 → **按模式收敛**（2026-10-13，评审 F2 / R02 = ③）
+  //    ⚠️ 本用例原先断言 `dark.palette.primary.main === '#123abc'`（合法 hex 一律原样采用）——
+  //       而那正是 F2 的根因：`settings.json` 里存着旧默认值 `#3370FF` 时白字仅 4.28:1，
+  //       全站 11 类元素不达 AA，**而对比度门禁测的是 token 配对表、测不到运行期存值**。
+  //       现在收敛为「朝各自背景方向混合直到达标」：浅色朝黑（压页面底）、深色朝白（压纸面）。
   const dark = buildTheme({ dark: true, primary: '#123abc' })
   assert.equal(dark.palette.mode, 'dark')
-  assert.equal(dark.palette.primary.main, '#123abc')
   assert.equal(dark.palette.background.paper, '#1E1E1E')
-  // 回退主色 = `tokens.primary`（P5-2 起为 WCAG AA 文字安全值；断言引用 token，避免改色时硬编码字面量漂移）。
+  assert.notEqual(dark.palette.primary.main, '#123abc', '不达标主色不得原样采用')
+  assert.ok(
+    contrastRatio(dark.palette.primary.main, tokens.paperDark) >= 4.5,
+    `深色下主色压纸面必须 ≥4.5:1，实测 ${contrastRatio(dark.palette.primary.main, tokens.paperDark).toFixed(2)}`,
+  )
+  assert.ok(
+    contrastRatio(light.palette.primary.main, tokens.bg) >= 4.5,
+    '浅色下主色压页面底必须 ≥4.5:1',
+  )
+
+  // ③ 非法值 → 回退到 `tokens.primary`（WCAG AA 文字安全值；断言引用 token，避免硬编码漂移）
   assert.equal(buildTheme({ primary: 'invalid' }).palette.primary.main, tokens.primary)
   assert.equal(buildTheme().palette.mode, 'light')
 })

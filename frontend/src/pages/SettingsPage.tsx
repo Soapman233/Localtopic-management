@@ -14,7 +14,7 @@
  *   `variant="plain"`（仅标题行 + 分隔线），避免「卡片套卡片」；
  * - 内容限宽由 `App.tsx` 按路由统一处理（/settings → 1100px 居中），页面内不再自加 maxWidth。
  */
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   Alert,
@@ -38,6 +38,8 @@ import LanAccessPanel from '../components/LanAccessPanel'
 import PageHeader from '../components/PageHeader'
 import SectionCard from '../components/SectionCard'
 import { qk } from '../api/queryKeys'
+import { PRIMARY_MIN_CONTRAST, contrastRatio, tokens } from '../theme'
+import { GLOSSARY, describePrimaryContrast } from '../lib/glossary'
 
 interface FormState {
   db_path: string
@@ -70,6 +72,19 @@ export default function SettingsPage() {
   const [toast, setToast] = useState<{ kind: 'success' | 'error'; text: string } | null>(null)
   // 高级项（公式渲染）默认只读，需显式解锁才可编辑。
   const [advancedEditing, setAdvancedEditing] = useState(false)
+
+  /**
+   * 主色对比度（R02 = ③）：**与 `buildTheme` 的收敛口径保持一致**——
+   * 浅色看页面底 `tokens.bg`、深色看纸面 `#1E1E1E`，两者都 ≥ 4.5:1 才算达标。
+   * ⚠️ 口径必须同源：若这里换个背景算，就会出现「设置页说达标、界面其实没达标」的分裂。
+   * 放在早退（加载/错误）之前，故对 `form` 为 null 做了兜底。
+   */
+  const primaryContrast = useMemo(() => {
+    const c = form?.theme_primary ?? tokens.primary
+    const light = contrastRatio(c, tokens.bg)
+    const dark = contrastRatio(c, tokens.paperDark)
+    return { light, dark, ok: Math.min(light, dark) >= PRIMARY_MIN_CONTRAST }
+  }, [form?.theme_primary])
 
   // 首次加载后回填表单。
   useEffect(() => {
@@ -205,6 +220,30 @@ export default function SettingsPage() {
                     onChange={(e) => set('theme_primary', e.target.value)}
                     sx={{ width: 140 }}
                   />
+                </Stack>
+                {/* R02 = ③：**标注当前主色是否达标**，并给一键切到推荐值的动作。
+                    规范 §5.2 把「门禁测不到运行期存值」列为已知盲区，这里就是那个盲区的补丁。 */}
+                <Stack direction="row" spacing={1} alignItems="center" sx={{ mt: 0.75 }}>
+                  <Typography
+                    variant="caption"
+                    color={primaryContrast.ok ? 'text.secondary' : 'warning.main'}
+                  >
+                    {describePrimaryContrast(
+                      primaryContrast.light,
+                      primaryContrast.dark,
+                      primaryContrast.ok,
+                      PRIMARY_MIN_CONTRAST,
+                    )}
+                  </Typography>
+                  {!primaryContrast.ok && (
+                    <Button
+                      size="small"
+                      onClick={() => set('theme_primary', tokens.primary)}
+                      sx={{ minWidth: 0, px: 0.75, fontSize: 12, flexShrink: 0 }}
+                    >
+                      {GLOSSARY.primaryUseRecommended}
+                    </Button>
+                  )}
                 </Stack>
               </Box>
               <FormControlLabel

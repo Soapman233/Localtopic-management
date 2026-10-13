@@ -89,11 +89,11 @@ export function CoverageBanner({ coverage, dismissed, onDismiss }: CoverageBanne
                 </Typography>
                 {isUnannotated(it.bucket) ? (
                   // P0-5：0% 不等于"统计坏了"，要直说是"未标注"。
-                  <Typography variant="body2" component="span" fontWeight={600} color="warning.main">
+                  <Typography variant="body2" component="span" fontWeight={500} color="warning.main">
                     未标注（{it.bucket?.total?.toLocaleString('zh-CN') ?? '0'} 题）
                   </Typography>
                 ) : (
-                  <Typography variant="body2" component="span" fontWeight={600}>
+                  <Typography variant="body2" component="span" fontWeight={500}>
                     {fmtPct(it.bucket)}
                   </Typography>
                 )}
@@ -103,7 +103,7 @@ export function CoverageBanner({ coverage, dismissed, onDismiss }: CoverageBanne
               <Typography variant="body2" component="span" color="text.secondary">
                 待复核公式{' '}
               </Typography>
-              <Typography variant="body2" component="span" fontWeight={600}>
+              <Typography variant="body2" component="span" fontWeight={500}>
                 {coverage.review_open?.toLocaleString('zh-CN') ?? '0'} 条
               </Typography>
             </Box>

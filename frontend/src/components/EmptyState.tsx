@@ -58,7 +58,7 @@ export function EmptyState({
       </Box>
       {/* P5-3：空态标题是提示文案而非文档章节。`subtitle1` 在 MUI 默认渲染为 <h6>，
           会造成页内 h1→h6 跳级；显式降为 <div>（视觉不变）。 */}
-      <Typography variant={dense ? 'body2' : 'subtitle1'} component="div" fontWeight={600}>
+      <Typography variant={dense ? 'body2' : 'subtitle1'} component="div" fontWeight={500}>
         {title}
       </Typography>
       {description ? (

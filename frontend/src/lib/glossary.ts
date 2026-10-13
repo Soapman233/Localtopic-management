@@ -16,6 +16,11 @@
  * 2. 原始技术字段（scan index / 段落号 / 实例 id / 摘要 / 受影响模式）一律走
  *    `isDebugMode()` 开关，**默认不渲染**；仅在「给技术人员的信息」折叠区、且
  *    debug 开启时可见（维护者仍能定位问题，老师默认看不到）。
+ *
+ * ⚠️ 第 3 条铁律（2026-10-13 补）：**文案里不得出现裸 markdown**。
+ * 界面上曾真实出现过 `**同一网络下的任何设备**` 这种「星号上屏」——
+ * 需要强调就用真排版（中文书名号「」）或组件层的字重/颜色，**不要用 `**`**。
+ * 由 `tests/unit/glossary-markdown.test.ts` 守着（遍历 GLOSSARY 与全部 describe* 输出）。
  */
 import type { ExportIssue } from '../api/types'
 
@@ -170,16 +175,16 @@ export const GLOSSARY = {
   /** 已开启时的状态说明。 */
   lanOn: '已开启。手机连同一 WiFi 即可通过下方链接或二维码使用。',
   /** 🔴 风险提示（**必须显著展示**）：开启即对同网络开放。 */
-  lanRisk: '开启后，**同一网络下的任何设备**都能访问你的题库。'
+  lanRisk: '开启后，「同一网络下的任何设备」都能访问你的题库。'
     + '请勿在公共 WiFi（酒店、咖啡厅）下开启；不使用时建议关闭。',
   /** 改动需重启生效。 */
-  lanNeedRestart: '修改后需**重启题库**才生效。',
+  lanNeedRestart: '修改后需重启题库才生效。',
   /** 扫码使用说明。 */
   lanScanHint: '用手机相机或微信扫下面的二维码，或在手机浏览器打开链接：',
   /** 更换令牌按钮。 */
   lanRotate: '更换访问令牌',
   /** 更换令牌的后果说明。 */
-  lanRotateHint: '更换后，旧的链接和二维码**立即失效**，需要重新扫码。',
+  lanRotateHint: '更换后，旧的链接和二维码立即失效，需要重新扫码。',
   /** 探测不到局域网地址。 */
   lanNoIp: '没检测到局域网地址——请确认电脑已连接 WiFi 或网线，然后重试。',
   /** 复制链接按钮。 */
@@ -194,7 +199,7 @@ export const GLOSSARY = {
   lanHttpsOn: '已加密。手机首次访问会提示「不安全」，'
     + '这是因为使用了本机自签证书（正常现象），点「继续访问」即可，之后不再提示。',
   /** 🔴 关闭加密的风险提示。 */
-  lanHttpsOffRisk: '已关闭加密——同一网络下，别人可以**截获**访问令牌，'
+  lanHttpsOffRisk: '已关闭加密——同一网络下，别人可以截获访问令牌，'
     + '从而读写你的题库。请勿在公司、酒店等公共网络下使用。',
   /** 缺少证书生成能力。 */
   lanHttpsUnavailable: '本机缺少证书生成组件，无法启用加密。当前为明文传输，'
@@ -225,6 +230,14 @@ export const GLOSSARY = {
   newPaperNamePlaceholder: '例如：第 3 章单元测验',
   /** 提交按钮。 */
   newPaperCreate: '创建并开始组卷',
+
+  // ---- 主色对比度（评审 F2 / 规范 §5.2；R02 = ③）------------------------- //
+  /** 达标时的一行标注（带实测比值，便于核对）。 */
+  primaryOk: '对比度达标',
+  /** 不达标时的标注。 */
+  primaryLow: '对比度不足',
+  /** 「一键切到推荐主色」按钮。 */
+  primaryUseRecommended: '使用推荐主色',
 } as const
 
 /** 单题「快照锁定」提示（用于 Tooltip / 单行徽章）。 */
@@ -321,6 +334,29 @@ export function describeTechnicalInfo(): string {
  */
 export function describePaletteSearch(query: string): string {
   return `搜索题目「${query}」`
+}
+
+/**
+ * 设置页主色的**对比度标注**（R02 = ③「都做」的 ① 那一半）。
+ *
+ * 必须说清两件事，否则会误导：
+ * 1. **实测比值**（浅色 / 深色各一个，四舍五入到两位）——让老师能核对，而不是只看到结论；
+ * 2. 不达标时，界面**已经自动收敛**（`buildTheme` 的 `resolvePrimary`），
+ *    所以老师不会看到"坏掉"的界面，但**实际显示的颜色与所选值有偏差**——
+ *    这正是我们建议直接改用推荐主色的理由。
+ *
+ * ⚠️ 不要写成「界面不可用」之类的恐吓文案：那是**不实陈述**（自动收敛已经兜住了）。
+ */
+export function describePrimaryContrast(
+  lightRatio: number,
+  darkRatio: number,
+  ok: boolean,
+  min: number,
+): string {
+  const shown = `浅色 ${lightRatio.toFixed(2)}:1 / 深色 ${darkRatio.toFixed(2)}:1`
+  if (ok) return `${GLOSSARY.primaryOk}（${shown}）`
+  return `${GLOSSARY.primaryLow}（${shown}，需 ≥ ${min}:1）。界面会按主题自动收敛到达标值，`
+    + '但实际显示会与你选的略有偏差；建议改用推荐主色。'
 }
 
 /** 导入功能被关闭时的教师语言（替代含内部开关名的后端 message）。 */

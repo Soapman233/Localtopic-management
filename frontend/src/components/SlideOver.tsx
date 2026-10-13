@@ -81,7 +81,7 @@ export function SlideOver({
         sx={{ px: 2, pt: 1, pb: 1.25, flexShrink: 0 }}
       >
         <Box sx={{ minWidth: 0, flexGrow: 1 }}>
-          <Typography id={titleId} variant="subtitle1" component="h2" sx={{ fontWeight: 600 }}>
+          <Typography id={titleId} variant="subtitle1" component="h2" sx={{ fontWeight: 500 }}>
             {title}
           </Typography>
           {description ? (

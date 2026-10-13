@@ -76,8 +76,9 @@ describe('contentMaxWidthFor（内容限宽分档）', () => {
   it('正文类页面限宽', () => {
     expect(contentMaxWidthFor('/settings')).toBe(1100)
     expect(contentMaxWidthFor('/import')).toBe(1100)
-    // 详情页要容纳「正文 + 右侧上下文面板」两列，故更宽
-    expect(contentMaxWidthFor('/question/123')).toBe(1200)
+    // ⚠️ 2026-10-13（R05 = ③）：详情页 **1200 → 720**（规范 §4.1「阅读型」= 单栏 720）。
+    //    原先 1200 是为了容纳「正文 + 右侧上下文面板」两列；右栏已改**抽屉**，故回到单栏宽度。
+    expect(contentMaxWidthFor('/question/123')).toBe(720)
   })
 
   it('工具类页面全宽（限宽会挤压双栏与宽表格）', () => {

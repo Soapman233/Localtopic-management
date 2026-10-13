@@ -111,16 +111,18 @@ export function deriveCrumbs(pathname: string, opts?: { currentLabel?: string })
 /**
  * 内容区**最大宽度**（像素）。返回 `null` 表示不限宽（工具类页面全宽）。
  *
- * 依据（设计规范 §4 P0「内容最大宽度」）：
- * - **正文类**（设置 / 导入 / 单题详情）内容以阅读为主，过宽会让视线长距离横移。
- *   限宽后居中，阅读节奏更稳；
- * - **工具类**（组卷 / 找题 / 导出 / 维护页）承载双栏与宽表格，限宽会挤压主工作区，故全宽。
+ * 依据（设计规范 §4.1 布局表）：
+ * - **阅读型**（单题详情）→ 内容居中，**`maxWidth: 720`**；
+ * - **工具型**（组卷 / 找题 / 维护）→ 全宽，`padding: 24px`，**不设 maxWidth**。
  *
- * 详情页给到 1200 而非 1100：它要容纳「正文 + 右侧来源/历史上下文面板」两列。
+ * ⚠️ 2026-10-13（R05 = ③ 单栏 720 + 右栏改抽屉）：
+ * 详情页原为 **1200**（当时是「正文 + 右侧来源/历史两列」）；改为
+ * **单栏 720**，右栏内容收进**抽屉**（由页面右上角按钮打开）。
+ * 设置 / 导入两页规范未分类，暂沿用 1100（**已登记为待定项**，见任务表）。
  */
 export function contentMaxWidthFor(pathname: string): number | null {
   const clean = normalizePath(pathname)
   if (clean === 'settings' || clean === 'import') return 1100
-  if (clean === 'question' || clean.startsWith('question/')) return 1200
+  if (clean === 'question' || clean.startsWith('question/')) return 720
   return null
 }

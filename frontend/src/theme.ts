@@ -169,14 +169,28 @@ export const tokens = {
   /** 页面底色（浅色模式）。 */
   bg: '#F5F6F8',
 
-  // ── 圆角（来源：原 theme.ts radius + 原 tailwind.config.js borderRadius.card）──
+  // ── 深色表面（**唯一来源**）────────────────────────────────────────────────
   /**
-   * 基础圆角，接入 MUI `shape.borderRadius`。
-   * 10 → 12：对齐 M3 形状刻度的 **medium(12dp)**（M3 卡片/输入框档位）。
-   * 未取 16（M3 large）：全库 30+ 处 `borderRadius: 1`（即 `× shape.borderRadius`）的派生用法，
-   * 16 会让紧凑控件（筛选框、抽屉内小面板）过度圆润。
+   * 深色模式的页面底与纸面。提成 token 是因为它们**不只用于配色**：
+   * 主色对比度收敛（`resolvePrimary`）与设置页的达标标注都要拿它们当「背景」算对比度。
+   * 之前这两处各写一份字面量——一旦配色调整而漏改，就会出现
+   * 「标注说达标、实际不达标」的口径分裂。
    */
-  radius: 12,
+  bgDark: '#121212',
+  paperDark: '#1E1E1E',
+
+  // ── 圆角（**唯一来源**：设计规范 §2.4 的圆角表）──────────────────────────────
+  /**
+   * 基础圆角，接入 MUI `shape.borderRadius`，对应规范里的 **`radius.lg = 10`**。
+   *
+   * ⚠️ 2026-10-13（R03 = 服从规范）：**由 12 改回 10**。
+   * 之前取 12 是按 M3 的 medium 档，而规范把「卡片 / Paper」定为 **10**，
+   * 且规范声明自己是唯一权威 —— 实现让位。
+   *
+   * 全库 30+ 处 `borderRadius: 1`（即 `× shape.borderRadius`）的派生用法会一起变为 10px；
+   * 这也是当初没取 16 的原因（16 会让紧凑控件过度圆润）。
+   */
+  radius: 10,
 
   // ── 字号：5 档（来源：与 MUI 默认字号对齐，避免引入视觉变化）──────────────────
   /**
@@ -272,11 +286,131 @@ const CHIP_RADIUS = 8
 /** M3 active indicator：3dp 高、顶部圆角（M2/MUI 默认是 2px 直角）。 */
 const TAB_INDICATOR_RADIUS = 3
 
+/**
+ * 圆角档位（**唯一来源 = 设计规范 §2.4 的圆角表**，实现不得自造第四种）。
+ *
+ * | 令牌 | 值 | 规范允许的用途 |
+ * |---|---|---|
+ * | `RADIUS_SM` | 4 | 内联代码、公式降级块 |
+ * | `RADIUS_MD` | 8 | 按钮、输入框、Chip |
+ * | `RADIUS_LG` | 10 | 卡片、Paper（= `tokens.radius`） |
+ * | `RADIUS_PILL` | 999 | 胶囊徽章、状态点 |
+ *
+ * ⚠️ 2026-10-13（R03 = 服从规范）：本轮把按钮 999→8、卡片/Paper 16→10、
+ * Dialog 24→10、Alert 12→10、输入框 12→8。**规范里没有 16 与 24 这两档。**
+ * 规范同时要求「同一页面不得出现两种以上卡片圆角」，故 Dialog 也取 `lg`。
+ */
+const RADIUS_MD = 8
+const RADIUS_LG = 10
+const RADIUS_PILL = 999
+
+// ── 主色对比度收敛（评审 F2 / 规范 §5.2；**R02 = ③ 都做**）────────────────────
+/** `#RRGGBB` → `[r,g,b]`；非法输入返回 `null`。 */
+function hexToRgb(hex: string): [number, number, number] | null {
+  const m = /^#([0-9a-fA-F]{6})$/.exec(hex.trim())
+  if (!m) return null
+  const n = Number.parseInt(m[1], 16)
+  return [(n >> 16) & 255, (n >> 8) & 255, n & 255]
+}
+
+/** sRGB 相对亮度（WCAG 2.2 定义）。 */
+function relativeLuminance(hex: string): number {
+  const rgb = hexToRgb(hex)
+  if (!rgb) return 0
+  const [r, g, b] = rgb.map((v) => {
+    const c = v / 255
+    return c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4
+  }) as [number, number, number]
+  return 0.2126 * r + 0.7152 * g + 0.0722 * b
+}
+
+/**
+ * 两个颜色的 WCAG 对比度（1–21）。
+ *
+ * 导出供测试与「运行期存值对比度」门禁复用——**不要在别处另写一份**，
+ * 否则会出现「门禁算 4.5、界面算 4.4」这类口径分裂。
+ */
+export function contrastRatio(a: string, b: string): number {
+  const la = relativeLuminance(a)
+  const lb = relativeLuminance(b)
+  const [hi, lo] = la >= lb ? [la, lb] : [lb, la]
+  return (hi + 0.05) / (lo + 0.05)
+}
+
+/** 把 `hex` 朝 `target` 按 `t`（0–1）线性混合。 */
+function mixToward(hex: string, target: string, t: number): string {
+  const a = hexToRgb(hex)
+  const b = hexToRgb(target)
+  if (!a || !b) return hex
+  const out = a.map((v, i) => Math.round(v + (b[i] - v) * t))
+  return `#${out.map((v) => v.toString(16).padStart(2, '0')).join('')}`
+}
+
+/** 主色派生结果。 */
+export interface ResolvedPrimary {
+  /** 实际用于 `palette.primary.main` 的值。 */
+  main: string
+  /** 压在主色**填充**上的文字色。 */
+  contrastText: string
+  /** 是否对用户选择做了调整（供设置页提示「已自动收敛」）。 */
+  adjusted: boolean
+  /** 用户请求的原始值（未调整时与 `main` 相同）。 */
+  requested: string
+}
+
+/** 主色必须达到的对比度（WCAG SC 1.4.3 正文档）。 */
+export const PRIMARY_MIN_CONTRAST = 4.5
+
+/**
+ * 主色**对比度收敛**（R02 = ③「都做」的 ② 那一半）。
+ *
+ * 为什么必须在 `buildTheme` 里做，而不是只在设置页提示
+ * ---------------------------------------------------
+ * 对比度门禁 `check-contrast.mjs` 校验的是 **token 配对表**，
+ * 而真正生效的主色来自**运行期存值**（`outputs/webui/settings.json`）——
+ * 门禁**测不到它**（规范 §5.2 明确把这条列为「已知覆盖盲区」）。
+ * 实测后果：本机存着旧默认值 `#3370FF`，白字仅 **4.28:1**，
+ * 全站 **11 类元素**不达 AA，而门禁一路报通过。
+ *
+ * 收敛规则（**按模式分别收敛**，因为主色在两个模式里承担的角色不同）
+ * ------------------------------------------------------------------
+ * - **浅色**：主色既要能承白字（filled 按钮），又要能压在白色/页面底上作文字。
+ *   页面底 `#F5F6F8` 比纯白更暗，是**更紧的那条约束** → 朝黑混合至达标。
+ * - **深色**：主色主要作**文字/图标**压在 `#121212` / `#1E1E1E` 上。
+ *   `#1E1E1E` 更亮，是更紧的约束 → 朝白混合至达标。
+ *   随之 `contrastText` 必须转为**深色**（浅底深字），否则白字压浅主色同样不达标。
+ *
+ * 两个已知值的行为（实测）：
+ * - `#2F63EA`（token 的「文字安全值」，压页面底 4.74:1）→ **不调整**，原样使用；
+ * - `#3370FF`（旧默认值，压页面底 3.96:1）→ 自动收敛到 ≈`#2F67EB`（与 token 值几乎重合）。
+ *
+ * @param raw 用户保存的主色（非法值回退到 `tokens.primary`）。
+ * @param dark 是否深色模式。
+ */
+export function resolvePrimary(raw: string | undefined, dark: boolean): ResolvedPrimary {
+  const requested = raw && hexToRgb(raw) ? raw : tokens.primary
+  // 更紧的那条约束：浅色取页面底（比纯白暗），深色取纸面（比 #121212 亮）。
+  const against = dark ? tokens.paperDark : tokens.bg
+  const toward = dark ? '#FFFFFF' : '#000000'
+
+  let main = requested
+  let adjusted = false
+  for (let i = 0; i < 100 && contrastRatio(main, against) < PRIMARY_MIN_CONTRAST; i += 1) {
+    main = mixToward(main, toward, 0.02)
+    adjusted = true
+  }
+
+  // 填充上的文字：能压白字就用白，否则用深色（与语义色在深色模式下的处理一致）。
+  const contrastText = contrastRatio('#FFFFFF', main) >= PRIMARY_MIN_CONTRAST ? ON_SOLID_FILL : ON_VIVID_FILL
+
+  return { main, contrastText, adjusted, requested }
+}
+
 /** 读取已保存偏好；历史非法主色安全回退，避免主题构建导致白屏。 */
 export function buildTheme(preferences?: { primary?: string; dark?: boolean }) {
   const dark = preferences?.dark === true
-  const color = preferences?.primary ?? ''
-  const primary = /^#[0-9a-fA-F]{6}$/.test(color) ? color : tokens.primary
+  // ⚠️ 不再「合法 hex 就原样采用」——那正是 F2 的根因（见 `resolvePrimary` 注释）。
+  const primary = resolvePrimary(preferences?.primary, dark)
   /**
    * 语义色 `.main` 按模式取「文字安全值」：
    * - 浅色模式取深色值（白底/浅底上作文字/图标/描边达标）；
@@ -292,11 +426,13 @@ export function buildTheme(preferences?: { primary?: string; dark?: boolean }) {
   return createTheme({
     palette: {
       mode: dark ? 'dark' : 'light',
-      primary: { main: primary, contrastText: ON_SOLID_FILL },
+      primary: { main: primary.main, contrastText: primary.contrastText },
       success: { main: semantic.success, contrastText: dark ? ON_VIVID_FILL : ON_SOLID_FILL },
       warning: { main: semantic.warning, contrastText: dark ? ON_VIVID_FILL : ON_SOLID_FILL },
       error: { main: semantic.error, contrastText: dark ? ON_VIVID_FILL : ON_SOLID_FILL },
-      background: dark ? { default: '#121212', paper: '#1E1E1E' } : { default: tokens.bg, paper: '#FFFFFF' },
+      background: dark
+        ? { default: tokens.bgDark, paper: tokens.paperDark }
+        : { default: tokens.bg, paper: '#FFFFFF' },
     },
     /**
      * M3 tonal elevation：只减淡 level-1 阴影（默认 Paper/Card 的高度）。
@@ -348,12 +484,16 @@ export function buildTheme(preferences?: { primary?: string; dark?: boolean }) {
     typography: {
       fontFamily:
         "-apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', Roboto, Arial, sans-serif",
-      h1: { fontWeight: 600, letterSpacing: '-0.015em' },
-      h2: { fontWeight: 600, letterSpacing: '-0.01em' },
-      h3: { fontWeight: 600, letterSpacing: '-0.01em' },
-      h4: { fontWeight: 600 },
-      h5: { fontWeight: 600 },
-      h6: { fontWeight: 600 },
+      // ⚠️ 2026-10-13（R04 = 全量回退）：标题由 **600 回退到 500**。
+      //    规范 §2.2 明确「**只有 400 / 500 两档**，禁止 600/700（中文粗体在 1366 屏上糊）」。
+      //    代价：标题与正文的字重差变小、层次感变弱——这是**用户已知并选择**的取舍（R04=①）。
+      //    层级改由**字号 + 位置 + 留白**承担（规范 §1.3「平面优先：用位置与留白表达重要」）。
+      h1: { fontWeight: 500, letterSpacing: '-0.015em' },
+      h2: { fontWeight: 500, letterSpacing: '-0.01em' },
+      h3: { fontWeight: 500, letterSpacing: '-0.01em' },
+      h4: { fontWeight: 500 },
+      h5: { fontWeight: 500 },
+      h6: { fontWeight: 500 },
       subtitle1: { fontWeight: 500, lineHeight: 1.5 },
       subtitle2: { fontWeight: 500, lineHeight: 1.5 },
       body1: { lineHeight: 1.7 },
@@ -369,17 +509,18 @@ export function buildTheme(preferences?: { primary?: string; dark?: boolean }) {
         defaultProps: { disableElevation: true },
         styleOverrides: {
           /**
-           * **M3 标志性形状：胶囊（full = 999px）**。这是 Material 3 与现代 Google
-           * 产品（Gmail / Drive / Gemini）最可辨识的按钮语言，视觉收益最大的一条。
+           * ⚠️ 2026-10-13（R03 = 服从规范）：**由 M3 胶囊（999）改回 `radius.md`（8）**。
            *
-           * 同时 `textTransform: 'none'`（见 typography.button 注释）。
+           * 之前取 999 是按 Material 3 的胶囊按钮做的（我当时认为这是「最可辨识的 M3 语言」）；
+           * 但规范 §2.4 把按钮明确归到 `radius.md = 8`，且规范声明自己是唯一权威。
+           * **实现让位**——保留的只有 `textTransform: 'none'`（规范 §1.3「不用全大写」）。
            *
-           * 加过渡：hover 时的底色/描边变化走 M3 短时长，不再瞬变。
+           * 加过渡：hover 时的底色/描边变化走短时长，不再瞬变。
            *
-           * ⚠️ 焦点环是**硬约束**（见下），胶囊形状不得影响它。
+           * ⚠️ 焦点环是**硬约束**（见下），形状改动不得影响它。
            */
           root: ({ theme }) => ({
-            borderRadius: 999,
+            borderRadius: RADIUS_MD,
             transition: theme.transitions.create(
               ['background-color', 'border-color', 'box-shadow', 'color'],
               { duration: theme.transitions.duration.short, easing: theme.transitions.easing.standard },
@@ -397,7 +538,7 @@ export function buildTheme(preferences?: { primary?: string; dark?: boolean }) {
         },
       },
       /**
-       * M3 卡片（tonal elevation 的「可辨识边界」落点）：
+       * 卡片：圆角取 `radius.lg`（10，规范 §2.4）。
        * outlined 卡本就是「1px 描边、无高度」（主流卡片如 QuestionCard 即是），不动；
        * 默认（elevation）卡片补 1px 描边，让它在减淡阴影后仍与页面底色有明确分界。
        * 描边用 `palette.divider`（浅/深模式各取合适的半透明灰），不引入新颜色、不影响对比度门禁。
@@ -405,8 +546,7 @@ export function buildTheme(preferences?: { primary?: string; dark?: boolean }) {
       MuiCard: {
         styleOverrides: {
           /**
-           * M3 卡片圆角用 **medium-plus（16dp）**——比基础 12 更大一级，卡片作为
-           * 「内容容器」理应比控件更圆润，这是现代卡片式设计（Notion/Linear/Gmail）的共识。
+           * ⚠️ 2026-10-13（R03）：圆角 **16 → 10**（规范 `radius.lg`）。
            * 加过渡：hover 时的描边/阴影变化不再瞬变。
            */
           root: ({
@@ -416,7 +556,7 @@ export function buildTheme(preferences?: { primary?: string; dark?: boolean }) {
             ownerState: { variant?: string }
             theme: Theme
           }) => ({
-            borderRadius: 16,
+            borderRadius: RADIUS_LG,
             transition: theme.transitions.create(['border-color', 'box-shadow'], {
               duration: theme.transitions.duration.short,
               easing: theme.transitions.easing.standard,
@@ -428,23 +568,24 @@ export function buildTheme(preferences?: { primary?: string; dark?: boolean }) {
         },
       },
       /**
-       * 其余部件的圆角统一到 M3 档位，避免「卡片很圆、输入框很方」的割裂感：
-       * Paper.rounded 16 / Dialog 24（M3 extra-large 档）/ Alert 与输入框 12 / Tooltip 8。
+       * 其余部件圆角**统一到规范 §2.4 的四档**（不得出现第五种）：
+       * Paper 10（lg）/ Dialog 10（lg）/ Alert 10（lg）/ 输入框 8（md）/ Tooltip 8（md）。
+       * ⚠️ 2026-10-13（R03）：Dialog 24→10、Alert 12→10、OutlinedInput 12→8、Paper.rounded 16→10。
        */
       MuiPaper: {
         styleOverrides: {
           root: { backgroundImage: 'none' },
-          rounded: { borderRadius: 16 },
+          rounded: { borderRadius: RADIUS_LG },
         },
       },
-      MuiDialog: { styleOverrides: { paper: { borderRadius: 24 } } },
-      MuiAlert: { styleOverrides: { root: { borderRadius: 12 } } },
-      MuiOutlinedInput: { styleOverrides: { root: { borderRadius: 12 } } },
+      MuiDialog: { styleOverrides: { paper: { borderRadius: RADIUS_LG } } },
+      MuiAlert: { styleOverrides: { root: { borderRadius: RADIUS_LG } } },
+      MuiOutlinedInput: { styleOverrides: { root: { borderRadius: RADIUS_MD } } },
       MuiTooltip: {
-        styleOverrides: { tooltip: { borderRadius: 8, fontSize: '0.75rem', padding: '6px 10px' } },
+        styleOverrides: { tooltip: { borderRadius: RADIUS_MD, fontSize: '0.75rem', padding: '6px 10px' } },
       },
-      /** 表头加粗：扫描表格时先看到列含义（纯字重，无新增底色，不影响对比度）。 */
-      MuiTableCell: { styleOverrides: { head: { fontWeight: 600 } } },
+      /** 表头加字重：规范 §2.2 只允许 400/500，故用 500（原 600 已回退）。 */
+      MuiTableCell: { styleOverrides: { head: { fontWeight: 500 } } },
       /**
        * M3 **状态层（state layer）**：用「内容色」按 8%（hover）/ 12%（focus / pressed）叠加，
        * 取代 M2 的 `action.hover`（仅 4%）。用 `text.primary` 而非主色：M3 的导航/列表项状态层
@@ -457,8 +598,9 @@ export function buildTheme(preferences?: { primary?: string; dark?: boolean }) {
              * 导航项胶囊化 + 左右留边（截图里的标志性做法）：
              * 选中项是一枚**圆角胶囊**，而不是通栏色块——通栏会让侧栏显得「糊成一片」。
              * `mx` 留出 8px 让胶囊与侧栏边缘脱开，视觉更透气。
+             * ⚠️ 取 `radius.lg`（10）——规范 §2.4 未给导航项单列档位，按「卡片/Paper」档处理。
              */
-            borderRadius: 10,
+            borderRadius: RADIUS_LG,
             marginLeft: 8,
             marginRight: 8,
             width: 'calc(100% - 16px)',
@@ -483,7 +625,8 @@ export function buildTheme(preferences?: { primary?: string; dark?: boolean }) {
                 top: '20%',
                 bottom: '20%',
                 width: 3,
-                borderRadius: 2,
+                // 3px 宽的竖条 → 用 pill 表达「全圆角」（渲染与原先的 2×shape 等价，但档位明确）
+                borderRadius: RADIUS_PILL,
                 backgroundColor: theme.palette.primary.main,
               },
             },
@@ -558,7 +701,8 @@ export function buildTheme(preferences?: { primary?: string; dark?: boolean }) {
         styleOverrides: {
           root: {
             fontSize: '0.6875rem',
-            fontWeight: 600,
+            // ⚠️ R04：600 → 500（规范 §2.2 只允许 400/500）
+            fontWeight: 500,
             letterSpacing: '0.06em',
             textTransform: 'uppercase',
             lineHeight: 2.2,

@@ -309,6 +309,9 @@ export function BlockView({ block, model }: BlockViewProps): ReactNode {
         style={{
           fontFamily: '"黑体", "SimHei", "Heiti SC", sans-serif',
           fontSize: model.titleFontPx,
+          // ⚠️ 这里的 700 是**纸面排版**（镜像 DOCX 里的黑体加粗），**不是界面字重**。
+          //    设计规范 §7 明确「导出件本身的版式属 bank/export.py 模板规格，本规范未覆盖」，
+          //    故 R04「字重只留 400/500」**不适用于此**。改这里会让预览与导出件不一致。
           fontWeight: 700,
           textAlign: 'center',
         }}
@@ -340,6 +343,7 @@ export function BlockView({ block, model }: BlockViewProps): ReactNode {
         style={{
           fontFamily: '"宋体", "SimSun", serif',
           fontSize: model.sectionFontPx,
+          // ⚠️ 同上：纸面（大题标题加粗），不属界面字重规范范围。
           fontWeight: 700,
         }}
       >

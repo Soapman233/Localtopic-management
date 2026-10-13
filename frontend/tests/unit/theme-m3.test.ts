@@ -87,9 +87,12 @@ describe('M3 主题升级', () => {
     expect(rule.outlineOffset).toBe(2)
   })
 
-  it('M3 形状：基础圆角为 medium(12) 并派生到 MUI shape', () => {
-    expect(tokens.radius).toBe(12)
-    expect(theme.shape.borderRadius).toBe(12)
+  it('圆角：基础圆角为 10（规范 §2.4 radius.lg）并派生到 MUI shape', () => {
+    // ⚠️ 2026-10-13（R03 = 服从规范）：**由 12 改为 10**。
+    // 12 是按 Material 3 的 medium 档取的；而《设计语言与人机交互规范》§2.4
+    // 把「卡片 / Paper」定为 `radius.lg = 10`，且规范声明自己是唯一权威 —— 实现让位。
+    expect(tokens.radius).toBe(10)
+    expect(theme.shape.borderRadius).toBe(10)
   })
 
   it('M3 tonal elevation：level-1 阴影比 MUI 默认更淡，其余档位不变', () => {

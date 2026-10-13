@@ -84,7 +84,7 @@ function StatCard({
         {label}
       </Typography>
       {/* P5-3：总览卡的「数值」是数据而非标题——去掉 variant=h5 带来的伪 <h5>，避免污染标题大纲。 */}
-      <Typography variant="h5" fontWeight={700} component="div" sx={{ color: `${accent}.main` }}>
+      <Typography variant="h5" fontWeight={500} component="div" sx={{ color: `${accent}.main` }}>
         {value}
       </Typography>
       {hint && (
@@ -279,7 +279,7 @@ export default function StatsPage() {
               <Typography variant="body2" color="text.secondary">
                 已处理 {s.review?.resolved ?? 0} / 共 {reviewTotal}
               </Typography>
-              <Typography variant="body2" fontWeight={600}>
+              <Typography variant="body2" fontWeight={500}>
                 {reviewPct}%
               </Typography>
             </Stack>

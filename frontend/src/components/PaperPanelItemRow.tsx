@@ -102,7 +102,7 @@ export function SortableItemRow({
       </Tooltip>
       <Box sx={{ flex: 1, minWidth: 0 }}>
         <Stack direction="row" spacing={0.75} alignItems="center" flexWrap="wrap" useFlexGap>
-          <Typography variant="caption" fontWeight={600} color="primary">
+          <Typography variant="caption" fontWeight={500} color="primary">
             {seq}.
           </Typography>
           <Typography variant="body2" sx={{ flex: 1, minWidth: 80 }} noWrap title={preview}>

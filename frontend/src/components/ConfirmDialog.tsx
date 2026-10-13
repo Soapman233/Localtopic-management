@@ -69,7 +69,7 @@ export function ConfirmDialog({
               <Typography variant="body2" color="text.secondary">
                 {impactPrefix}
               </Typography>
-              <Typography variant="h4" component="div" fontWeight={700} color="warning.dark">
+              <Typography variant="h4" component="div" fontWeight={500} color="warning.dark">
                 {impactCount.toLocaleString('zh-CN')}
               </Typography>
               <Typography variant="body2" color="text.secondary">

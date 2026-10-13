@@ -15,7 +15,6 @@ import {
   Box,
   Button,
   Chip,
-  Collapse,
   Dialog,
   DialogActions,
   DialogContent,
@@ -29,7 +28,7 @@ import {
 } from '@mui/material'
 import ArrowBackIcon from '@mui/icons-material/ArrowBack'
 import EditIcon from '@mui/icons-material/Edit'
-import ExpandMoreIcon from '@mui/icons-material/ExpandMore'
+import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined'
 import { useNavigate, useParams } from 'react-router-dom'
 import {
   getQuestion,
@@ -46,6 +45,7 @@ import { VersionHistory } from '../components/VersionHistory'
 import { ErrorState } from '../components/ErrorState'
 import { LoadingState } from '../components/LoadingState'
 import { PageHeader } from '../components/PageHeader'
+import { SlideOver } from '../components/SlideOver'
 import { ErrorCode, errorCodeOf, errorDataOf } from '../api/errors'
 import { qk } from '../api/queryKeys'
 import { describeMentionScope } from '../lib/glossary'
@@ -98,9 +98,9 @@ export default function QuestionDetailPage() {
   const [level, setLevel] = useState<string>('中')
   const [saveMsg, setSaveMsg] = useState<string | null>(null)
   // B2 §3.4：只读上下文（来源 / 公式与来源定位 / 历史）收进右栏，默认展开、可折叠。
-  const [contextOpen, setContextOpen] = useState(true)
-  const [moreOpen, setMoreOpen] = useState(false)
-  const [historyOpen, setHistoryOpen] = useState(false)
+  // R05：右栏内容改抽屉后，`contextOpen` 即抽屉开合；原先「更多信息 / 版本历史」
+  // 两级折叠的 state 已无用（抽屉自身即展开态），一并删除。
+  const [contextOpen, setContextOpen] = useState(false)
 
   const qQuery = useQuery({
     queryKey: qk.question(questionId),
@@ -204,7 +204,7 @@ export default function QuestionDetailPage() {
                 color="warning"
                 variant="outlined"
                 label={`公式异常 ${abnormalFormulaCount}`}
-                title="存在非 OK 状态的公式，展开右栏「更多信息」查看详情"
+                title="存在非 OK 状态的公式，点页头「来源 / 历史」查看详情"
               />
             )}
           </>
@@ -213,6 +213,10 @@ export default function QuestionDetailPage() {
           <>
             <Button startIcon={<ArrowBackIcon />} onClick={() => navigate(-1)}>
               返回
+            </Button>
+            {/* R05：右栏改为抽屉后，必须有一个**显式入口**，否则来源/历史无处可点。 */}
+            <Button startIcon={<InfoOutlinedIcon />} onClick={() => setContextOpen(true)}>
+              来源 / 历史
             </Button>
             {!editing && (
               <Button variant="contained" startIcon={<EditIcon />} onClick={() => setEditing(true)}>
@@ -229,17 +233,10 @@ export default function QuestionDetailPage() {
         </Alert>
       )}
 
-      {/* 正文单栏 + 右侧上下文面板：窄屏（<md）自动上下堆叠。 */}
-      <Box
-        sx={{
-          display: 'flex',
-          gap: { xs: 2, md: 3 },
-          flexDirection: { xs: 'column', md: 'row' },
-          alignItems: { xs: 'stretch', md: 'flex-start' },
-        }}
-      >
-        {/* 正文（可读单栏）：题干 / 图片 / 答案 / 解析 / 知识点标签。 */}
-        <Box sx={{ flex: 1, minWidth: 0 }}>
+      {/* 正文：**单栏**。R05（= ③）把原来的「正文 + 右侧上下文面板」双栏改成单栏——
+          规范 §4.1 要求「阅读型」页面内容居中、`maxWidth: 720`，双栏装不下 720。
+          右栏内容（来源 / 公式 / 版本历史）收进**抽屉**，由页头「来源 / 历史」打开。 */}
+      <Box sx={{ minWidth: 0 }}>
           <Paper variant="outlined" sx={{ p: 2.5 }}>
             {editing ? (
               <QuestionEditor
@@ -325,99 +322,57 @@ export default function QuestionDetailPage() {
           </Paper>
         </Box>
 
-        {/* 右侧上下文面板（对齐参考截图右栏）：来源文件 / 公式与来源定位 / 版本历史。
-            可整体折叠；窄屏自动落到正文下方堆叠，信息不隐藏。 */}
-        <Box component="aside" aria-label="来源与历史" sx={{ width: { xs: '100%', md: 320 }, flexShrink: 0 }}>
-          <Paper variant="outlined" sx={{ p: 2 }}>
-            <Button
-              onClick={() => setContextOpen((v) => !v)}
-              aria-expanded={contextOpen}
-              aria-controls="question-context"
-              endIcon={
-                <ExpandMoreIcon
-                  sx={{ transform: contextOpen ? 'rotate(180deg)' : 'none', transition: 'transform .15s' }}
-                />
-              }
-              sx={{ textTransform: 'none', color: 'text.primary' }}
-            >
-              来源 / 历史
-            </Button>
-            <Collapse in={contextOpen} timeout="auto">
-              <Box id="question-context" sx={{ pt: 1 }}>
-                {/* 来源文件：默认只显示文件名（完整定位见下方「更多信息」）。 */}
-                <Typography variant="subtitle2" component="h2" color="text.secondary" gutterBottom>
-                  来源文件
-                </Typography>
-                <Typography variant="body2" color="text.secondary" sx={{ mb: 1, wordBreak: 'break-word' }}>
-                  {q.src_file || '—'}
-                </Typography>
+      {/* R05：右栏内容收进**抽屉**。
+          抽屉本身就是「已展开」，故不再套一层「更多信息」折叠——
+          原先是「点开右栏 → 再点开更多信息」两级折叠，现在一级到位。 */}
+      <SlideOver
+        open={contextOpen}
+        onClose={() => setContextOpen(false)}
+        title="来源 / 历史"
+        labelledById="question-context-title"
+        width={420}
+      >
+        <Typography variant="subtitle2" component="h3" color="text.secondary" gutterBottom>
+          来源文件
+        </Typography>
+        <Typography variant="body2" color="text.secondary" sx={{ mb: 1, wordBreak: 'break-word' }}>
+          {q.src_file || '—'}
+        </Typography>
 
-                <Divider sx={{ my: 1.5 }} />
+        <Divider sx={{ my: 1.5 }} />
 
-                <Button
-                  onClick={() => setMoreOpen((v) => !v)}
-                  aria-expanded={moreOpen}
-                  aria-controls="question-more-info"
-                  endIcon={
-                    <ExpandMoreIcon
-                      sx={{ transform: moreOpen ? 'rotate(180deg)' : 'none', transition: 'transform .15s' }}
-                    />
-                  }
-                  sx={{ color: 'text.secondary', textTransform: 'none' }}
-                >
-                  更多信息（公式、来源定位）
-                </Button>
-                <Collapse in={moreOpen} timeout="auto" unmountOnExit>
-                  <Box id="question-more-info" sx={{ pt: 1.5 }}>
-                    <Typography variant="subtitle2" component="h3" color="text.secondary" gutterBottom>
-                      公式列表（{(q.formulas ?? []).length} 条）
-                    </Typography>
-                    {(q.formulas ?? []).length === 0 ? (
-                      <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-                        本题无公式。
-                      </Typography>
-                    ) : (
-                      <Stack spacing={1} sx={{ mb: 2 }}>
-                        {q.formulas!.map((f) => (
-                          <FormulaRow key={f.fid} formula={f} />
-                        ))}
-                      </Stack>
-                    )}
-                    <Typography variant="subtitle2" component="h3" color="text.secondary" gutterBottom>
-                      来源定位
-                    </Typography>
-                    <Typography variant="body2" color="text.secondary">
-                      来源文件：{q.src_file || '—'}；学段 {q.src_stage || '待补充'}；学科 {q.src_subject || '待补充'}；
-                      年级 {q.src_grade || '待补充'}；教材 {q.src_textbook || '待补充'}；章节 {q.chapter || '待补充'}
-                    </Typography>
-                  </Box>
-                </Collapse>
+        <Typography variant="subtitle2" component="h3" color="text.secondary" gutterBottom>
+          更多信息（公式、来源定位）
+        </Typography>
+        <Typography variant="subtitle2" component="h4" color="text.secondary" sx={{ mt: 1 }} gutterBottom>
+          公式列表（{(q.formulas ?? []).length} 条）
+        </Typography>
+        {(q.formulas ?? []).length === 0 ? (
+          <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+            本题无公式。
+          </Typography>
+        ) : (
+          <Stack spacing={1} sx={{ mb: 2 }}>
+            {q.formulas!.map((f) => (
+              <FormulaRow key={f.fid} formula={f} />
+            ))}
+          </Stack>
+        )}
+        <Typography variant="subtitle2" component="h4" color="text.secondary" gutterBottom>
+          来源定位
+        </Typography>
+        <Typography variant="body2" color="text.secondary">
+          来源文件：{q.src_file || '—'}；学段 {q.src_stage || '待补充'}；学科 {q.src_subject || '待补充'}；
+          年级 {q.src_grade || '待补充'}；教材 {q.src_textbook || '待补充'}；章节 {q.chapter || '待补充'}
+        </Typography>
 
-                <Divider sx={{ my: 1.5 }} />
+        <Divider sx={{ my: 1.5 }} />
 
-                <Button
-                  onClick={() => setHistoryOpen((v) => !v)}
-                  aria-expanded={historyOpen}
-                  aria-controls="question-history"
-                  endIcon={
-                    <ExpandMoreIcon
-                      sx={{ transform: historyOpen ? 'rotate(180deg)' : 'none', transition: 'transform .15s' }}
-                    />
-                  }
-                  sx={{ textTransform: 'none', color: 'text.primary' }}
-                >
-                  版本历史（只读）
-                </Button>
-                <Collapse in={historyOpen} timeout="auto" unmountOnExit>
-                  <Box id="question-history" sx={{ pt: 1 }}>
-                    <VersionHistory questionId={q.id} versions={q.versions} />
-                  </Box>
-                </Collapse>
-              </Box>
-            </Collapse>
-          </Paper>
-        </Box>
-      </Box>
+        <Typography variant="subtitle2" component="h3" color="text.secondary" gutterBottom>
+          版本历史（只读）
+        </Typography>
+        <VersionHistory questionId={q.id} versions={q.versions} />
+      </SlideOver>
 
       {/* 难度标注 */}
       <Dialog open={annotateOpen} onClose={() => setAnnotateOpen(false)}>

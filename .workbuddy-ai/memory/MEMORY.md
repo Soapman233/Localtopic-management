@@ -130,14 +130,25 @@
 
 ## 10. 当前基线与常用命令
 - 后端 **543 项**（540 通过 / 2 既有失败 / 1 skip）。**2 个既有失败**：`test_edition.TestAuthMiddleware`（500≠200，环境相关，已反证与近期改动无关）。
-- 前端：tsc 0 错误；vitest **44 文件 / 339 测试**全过；对比度 65/65。
-- 截图验收：浅色/深色各 20 页，**横向溢出 0/20**。打包版 `verify_portable_detached.py` 7/7。
-- 打包产物 `dist/题库/`：**65.5 MB**（含 cryptography 的 Rust 扩展 9.4MB + Python 运行时）。
+- 前端：tsc 0 错误；`npm test` **31 node:test + 46 文件 / 353 vitest**；对比度 **65/65**；硬编码颜色 **0 违规（3 豁免）**。
+- 截图验收：**1366 / 1024 / 390 三视口** × 浅色/深色 = 60 页，**横向溢出 0/60**。
+- 打包产物 `dist/题库/`：**65.5 MB**。入口 chunk **46,781 B**（规范预算 ≤30 KB，**仍超标**；但首屏总量与请求数优于 main）。
   **判断产物新鲜度的可靠方法**：比对 `dist/题库/_internal/webui/static/assets/index-*.js` 的 hash 与源码侧是否一致。
   ⚠️ **重新打包前必须结束占用 `dist/题库` 的进程**（`netstat -ano | grep :8720`），
   否则 `mv`/`rm` 报「资源被占用」、PyInstaller `--clean` 被沙箱删除守卫拦截 → **静默打包失败、旧 exe 不被替换**。
 - `outputs/bank.db` sha256 `6905955734953c6c…`（64,815,104B）。**导出是只读操作**，导出后 hash/mtime 不变。
   ⚠️ 本 worktree 的 `outputs/bank.db` 是 **0 字节占位**（真库在 `D:/Open-source project/Localtopic-management/outputs/bank.db`）。
+
+### 10.1 设计规范落地口径（2026-10-13 R02–R05 拍板后）
+
+| 维度 | 结论 |
+|---|---|
+| 落地基线 | **本线**（`workbuddy/main-14dd9452`）；两份规范已逐字节导入 `deliverables/` |
+| 圆角（R03=①） | **服从规范**：按钮 8 / 卡片·Paper·Dialog·Alert 10 / 输入框 8 / Chip 8；`tokens.radius = 10`。**规范里没有 16、24** |
+| 字重（R04=①） | **全量回退 400/500**（19 处 600/700 → 500）。**例外**：`livePreview/blocks.tsx` 的纸面 700（导出件版式，规范 §7 明确未覆盖，已加保护注释） |
+| 限宽（R05=③） | 详情 **单栏 720** + 右栏内容进 `SlideOver` 抽屉；设置/导入 **1100（未分类，待定）**；工具类全宽 |
+| 主色（R02=③） | `resolvePrimary()` **按模式收敛**（浅色朝黑压页面底、深色朝白压纸面），并保证 `contrastText` 同步；设置页显示实测比值 + 一键推荐。**门禁测不到运行期存值**是已知盲区，这条是补丁 |
+| 已知超标 | 入口 46,781 B > 规范 30 KB（R06 待拍板：是否改看首屏总量+请求数） |
 - API：统一 `{code,data,message}`。服务地址 `http://127.0.0.1:8720`（仅本机）。
 - 命令：`python -m webui`（启动）；`python -m unittest discover -s tests`（全量）；
   `python -m bank.cli {init,import,stats,search,paper,backup,restore,...}`。

@@ -66,7 +66,7 @@ export function SectionCard({
           <Typography
             variant="subtitle1"
             component={level === 'section' ? 'h2' : 'h3'}
-            sx={{ fontWeight: 600, lineHeight: 1.5 }}
+            sx={{ fontWeight: 500, lineHeight: 1.5 }}
           >
             {title}
           </Typography>

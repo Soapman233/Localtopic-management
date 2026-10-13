@@ -160,7 +160,7 @@ function SourceDetailDialog({
           )}
           {detail && src && (
             <Box>
-              <Typography variant="subtitle1" component="h3" fontWeight={600} gutterBottom>
+              <Typography variant="subtitle1" component="h3" fontWeight={500} gutterBottom>
                 {src.file_name}
               </Typography>
               <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap sx={{ mb: 1 }}>
@@ -399,7 +399,7 @@ export default function SourcesPage() {
                 `nowrap` 让表头单行显示（窄屏下由 TableContainer 内部横向滚动承载）。
                 sx 命中 `& .MuiTableCell-head`，特异性高于 stickyHeader 的 `.MuiTableCell-stickyHeader`，
                 可覆盖其 `background.paper`。 */}
-            <TableHead sx={{ '& .MuiTableCell-head': { bgcolor: 'action.hover', fontWeight: 600, whiteSpace: 'nowrap' } }}>
+            <TableHead sx={{ '& .MuiTableCell-head': { bgcolor: 'action.hover', fontWeight: 500, whiteSpace: 'nowrap' } }}>
               <TableRow>
                 <TableCell>文件名</TableCell>
                 <TableCell>学段/学科</TableCell>

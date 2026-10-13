@@ -7,7 +7,7 @@
  * 3. 右侧「来源 / 历史」上下文面板存在，且来源文件信息**不隐藏**。
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import { screen } from '@testing-library/react'
+import { fireEvent, screen, within } from '@testing-library/react'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import QuestionDetailPage from '../../../src/pages/QuestionDetailPage'
 import type { Question } from '../../../src/api/types'
@@ -55,10 +55,18 @@ describe('QuestionDetailPage 页头与上下文面板', () => {
     expect(nav.textContent).toContain('题 9')
   })
 
-  it('右侧「来源 / 历史」面板存在，来源文件信息不隐藏', async () => {
+  it('「来源 / 历史」收进抽屉：默认关闭，点页头入口后可见来源文件信息', async () => {
     vi.stubGlobal('fetch', vi.fn(async () => jsonResponse(questionFixture)))
     renderDetail()
-    expect(await screen.findByRole('complementary', { name: '来源与历史' })).toBeInTheDocument()
-    expect(screen.getByText('八年级物理下册期末卷.docx')).toBeInTheDocument()
+
+    // R05（= ③）：右栏由**内联面板**改为**抽屉**——默认关闭，
+    // 信息不隐藏，但必须有一个显式入口（否则来源/历史无处可点）。
+    expect(screen.queryByRole('dialog', { name: '来源 / 历史' })).toBeNull()
+
+    fireEvent.click(await screen.findByRole('button', { name: /来源 \/ 历史/ }))
+
+    const drawer = await screen.findByRole('dialog', { name: '来源 / 历史' })
+    expect(drawer).toBeInTheDocument()
+    expect(within(drawer).getByText('八年级物理下册期末卷.docx')).toBeInTheDocument()
   })
 })

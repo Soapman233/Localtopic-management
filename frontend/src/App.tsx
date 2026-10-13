@@ -200,7 +200,7 @@ const GROUP_SUBHEADER_SX = {
   bgcolor: 'transparent',
   color: 'text.secondary',
   fontSize: 12,
-  fontWeight: 600,
+  fontWeight: 500,
   lineHeight: 2,
   mt: 1,
 } as const

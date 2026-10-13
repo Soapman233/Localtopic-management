@@ -49,7 +49,7 @@ export function ProgressStages({
     <Box role="status" aria-live="polite" sx={{ width: '100%' }}>
       <Stack direction="row" spacing={1} alignItems="baseline" flexWrap="wrap" useFlexGap>
         {title ? (
-          <Typography variant="body2" fontWeight={600}>
+          <Typography variant="body2" fontWeight={500}>
             {title}
           </Typography>
         ) : null}

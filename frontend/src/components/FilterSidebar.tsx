@@ -140,7 +140,7 @@ export function FilterSidebar({
         {/* 答案 / 解析 / 公式 快捷开关 */}
         <Accordion defaultExpanded disableGutters elevation={0}>
           <AccordionSummary expandIcon={<ExpandMoreIcon />}>
-            <Typography variant="body2" fontWeight={600}>状态</Typography>
+            <Typography variant="body2" fontWeight={500}>状态</Typography>
           </AccordionSummary>
           <AccordionDetails sx={{ pt: 0 }}>
             <Stack spacing={0.5}>
@@ -209,7 +209,7 @@ export function FilterSidebar({
         <Accordion defaultExpanded disableGutters elevation={0}>
           <AccordionSummary expandIcon={<ExpandMoreIcon />}>
             <Stack direction="row" spacing={0.5} alignItems="center" sx={{ minWidth: 0 }}>
-              <Typography variant="body2" fontWeight={600}>知识点（搜索线索）</Typography>
+              <Typography variant="body2" fontWeight={500}>知识点（搜索线索）</Typography>
               {/* B2 §3.3：严格模式状态移到知识点筛选旁（不再占据页面顶部提示条）。 */}
               {strictKp && (
                 <Chip
@@ -257,7 +257,7 @@ export function FilterSidebar({
               defaultExpanded={usable} disableGutters elevation={0}>
               <AccordionSummary expandIcon={<ExpandMoreIcon />}>
                 <Stack direction="row" spacing={0.5} alignItems="center" sx={{ minWidth: 0 }}>
-                  <Typography variant="body2" fontWeight={600}>
+                  <Typography variant="body2" fontWeight={500}>
                     {dim.label}
                   </Typography>
                   <CoverageChip bucket={cov} label={dim.label} />

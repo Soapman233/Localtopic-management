@@ -64,7 +64,7 @@ function ImportResultPanel({ result, onReset }: { result: ImportJobResult; onRes
     <Paper variant="outlined" sx={{ p: 2, mt: 2 }}>
       <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 1 }}>
         <CheckCircleIcon color="success" />
-        <Typography variant="subtitle1" component="h2" fontWeight={600}>
+        <Typography variant="subtitle1" component="h2" fontWeight={500}>
           导入完成
         </Typography>
       </Stack>
@@ -232,7 +232,7 @@ export default function ImportPage() {
             }}
           >
             <CloudUploadIcon sx={{ fontSize: 44, color: 'text.disabled' }} />
-            <Typography variant="subtitle1" component="div" fontWeight={600} sx={{ mt: 1 }}>
+            <Typography variant="subtitle1" component="div" fontWeight={500} sx={{ mt: 1 }}>
               把试卷文件拖到这里，或点击选择
             </Typography>
             <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
