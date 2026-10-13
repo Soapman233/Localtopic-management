@@ -5,7 +5,15 @@
 import { useEffect, useLayoutEffect, useRef, type ReactNode } from 'react'
 import { MOTION_QUERY, useReducedMotion } from '../hooks/useReducedMotion'
 import { canAnimateList, type ListSnapshot } from '../lib/listMotion'
-type Controller = { enable: () => void; disable: () => void; isEnabled: () => boolean }
+type Controller = {
+  enable: () => void
+  disable: () => void
+  isEnabled: () => boolean
+  /** 断开观察器 / 定时器并注销父节点集合；由库暴露，卸载时必须调用。 */
+  destroy?: () => void
+}
+/** AutoAnimate 给「待移除元素」打的私有标记（见已安装版本 index.mjs 的 remove()）。 */
+const AA_DEL = '__aa_del'
 export function AnimatedList({ children, scope, stable, ids, toolbar = false, testId }: ListSnapshot & {
   children: ReactNode; toolbar?: boolean; testId?: string
 }) {
@@ -14,11 +22,18 @@ export function AnimatedList({ children, scope, stable, ids, toolbar = false, te
   const previous = useRef<ListSnapshot>()
   const reduced = useReducedMotion()
   const stop = () => {
+    const el = root.current
     controller.current?.disable()
-    // disable只阻止未来动画；即时取消该父节点/直接子项上的运行中WAAPI，含移除临时节点。
-    for (const animation of root.current?.getAnimations?.({ subtree: true }) ?? []) {
+    if (!el) return
+    // disable 只取消 WAAPI（不触发库的 finish → cleanUp）；被取消的移除动画会让库在
+    // remove() 里重新挂回父节点的「待移除元素」永久残留（绝对定位残影）。因此这里显式
+    // 移除带库删除标记的直接子节点——只删插件标记的临时节点，不动 React 仍渲染的正常节点。
+    for (const animation of el.getAnimations?.({ subtree: true }) ?? []) {
       const target = (animation.effect as KeyframeEffect | null)?.target
-      if (target === root.current || target?.parentElement === root.current) animation.cancel()
+      if (target === el || target?.parentElement === el) animation.cancel()
+    }
+    for (const child of Array.from(el.children)) {
+      if (AA_DEL in child) child.remove()
     }
   }
   useLayoutEffect(() => {
@@ -39,7 +54,15 @@ export function AnimatedList({ children, scope, stable, ids, toolbar = false, te
       value.disable()
       controller.current = value
     }).catch(() => { /* 可选增强失败不影响检索、勾选或提交，继续无动画。 */ })
-    return () => { canceled = true; stop(); controller.current = undefined }
+    return () => {
+      canceled = true
+      stop()
+      // 卸载 / 偏好切换时销毁控制器：disconnect MutationObserver / IntersectionObserver、
+      // 解除 ResizeObserver 与定时器，避免「找题↔设置」往返使观察器持续累积。
+      // destroy 后该实例已失效，必须置空，不能被后续 enable() 复用。
+      controller.current?.destroy?.()
+      controller.current = undefined
+    }
   }, [reduced])
   return <div ref={root} data-testid={testId}>{children}</div>
 }

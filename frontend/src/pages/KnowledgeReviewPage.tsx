@@ -19,7 +19,7 @@
  * ``/api/labels/decision/preview`` 预检影响条数，再以 ``confirm=true`` 提交；
  * 默认批量**只处理待复核项，绝不覆盖已有决定**。
  */
-import { useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   Alert,
@@ -94,9 +94,15 @@ export default function KnowledgeReviewPage({ headingLevel = 1 }: { headingLevel
   const [importResult, setImportResult] = useState<LabelImportResult | null>(null)
 
   // 批量确认状态：先预检影响条数，再二次确认。
-  const [batch, setBatch] = useState<{ decision: string; preview: LabelDecisionPreview } | null>(
-    null,
-  )
+  // ⚠️ `target` 是**发起预检时的目标标签**，与 `preview` 同源冻结；展示与提交都用它，
+  //    绝不读「当前选中」，否则切标签后弹窗数字与实际写入会不一致（FIX-1）。
+  const [batch, setBatch] = useState<{
+    decision: string
+    target: string
+    preview: LabelDecisionPreview
+  } | null>(null)
+  // 预检请求代次：切标签 / 取消 / 卸载都会自增，使在途的旧预检响应失效（拒绝迟到响应）。
+  const batchSeq = useRef(0)
 
   const summaryQ = useQuery({
     queryKey: qk.labelsSummary(),
@@ -169,13 +175,32 @@ export default function KnowledgeReviewPage({ headingLevel = 1 }: { headingLevel
       .slice(0, 5)
   }, [summaryQ.data])
 
-  /** 打开批量确认：先预检影响条数（只读，不写库）。 */
+  /** 作废当前 / 在途的批量预检并关闭确认框（切标签、取消、卸载时调用）。 */
+  const invalidateBatch = () => {
+    batchSeq.current += 1
+    setBatch(null)
+  }
+
+  // 卸载时作废在途预检，避免迟到响应在组件卸载后写状态。
+  useEffect(() => () => { batchSeq.current += 1 }, [])
+
+  /** 打开批量确认：先预检影响条数（只读，不写库）。
+   *
+   * 冻结目标：`target` 取自发起预检时的选中标签，并与请求代次一起校验——
+   * 只有「仍是同一代次」的响应才会被接受，从而拒绝迟到响应；提交时也用 `target`，
+   * 保证「写哪个标签」由弹窗展示的那个标签决定，而不是当前的 `selected`。
+   */
   const openBatch = async (decision: string) => {
     if (!selected) return
+    const target = selected
+    const seq = ++batchSeq.current
     try {
-      const pv = await previewDecision({ label_name: selected, decision })
-      setBatch({ decision, preview: pv })
+      const pv = await previewDecision({ label_name: target, decision })
+      // 拒绝迟到响应：切标签 / 取消 / 再次预检已使本次预检失效 → 丢弃。
+      if (seq !== batchSeq.current) return
+      setBatch({ decision, target, preview: pv })
     } catch (err) {
+      if (seq !== batchSeq.current) return
       setToast({ kind: 'error', text: `预检失败：${(err as Error).message}` })
     }
   }
@@ -185,6 +210,8 @@ export default function KnowledgeReviewPage({ headingLevel = 1 }: { headingLevel
   const itemPageCount = Math.max(1, Math.ceil(itemTotal / ITEM_PAGE_SIZE))
 
   const pickLabel = (name: string) => {
+    // 切换标签 → 作废在途 / 待确认的批量操作，旧弹窗不得继续可确认。
+    if (name !== selected) invalidateBatch()
     setSelected(name)
     setPage(1)
   }
@@ -513,14 +540,15 @@ export default function KnowledgeReviewPage({ headingLevel = 1 }: { headingLevel
         confirmText={batch?.decision === '否决' ? '确认否决' : '确认'}
         confirmColor={batch?.decision === '否决' ? 'error' : 'success'}
         loading={decideMut.isPending}
-        onCancel={() => setBatch(null)}
+        onCancel={invalidateBatch}
         onConfirm={() => {
-          if (selected && batch) {
-            decideMut.mutate({ label_name: selected, decision: batch.decision, confirm: true })
+          // 提交与展示同源：写 `batch.target`（弹窗展示的标签），不读当前选中。
+          if (batch) {
+            decideMut.mutate({ label_name: batch.target, decision: batch.decision, confirm: true })
           }
         }}
       >
-        标签「{batch?.preview.label_name}」共命中 {batch?.preview.matched.toLocaleString('zh-CN')} 条关联，
+        标签「{batch?.target}」共命中 {batch?.preview.matched.toLocaleString('zh-CN')} 条关联，
         其中 {batch?.preview.pending.toLocaleString('zh-CN')} 条为「待复核」。
         批量操作<strong>只处理待复核项，绝不覆盖已有决定</strong>（如需覆盖请使用强制模式）。
       </ConfirmDialog>

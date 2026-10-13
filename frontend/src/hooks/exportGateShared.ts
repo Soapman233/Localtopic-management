@@ -27,6 +27,32 @@ export function detectEnvFailure(err: unknown): EnvFailure {
   return null
 }
 
+/** 后端「PDF 生成失败」warning 前缀（见 `webui/services/preview.py::render`）。 */
+const PDF_FAIL_PREFIX = 'PDF 生成失败（预览不可用）'
+
+/**
+ * 从**已完成但无页面**的预览作业结果中识别「无页环境失败」。
+ *
+ * 后端 PDF 失败时**不抛异常**：作业正常 `done`，`pages=[]`、`pdf=null`，并追加一条
+ * ``PDF 生成失败（预览不可用）：<error>`` 的 warning（DOCX 仍已生成）。此时像素预览不可用，
+ * 若不给出降级入口，DOCX 导出会被**永久锁死**（FIX-2）。
+ *
+ * ⚠️ 判定**从严**：只认「PDF 生成失败」这条 warning，且其错误文本明确指向
+ *    Word / WPS / editor_sdk；「PDF 位图化失败」、内容 / 桥接 warning 或未知原因
+ *    **一律返回 null（保持锁定）**。**不得**把全部 warning 拼起来做宽泛子串匹配，
+ *    否则会把未知导出失败误判成环境失败而放行。
+ */
+export function detectNoPageEnvFailure(result: unknown): EnvFailure {
+  if (!result || typeof result !== 'object') return null
+  const warnings = (result as { warnings?: unknown }).warnings
+  if (!Array.isArray(warnings)) return null
+  for (const w of warnings) {
+    if (typeof w !== 'string' || !w.startsWith(PDF_FAIL_PREFIX)) continue
+    return detectEnvFailure(new Error(w))
+  }
+  return null
+}
+
 /**
  * 环境失败的**技术口径**原因（含 `editor_sdk` 等原始字段）。
  *

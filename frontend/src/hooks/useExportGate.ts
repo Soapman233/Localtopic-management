@@ -27,6 +27,7 @@ import { useUiStore, previewSettingsKey, type PreviewTicket } from '../store/uiS
 import { describeJobTimeout } from '../lib/glossary'
 import {
   detectEnvFailure,
+  detectNoPageEnvFailure,
   extractPages,
   inferExportStage,
   inferPreviewStage,
@@ -41,6 +42,7 @@ import type { ExportJobResult, ExportPayload, PreviewPage } from '../api/types'
 // 并让导出抽屉与导出中心**共用同一份阶段定义与推断**（避免两处各写一份阶段名）。
 export {
   detectEnvFailure,
+  detectNoPageEnvFailure,
   describeEnvFailure,
   extractPages,
   envReason,
@@ -305,7 +307,12 @@ export function useExportGate(options: ExportGateOptions) {
         setPreviewError(null)
         setEnvFail(null)
       } else {
+        // done 却没有页面：PDF 未生成（DOCX 可能已生成，见后端 render()）。
+        // 仅当 warning 明确指向环境原因（Word/WPS/editor_sdk）时，才给出与 error 分支
+        // **同等**的降级确认入口；未知原因继续锁定——「给降级入口」≠「自动放行」，
+        // 用户仍须显式确认才能越过门禁（export_allowed 不放宽）。
         setPreviewError('预览作业完成但未返回页面（可能 PDF 生成失败）。')
+        setEnvFail(detectNoPageEnvFailure(info.result))
         invalidatePreview(paperId)
       }
       setPreviewJobId(null)
