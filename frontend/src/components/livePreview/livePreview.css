@@ -97,13 +97,13 @@
 
 /* 拖拽手柄：每题左侧，悬停显现（拖动时始终显示）。
  * P1-2：补 `:focus-within`，使键盘 Tab 聚焦到手柄/工具栏时同样显现（此前仅 hover 可达）。
- * P5-2：原 `#b0bec5` 在白色纸张上仅 1.91:1（未达非文字 3:1），改用 `#78909c`（3.35:1）。 */
+ * P5-2：原 `#b0bec5` 在白色纸张上仅 1.91:1（未达非文字 3:1），原手柄色为 3.35:1；T12/T13 改由主题中性文字令牌提供（白纸 4.97:1）。 */
 .lp-qhandle {
   position: absolute;
   left: -14px;
   top: 0;
   cursor: grab;
-  color: #78909c;
+  color: var(--qb-paper-handle);
   font-size: 13px;
   line-height: 1;
   user-select: none;
@@ -247,5 +247,5 @@
 /* P5-2：深色覆盖里的删除按钮实际压在**白色纸张**上（纸张恒为白底黑字），
  * 原 `#ef9a9a`/`#ffcdd2` 在白底上仅 2.15:1，改用与浅色模式一致的深红（5.62:1 / 6.57:1）。 */
 .lp-dark .lp-qdel:hover { color: #b71c1c; }
-.lp-dark .lp-qhandle { color: #78909c; }
+.lp-dark .lp-qhandle { color: var(--qb-paper-handle); }
 .lp-dark .lp-debug-badge { color: #ffcc80; background: #3a2a10; border-color: #ffb74d; }

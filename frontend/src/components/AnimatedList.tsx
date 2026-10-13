@@ -3,6 +3,7 @@
  * 不用于测量、纸面、DnD或题干内部。资格同时核对查询身份、稳定状态与共同ID顺序。
  */
 import { useEffect, useLayoutEffect, useRef, type ReactNode } from 'react'
+import { tokens } from '../theme'
 import { MOTION_QUERY, useReducedMotion } from '../hooks/useReducedMotion'
 import { canAnimateList, type ListSnapshot } from '../lib/listMotion'
 type Controller = {
@@ -50,7 +51,7 @@ export function AnimatedList({ children, scope, stable, ids, toolbar = false, te
     // 迟到import只登记当下DOM，绝不将等待期间的首载/查询变化补播。
     void import('@formkit/auto-animate').then(({ default: autoAnimate }) => {
       if (canceled || typeof window.matchMedia !== 'function' || window.matchMedia(MOTION_QUERY).matches) return
-      const value = autoAnimate(element, { duration: 120, easing: 'ease-out' })
+      const value = autoAnimate(element, { duration: tokens.motion.fast, easing: tokens.motion.easeOut })
       value.disable()
       controller.current = value
     }).catch(() => { /* 可选增强失败不影响检索、勾选或提交，继续无动画。 */ })

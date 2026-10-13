@@ -15,6 +15,8 @@ export default defineConfig({
     },
   },
   build: {
+    // T12/T13：使用Terser默认安全压缩，保持既有分包和首屏原始字节预算。
+    minify: 'terser',
     outDir: '../webui/static',
     // 说明：T01 原为 emptyOutDir:true（构建前清空产物）。本机（WorkBuddy 沙箱）对
     // 「单次删除 >50 个文件」有安全拦截，而 webui/static/assets 含 59 个 KaTeX 字体，

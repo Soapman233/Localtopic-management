@@ -10,6 +10,7 @@
  * 因宿主是深色 `primary.main` 顶栏，文本/描边统一用 `inherit`（白色）保证对比度。
  */
 import { Box, Button, Chip, IconButton, MenuItem, Select, Stack } from '@mui/material'
+import { alpha } from '@mui/material/styles'
 import ListAltIcon from '@mui/icons-material/ListAlt'
 import type { Paper } from '../api/types'
 
@@ -33,17 +34,17 @@ export function PaperSwitcher({ papers, currentPaperId, onSwitch, onOpenList, co
         value={currentPaperId ?? ''}
         displayEmpty
         onChange={(e) => onSwitch(Number(e.target.value))}
-        sx={{
+        sx={(theme) => ({
           minWidth: compact ? 132 : 260,
           maxWidth: compact ? 200 : 360,
           color: 'inherit',
           // 深色顶栏上把描边/下拉箭头统一为白色系，保证可读与可点击感。
-          '& .MuiOutlinedInput-notchedOutline': { borderColor: 'rgba(255,255,255,0.5)' },
-          '&:hover .MuiOutlinedInput-notchedOutline': { borderColor: 'rgba(255,255,255,0.85)' },
-          '&.Mui-focused .MuiOutlinedInput-notchedOutline': { borderColor: '#fff' },
+          '& .MuiOutlinedInput-notchedOutline': { borderColor: alpha(theme.palette.common.white, 0.5) },
+          '&:hover .MuiOutlinedInput-notchedOutline': { borderColor: alpha(theme.palette.common.white, 0.85) },
+          '&.Mui-focused .MuiOutlinedInput-notchedOutline': { borderColor: theme.palette.common.white },
           '& .MuiSelect-select': { color: 'inherit' },
           '& .MuiSvgIcon-root': { color: 'inherit' },
-        }}
+        })}
         data-testid="paper-switcher"
         renderValue={() =>
           current ? current.title : currentPaperId != null ? `试卷 #${currentPaperId}` : '选择试卷…'

@@ -8,6 +8,7 @@
  * 本地版没有账号概念，显示"当前用户：admin"只会让人困惑。
  */
 import { Alert, Button, Chip, Stack, Tooltip, Typography } from '@mui/material'
+import { alpha } from '@mui/material/styles'
 import LogoutIcon from '@mui/icons-material/Logout'
 import VisibilityIcon from '@mui/icons-material/Visibility'
 import { useAuth } from '../app/auth/AuthProvider'
@@ -24,12 +25,12 @@ export function SessionControls() {
         <Chip
           size="small"
           label={`${user.display_name} · ${ROLE_LABELS[user.role]}`}
-          sx={{
+          sx={(theme) => ({
             // 顶栏是主色底，用半透明白保证可读（对比度按顶栏底色计算）
-            color: '#fff',
-            bgcolor: 'rgba(255,255,255,0.18)',
+            color: theme.palette.common.white,
+            bgcolor: alpha(theme.palette.common.white, 0.18),
             maxWidth: 200,
-          }}
+          })}
         />
       </Tooltip>
       <Button

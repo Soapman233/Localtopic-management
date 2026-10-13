@@ -6,6 +6,7 @@
  * 可拖拽（P1-10）：拖到右栏试卷即加入（由组卷页的 DndContext 处理）。
  */
 import { Box, Button, Card, CardActions, CardContent, Checkbox, Chip, Stack, Tooltip, Typography } from '@mui/material'
+import { tokens } from '../theme'
 import DragIndicatorIcon from '@mui/icons-material/DragIndicator'
 import AddIcon from '@mui/icons-material/Add'
 import ArticleIcon from '@mui/icons-material/Article'
@@ -88,7 +89,7 @@ export function QuestionCard({
       sx={{
         mb: 1.5,
         transition: 'box-shadow .15s, border-color .15s',
-        '&:hover': { boxShadow: '0 4px 12px rgba(0,0,0,.10)', borderColor: 'primary.light' },
+        '&:hover': { boxShadow: tokens.cardHoverShadow, borderColor: 'primary.light' },
       }}
     >
       <CardContent sx={{ pb: 1 }}>

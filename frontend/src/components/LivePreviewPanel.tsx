@@ -23,6 +23,7 @@
  *  - 题目右上角工具栏：点**分值 chip** 就地改分（`onScoreChange`，非法值红框）、
  *    `✕` 删除（`onRemove`）；**不改题干文字**（点题号跳详情页由父级处理）。
  */
+import { tokens } from '../theme'
 import { useEffect, useMemo, useState } from 'react'
 import { Alert, Box, Chip, Stack, Tooltip, Typography, useTheme } from '@mui/material'
 import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable'
@@ -380,7 +381,7 @@ export function LivePreviewPanel(props: LivePreviewPanelProps) {
       {/* 页面层（可缩放展示） */}
       {showPages && <Box
         sx={{
-          bgcolor: dark ? '#1b1b1b' : '#EDEFF2',
+          bgcolor: tokens.canvas[dark ? 'dark' : 'light'],
           borderRadius: 1,
           p: 2,
           maxHeight: '72vh',

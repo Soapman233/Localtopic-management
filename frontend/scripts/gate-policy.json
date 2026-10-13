@@ -1,0 +1,510 @@
+{
+  "source": "outputs/handoff/A-T12T13.md G1",
+  "tokenSource": "theme.ts",
+  "declarations": [
+    {
+      "file": "components/livePreview/livePreview.css",
+      "scope": ".lp-page",
+      "key": "background",
+      "value": "#fff",
+      "count": 1,
+      "reason": "G1冻结固定纸面/打印工具声明；仍参加真实对比度"
+    },
+    {
+      "file": "components/livePreview/livePreview.css",
+      "scope": ".lp-page",
+      "key": "color",
+      "value": "#000",
+      "count": 1,
+      "reason": "G1冻结固定纸面/打印工具声明；仍参加真实对比度"
+    },
+    {
+      "file": "components/livePreview/livePreview.css",
+      "scope": ".lp-page",
+      "key": "box-shadow",
+      "value": "0 2px 10px rgba(0, 0, 0, 0.18)",
+      "count": 1,
+      "reason": "G1冻结固定纸面/打印工具声明；仍参加真实对比度"
+    },
+    {
+      "file": "components/livePreview/livePreview.css",
+      "scope": ".lp-page",
+      "key": "border",
+      "value": "1px solid #e3e6ea",
+      "count": 1,
+      "reason": "G1冻结固定纸面/打印工具声明；仍参加真实对比度"
+    },
+    {
+      "file": "components/livePreview/livePreview.css",
+      "scope": ".lp-page .lp-footer",
+      "key": "color",
+      "value": "#333",
+      "count": 1,
+      "reason": "G1冻结固定纸面/打印工具声明；仍参加真实对比度"
+    },
+    {
+      "file": "components/livePreview/livePreview.css",
+      "scope": ".lp-measure",
+      "key": "color",
+      "value": "#000",
+      "count": 1,
+      "reason": "G1冻结固定纸面/打印工具声明；仍参加真实对比度"
+    },
+    {
+      "file": "components/livePreview/livePreview.css",
+      "scope": ".lp-image-missing",
+      "key": "color",
+      "value": "#b91c1c",
+      "count": 1,
+      "reason": "G1冻结固定纸面/打印工具声明；仍参加真实对比度"
+    },
+    {
+      "file": "components/livePreview/livePreview.css",
+      "scope": ".lp-image-missing",
+      "key": "background",
+      "value": "#fef2f2",
+      "count": 1,
+      "reason": "G1冻结固定纸面/打印工具声明；仍参加真实对比度"
+    },
+    {
+      "file": "components/livePreview/livePreview.css",
+      "scope": ".lp-image-missing",
+      "key": "border",
+      "value": "1px dashed #b91c1c",
+      "count": 1,
+      "reason": "G1冻结固定纸面/打印工具声明；仍参加真实对比度"
+    },
+    {
+      "file": "components/livePreview/livePreview.css",
+      "scope": ".lp-debug-badge",
+      "key": "color",
+      "value": "#92400e",
+      "count": 1,
+      "reason": "G1冻结固定纸面/打印工具声明；仍参加真实对比度"
+    },
+    {
+      "file": "components/livePreview/livePreview.css",
+      "scope": ".lp-debug-badge",
+      "key": "background",
+      "value": "#fff7e6",
+      "count": 1,
+      "reason": "G1冻结固定纸面/打印工具声明；仍参加真实对比度"
+    },
+    {
+      "file": "components/livePreview/livePreview.css",
+      "scope": ".lp-debug-badge",
+      "key": "border",
+      "value": "1px solid #ffd591",
+      "count": 1,
+      "reason": "G1冻结固定纸面/打印工具声明；仍参加真实对比度"
+    },
+    {
+      "file": "components/livePreview/livePreview.css",
+      "scope": ".lp-block--editable:hover",
+      "key": "box-shadow",
+      "value": "0 0 0 1px #90caf9",
+      "count": 1,
+      "reason": "G1冻结固定纸面/打印工具声明；仍参加真实对比度"
+    },
+    {
+      "file": "components/livePreview/livePreview.css",
+      "scope": ".lp-qhandle:focus-visible, .lp-score-chip:focus-visible, .lp-qdel:focus-visible",
+      "key": "outline",
+      "value": "2px solid #1976d2",
+      "count": 1,
+      "reason": "G1冻结固定纸面/打印工具声明；仍参加真实对比度"
+    },
+    {
+      "file": "components/livePreview/livePreview.css",
+      "scope": ".lp-score-chip",
+      "key": "border",
+      "value": "1px solid #90caf9",
+      "count": 1,
+      "reason": "G1冻结固定纸面/打印工具声明；仍参加真实对比度"
+    },
+    {
+      "file": "components/livePreview/livePreview.css",
+      "scope": ".lp-score-chip",
+      "key": "background",
+      "value": "#e3f2fd",
+      "count": 1,
+      "reason": "G1冻结固定纸面/打印工具声明；仍参加真实对比度"
+    },
+    {
+      "file": "components/livePreview/livePreview.css",
+      "scope": ".lp-score-chip",
+      "key": "color",
+      "value": "#1565c0",
+      "count": 1,
+      "reason": "G1冻结固定纸面/打印工具声明；仍参加真实对比度"
+    },
+    {
+      "file": "components/livePreview/livePreview.css",
+      "scope": ".lp-score-chip.lp-score-empty",
+      "key": "border-color",
+      "value": "#ffb74d",
+      "count": 1,
+      "reason": "G1冻结固定纸面/打印工具声明；仍参加真实对比度"
+    },
+    {
+      "file": "components/livePreview/livePreview.css",
+      "scope": ".lp-score-chip.lp-score-empty",
+      "key": "background",
+      "value": "#fff3e0",
+      "count": 1,
+      "reason": "G1冻结固定纸面/打印工具声明；仍参加真实对比度"
+    },
+    {
+      "file": "components/livePreview/livePreview.css",
+      "scope": ".lp-score-chip.lp-score-empty",
+      "key": "color",
+      "value": "#9a3412",
+      "count": 1,
+      "reason": "G1冻结固定纸面/打印工具声明；仍参加真实对比度"
+    },
+    {
+      "file": "components/livePreview/livePreview.css",
+      "scope": ".lp-score-input",
+      "key": "border",
+      "value": "1px solid #1976d2",
+      "count": 1,
+      "reason": "G1冻结固定纸面/打印工具声明；仍参加真实对比度"
+    },
+    {
+      "file": "components/livePreview/livePreview.css",
+      "scope": ".lp-score-input.lp-invalid",
+      "key": "border-color",
+      "value": "#d32f2f",
+      "count": 1,
+      "reason": "G1冻结固定纸面/打印工具声明；仍参加真实对比度"
+    },
+    {
+      "file": "components/livePreview/livePreview.css",
+      "scope": ".lp-score-input.lp-invalid",
+      "key": "background",
+      "value": "#ffebee",
+      "count": 1,
+      "reason": "G1冻结固定纸面/打印工具声明；仍参加真实对比度"
+    },
+    {
+      "file": "components/livePreview/livePreview.css",
+      "scope": ".lp-score-input.lp-invalid",
+      "key": "color",
+      "value": "#b71c1c",
+      "count": 1,
+      "reason": "G1冻结固定纸面/打印工具声明；仍参加真实对比度"
+    },
+    {
+      "file": "components/livePreview/livePreview.css",
+      "scope": ".lp-qdel",
+      "key": "color",
+      "value": "#c62828",
+      "count": 1,
+      "reason": "G1冻结固定纸面/打印工具声明；仍参加真实对比度"
+    },
+    {
+      "file": "components/livePreview/livePreview.css",
+      "scope": ".lp-qdel:hover",
+      "key": "color",
+      "value": "#8e0000",
+      "count": 1,
+      "reason": "G1冻结固定纸面/打印工具声明；仍参加真实对比度"
+    },
+    {
+      "file": "components/livePreview/livePreview.css",
+      "scope": ".lp-content-blocked",
+      "key": "border",
+      "value": "1px dashed #b91c1c",
+      "count": 1,
+      "reason": "G1冻结固定纸面/打印工具声明；仍参加真实对比度"
+    },
+    {
+      "file": "components/livePreview/livePreview.css",
+      "scope": ".lp-content-blocked",
+      "key": "background",
+      "value": "#fff1f2",
+      "count": 1,
+      "reason": "G1冻结固定纸面/打印工具声明；仍参加真实对比度"
+    },
+    {
+      "file": "components/livePreview/livePreview.css",
+      "scope": ".lp-content-blocked",
+      "key": "color",
+      "value": "#991b1b",
+      "count": 1,
+      "reason": "G1冻结固定纸面/打印工具声明；仍参加真实对比度"
+    },
+    {
+      "file": "components/livePreview/livePreview.css",
+      "scope": ".lp-dark .lp-content-blocked",
+      "key": "border-color",
+      "value": "#f87171",
+      "count": 1,
+      "reason": "G1冻结固定纸面/打印工具声明；仍参加真实对比度"
+    },
+    {
+      "file": "components/livePreview/livePreview.css",
+      "scope": ".lp-dark .lp-content-blocked",
+      "key": "background",
+      "value": "#2a1416",
+      "count": 1,
+      "reason": "G1冻结固定纸面/打印工具声明；仍参加真实对比度"
+    },
+    {
+      "file": "components/livePreview/livePreview.css",
+      "scope": ".lp-dark .lp-content-blocked",
+      "key": "color",
+      "value": "#fca5a5",
+      "count": 1,
+      "reason": "G1冻结固定纸面/打印工具声明；仍参加真实对比度"
+    },
+    {
+      "file": "components/livePreview/livePreview.css",
+      "scope": ".lp-dark .lp-image-missing",
+      "key": "border-color",
+      "value": "#f87171",
+      "count": 1,
+      "reason": "G1冻结固定纸面/打印工具声明；仍参加真实对比度"
+    },
+    {
+      "file": "components/livePreview/livePreview.css",
+      "scope": ".lp-dark .lp-image-missing",
+      "key": "background",
+      "value": "#2a1416",
+      "count": 1,
+      "reason": "G1冻结固定纸面/打印工具声明；仍参加真实对比度"
+    },
+    {
+      "file": "components/livePreview/livePreview.css",
+      "scope": ".lp-dark .lp-image-missing",
+      "key": "color",
+      "value": "#fca5a5",
+      "count": 1,
+      "reason": "G1冻结固定纸面/打印工具声明；仍参加真实对比度"
+    },
+    {
+      "file": "components/livePreview/livePreview.css",
+      "scope": ".lp-dark .lp-score-chip",
+      "key": "border-color",
+      "value": "#64b5f6",
+      "count": 1,
+      "reason": "G1冻结固定纸面/打印工具声明；仍参加真实对比度"
+    },
+    {
+      "file": "components/livePreview/livePreview.css",
+      "scope": ".lp-dark .lp-score-chip",
+      "key": "background",
+      "value": "#0d2b45",
+      "count": 1,
+      "reason": "G1冻结固定纸面/打印工具声明；仍参加真实对比度"
+    },
+    {
+      "file": "components/livePreview/livePreview.css",
+      "scope": ".lp-dark .lp-score-chip",
+      "key": "color",
+      "value": "#90caf9",
+      "count": 1,
+      "reason": "G1冻结固定纸面/打印工具声明；仍参加真实对比度"
+    },
+    {
+      "file": "components/livePreview/livePreview.css",
+      "scope": ".lp-dark .lp-score-chip.lp-score-empty",
+      "key": "border-color",
+      "value": "#ffb74d",
+      "count": 1,
+      "reason": "G1冻结固定纸面/打印工具声明；仍参加真实对比度"
+    },
+    {
+      "file": "components/livePreview/livePreview.css",
+      "scope": ".lp-dark .lp-score-chip.lp-score-empty",
+      "key": "background",
+      "value": "#3a2a10",
+      "count": 1,
+      "reason": "G1冻结固定纸面/打印工具声明；仍参加真实对比度"
+    },
+    {
+      "file": "components/livePreview/livePreview.css",
+      "scope": ".lp-dark .lp-score-chip.lp-score-empty",
+      "key": "color",
+      "value": "#ffcc80",
+      "count": 1,
+      "reason": "G1冻结固定纸面/打印工具声明；仍参加真实对比度"
+    },
+    {
+      "file": "components/livePreview/livePreview.css",
+      "scope": ".lp-dark .lp-score-input",
+      "key": "background",
+      "value": "#0d2b45",
+      "count": 1,
+      "reason": "G1冻结固定纸面/打印工具声明；仍参加真实对比度"
+    },
+    {
+      "file": "components/livePreview/livePreview.css",
+      "scope": ".lp-dark .lp-score-input",
+      "key": "color",
+      "value": "#e3f2fd",
+      "count": 1,
+      "reason": "G1冻结固定纸面/打印工具声明；仍参加真实对比度"
+    },
+    {
+      "file": "components/livePreview/livePreview.css",
+      "scope": ".lp-dark .lp-score-input.lp-invalid",
+      "key": "background",
+      "value": "#3a1414",
+      "count": 1,
+      "reason": "G1冻结固定纸面/打印工具声明；仍参加真实对比度"
+    },
+    {
+      "file": "components/livePreview/livePreview.css",
+      "scope": ".lp-dark .lp-score-input.lp-invalid",
+      "key": "color",
+      "value": "#ffcdd2",
+      "count": 1,
+      "reason": "G1冻结固定纸面/打印工具声明；仍参加真实对比度"
+    },
+    {
+      "file": "components/livePreview/livePreview.css",
+      "scope": ".lp-dark .lp-qdel",
+      "key": "color",
+      "value": "#c62828",
+      "count": 1,
+      "reason": "G1冻结固定纸面/打印工具声明；仍参加真实对比度"
+    },
+    {
+      "file": "components/livePreview/livePreview.css",
+      "scope": ".lp-dark .lp-qdel:hover",
+      "key": "color",
+      "value": "#b71c1c",
+      "count": 1,
+      "reason": "G1冻结固定纸面/打印工具声明；仍参加真实对比度"
+    },
+    {
+      "file": "components/livePreview/livePreview.css",
+      "scope": ".lp-dark .lp-debug-badge",
+      "key": "color",
+      "value": "#ffcc80",
+      "count": 1,
+      "reason": "G1冻结固定纸面/打印工具声明；仍参加真实对比度"
+    },
+    {
+      "file": "components/livePreview/livePreview.css",
+      "scope": ".lp-dark .lp-debug-badge",
+      "key": "background",
+      "value": "#3a2a10",
+      "count": 1,
+      "reason": "G1冻结固定纸面/打印工具声明；仍参加真实对比度"
+    },
+    {
+      "file": "components/livePreview/livePreview.css",
+      "scope": ".lp-dark .lp-debug-badge",
+      "key": "border-color",
+      "value": "#ffb74d",
+      "count": 1,
+      "reason": "G1冻结固定纸面/打印工具声明；仍参加真实对比度"
+    },
+    {
+      "file": "index.css",
+      "scope": ".qb-katex-fallback",
+      "key": "color",
+      "value": "#b91c1c",
+      "count": 1,
+      "reason": "G1冻结KaTeX降级提示配对"
+    },
+    {
+      "file": "index.css",
+      "scope": ".qb-katex-fallback",
+      "key": "background",
+      "value": "#fef2f2",
+      "count": 1,
+      "reason": "G1冻结KaTeX降级提示配对"
+    },
+    {
+      "file": "index.css",
+      "scope": ".qb-katex-fallback",
+      "key": "border",
+      "value": "1px dashed #b91c1c",
+      "count": 1,
+      "reason": "G1冻结KaTeX降级提示配对"
+    },
+    {
+      "file": "components/PreviewViewer.tsx",
+      "scope": "PreviewViewer",
+      "key": "bgcolor",
+      "value": "#EDEFF2",
+      "count": 1,
+      "reason": "G1冻结外层A4画布底衬"
+    },
+    {
+      "file": "components/livePreview/blocks.tsx",
+      "scope": "BlockView",
+      "key": "borderBottom",
+      "value": "1px solid #000",
+      "count": 1,
+      "reason": "G1冻结固定试卷标题线"
+    },
+    {
+      "file": "pages/SettingsPage.tsx",
+      "scope": "PRIMARY_PRESETS",
+      "key": "hex",
+      "value": "#2F63EA",
+      "count": 1,
+      "reason": "G1冻结用户候选色数据"
+    },
+    {
+      "file": "pages/SettingsPage.tsx",
+      "scope": "PRIMARY_PRESETS",
+      "key": "hex",
+      "value": "#0E7490",
+      "count": 1,
+      "reason": "G1冻结用户候选色数据"
+    },
+    {
+      "file": "pages/SettingsPage.tsx",
+      "scope": "PRIMARY_PRESETS",
+      "key": "hex",
+      "value": "#15803D",
+      "count": 1,
+      "reason": "G1冻结用户候选色数据"
+    },
+    {
+      "file": "pages/SettingsPage.tsx",
+      "scope": "PRIMARY_PRESETS",
+      "key": "hex",
+      "value": "#7C3AED",
+      "count": 1,
+      "reason": "G1冻结用户候选色数据"
+    },
+    {
+      "file": "pages/SettingsPage.tsx",
+      "scope": "PRIMARY_PRESETS",
+      "key": "hex",
+      "value": "#9A3412",
+      "count": 1,
+      "reason": "G1冻结用户候选色数据"
+    },
+    {
+      "file": "pages/SettingsPage.tsx",
+      "scope": "minPrimaryContrast",
+      "key": "getContrastRatio",
+      "value": "#FFFFFF",
+      "count": 1,
+      "reason": "G1冻结用户色白字计算参照"
+    },
+    {
+      "file": "pages/SettingsPage.tsx",
+      "scope": "toForm",
+      "key": "String",
+      "value": "#2F63EA",
+      "count": 1,
+      "reason": "G1冻结默认主色回退，后续token消费欠账"
+    },
+    {
+      "file": "pages/SettingsPage.tsx",
+      "scope": "SettingsPage",
+      "key": "color",
+      "value": "#fff",
+      "count": 1,
+      "reason": "G1冻结候选色板白字"
+    }
+  ]
+}

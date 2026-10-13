@@ -78,8 +78,20 @@ export const tokens = {
   neutral: '#667085',
   /** 中性灰「禁用态」值：SC 1.4.3 明确豁免 disabled 控件，故保留浅灰以维持禁用观感。 */
   neutralDisabled: '#9CA3AF',
+  /** 未标注徽章既有描边，集中定义供组件复用。 */
+  neutralBorder: '#D0D3D9',
   /** 页面底色（浅色模式）。 */
   bg: '#F5F6F8',
+
+  // 间距与动效统一来源；旧路由保留 ease 曲线。
+  space: { 0: 0, half: 4, 1: 8, 2: 16, 3: 24, 4: 32, 6: 48, 8: 64 },
+  motion: {
+    fast: 120, base: 180, slow: 240,
+    ease: 'cubic-bezier(0.2, 0, 0, 1)', easeOut: 'ease-out', easeIn: 'ease-in', legacyRouteEase: 'ease',
+  },
+  // 普通界面的历史画布与悬浮阴影，迁移后保持既有视觉。
+  canvas: { light: '#EDEFF2', dark: '#1b1b1b' },
+  cardHoverShadow: '0 4px 12px rgba(0,0,0,.10)',
 
   // ── 圆角（来源：原 theme.ts radius + 原 tailwind.config.js borderRadius.card）──
   /** 基础圆角，接入 MUI `shape.borderRadius`。 */
@@ -193,7 +205,13 @@ export function buildTheme(preferences?: { primary?: string; dark?: boolean }) {
     warning: dark ? tokens.warningTextDark : tokens.warningText,
     error: dark ? tokens.errorTextDark : tokens.errorText,
   }
+  const { fast, base, slow, ease, easeOut, easeIn } = tokens.motion
   return createTheme({
+    spacing: tokens.space[1],
+    transitions: {
+      duration: { shortest: fast, short: fast, standard: base, shorter: base, complex: slow, enteringScreen: slow, leavingScreen: slow },
+      easing: { easeInOut: ease, easeOut, easeIn, sharp: ease },
+    },
     palette: {
       mode: dark ? 'dark' : 'light',
       primary: { main: primary, dark: primaryFill, contrastText: ON_SOLID_FILL },
@@ -214,6 +232,7 @@ export function buildTheme(preferences?: { primary?: string; dark?: boolean }) {
         "-apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', Roboto, Arial, sans-serif",
     },
     components: {
+      MuiCssBaseline: { styleOverrides: { ':root': { '--qb-motion-fast': `${fast}ms`, '--qb-route-ease': tokens.motion.legacyRouteEase, '--qb-paper-handle': tokens.neutral } } },
       MuiButton: {
         defaultProps: { disableElevation: true },
         styleOverrides: {
@@ -242,6 +261,8 @@ export function buildTheme(preferences?: { primary?: string; dark?: boolean }) {
            * hover 用的正是 `palette.primary.dark`，无需另写。浅色模式下两者恒等 → 视觉零变化。
            */
           containedPrimary: { backgroundColor: primaryFill },
+          // 深色主色描边按钮在 hover 叠层上改用正文色；保留原背景。
+          ...(dark && { outlinedPrimary: ({ theme }) => ({ '&:hover': { color: theme.palette.text.primary } }) }),
         },
       },
       MuiPaper: { styleOverrides: { root: { backgroundImage: 'none' } } },

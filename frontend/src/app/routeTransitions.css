@@ -1,8 +1,8 @@
 /* 只淡化当前安全内容。关闭浏览器默认几何插值，外壳与root不参与动画。 */
 ::view-transition-group(root), ::view-transition-old(root), ::view-transition-new(root),
 ::view-transition-group(route-content) { animation: none; }
-::view-transition-old(route-content) { animation: qb-route-out 120ms ease both; }
-::view-transition-new(route-content) { animation: qb-route-in 120ms ease both; }
+::view-transition-old(route-content) { animation: qb-route-out var(--qb-motion-fast) var(--qb-route-ease) both; }
+::view-transition-new(route-content) { animation: qb-route-in var(--qb-motion-fast) var(--qb-route-ease) both; }
 @keyframes qb-route-out { to { opacity: 0; } }
 @keyframes qb-route-in { from { opacity: 0; } }
 @media (prefers-reduced-motion: reduce) {

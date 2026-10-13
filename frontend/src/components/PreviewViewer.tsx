@@ -5,6 +5,7 @@
  */
 import { useEffect, useState } from 'react'
 import { Box, Button, Chip, IconButton, Paper, Stack, Tooltip, Typography } from '@mui/material'
+import { alpha } from '@mui/material/styles'
 import ZoomInIcon from '@mui/icons-material/ZoomIn'
 import ZoomOutIcon from '@mui/icons-material/ZoomOut'
 import RestartAltIcon from '@mui/icons-material/RestartAlt'
@@ -83,15 +84,16 @@ export function PreviewViewer({ pages, cached }: PreviewViewerProps) {
             >
               <Typography
                 variant="caption"
-                sx={{
+                sx={(theme) => ({
                   position: 'absolute',
                   top: 4,
                   left: 8,
-                  color: 'text.secondary',
-                  bgcolor: 'rgba(255,255,255,.75)',
+                  // 页码覆盖白纸位图，用固定深字，避免深色主题的浅字压浅底。
+                  color: alpha(theme.palette.common.black, 0.6),
+                  bgcolor: alpha(theme.palette.common.white, 0.75),
                   px: 0.5,
                   borderRadius: '4px',
-                }}
+                })}
               >
                 第 {page.n} 页
               </Typography>

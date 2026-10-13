@@ -6,6 +6,7 @@
  * 设计约束（PRD 5.2）：难度为空时**必须**渲染灰色「未标注」徽章 + 「标注」按钮，
  * **绝不能渲染成空白**（空白会被误读为「简单/无难度」）。
  */
+import { tokens } from '../theme'
 import { Button, Chip, Stack, Tooltip } from '@mui/material'
 import type { ChipProps } from '@mui/material'
 
@@ -64,7 +65,7 @@ export function DifficultyBadge({
           size="small"
           label="未标注"
           variant="outlined"
-          sx={{ color: 'text.secondary', borderColor: '#D0D3D9' }}
+          sx={{ color: 'text.secondary', borderColor: tokens.neutralBorder }}
         />
         {onAnnotate && (
           <Button size="small" onClick={onAnnotate} sx={{ minWidth: 0, px: 0.75, fontSize: 12 }}>
