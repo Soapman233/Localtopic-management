@@ -64,7 +64,11 @@ function ReviewPreview({ item }: { item: ReviewItem }) {
   const [failed, setFailed] = useState(false)
   if (!item.preview_url || failed) return <Alert severity="warning" sx={{ mt: 1 }}>源预览图缺失或无法转换，请打开该题核对来源文件。</Alert>
   return (
-    <Box sx={{ mt: 1, p: 1, bgcolor: '#fff', border: '1px solid', borderColor: 'divider', borderRadius: 1 }}>
+    // ⚠️ 这里曾是硬编码 `bgcolor: '#fff'`（设计评审 F1）：容器**不随主题切换**，
+    //    深色模式下 `text.secondary` 变浅色、压在白底上 → **白底白字、内容完全不可见**。
+    //    改用语义槽 `background.paper`：浅色下仍是纯白（观感不变），深色下随主题变深，
+    //    容器内的预览图（自带底色的 PNG）与说明文字都保持可读。
+    <Box sx={{ mt: 1, p: 1, bgcolor: 'background.paper', border: '1px solid', borderColor: 'divider', borderRadius: 1 }}>
       <Box component="img" src={item.preview_url} alt={`公式 ${item.fid ?? ''} 的源预览`}
         loading="lazy" onError={() => setFailed(true)} sx={{ maxWidth: '100%', maxHeight: 160, objectFit: 'contain' }} />
       <Typography variant="caption" color="text.secondary" display="block">

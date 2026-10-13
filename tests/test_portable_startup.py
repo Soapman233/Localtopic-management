@@ -18,6 +18,7 @@
 """
 from __future__ import annotations
 
+import ctypes
 import importlib.util
 import shutil
 import sys
@@ -140,10 +141,40 @@ class TestFatalShowsSomething(_NoConsoleBase):
     """无控制台时出错必须**让用户看得见**（弹窗），而不是静默退出。"""
 
     def test_fatal_does_not_raise(self):
+        """`_fatal` 不抛异常，且**确实请求过弹窗**（带正确标题/正文/图标）。
+
+        🔴 为什么必须打桩 `MessageBoxW`（2026-10-13 实测踩坑）
+        ----------------------------------------------------
+        `MessageBoxW` 是**阻塞式模态弹窗**：不点掉就永远不返回。
+        此前本用例直接调用 `_fatal` 而不打桩，于是：
+          - 整条测试套件**卡死在这一条上**（实测 11 分钟无进展；正常 1 分 41 秒）；
+          - 桌面上留下一个**没人点的对话框**，等待人工点击才能继续。
+        也就是说，这条测试过去是「靠有人恰好点掉弹窗」才通过的 ——
+        **测试不得依赖人去点对话框**。
+
+        打桩后不仅不再卡，还能**断言弹窗内容**——比原来的「不抛异常」强得多。
+        """
         with self._patch_root():
             self._drop_streams()
             self.mod._ensure_streams()             # 接管到日志
-            self.mod._fatal("测试", "这是测试错误")   # 不应抛异常
+
+            calls: list[tuple[str, str, int]] = []
+
+            def _fake_message_box(_hwnd, text, title, flags):  # noqa: ANN001
+                calls.append((text, title, flags))
+                return 1  # IDOK
+
+            with unittest.mock.patch.object(
+                ctypes.windll.user32, "MessageBoxW", side_effect=_fake_message_box
+            ):
+                self.mod._fatal("测试", "这是测试错误")   # 不应抛异常
+
+            self.assertEqual(len(calls), 1, "应恰好请求一次弹窗")
+            text, title, flags = calls[0]
+            self.assertEqual(title, "测试", "标题应原样传递")
+            self.assertIn("这是测试错误", text, "正文应包含错误信息")
+            self.assertIn("日志", text, "正文应告诉用户日志在哪")
+            self.assertEqual(flags, 0x10, "应使用 MB_ICONERROR")
 
 
 if __name__ == "__main__":

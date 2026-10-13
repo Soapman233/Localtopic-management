@@ -228,6 +228,8 @@ export default function LanAccessPanel() {
                         <Box
                           aria-label="手机访问二维码"
                           sx={{
+                            // color-token-exempt: 二维码必须是**浅底深码**才能被扫到；深色模式下跟随主题
+                            // 变成深底会让黑色码点与底色同色、扫不出来。这是「物理约束」而非配色偏好。
                             bgcolor: '#fff',
                             p: 1,
                             borderRadius: 1,

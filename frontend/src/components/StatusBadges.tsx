@@ -64,7 +64,9 @@ export function DifficultyBadge({
           size="small"
           label="未标注"
           variant="outlined"
-          sx={{ color: 'text.secondary', borderColor: '#D0D3D9' }}
+          // 描边取语义槽。原为硬编码 `#D0D3D9`：深色模式下这个浅灰压在暗底上过亮，
+          // 且违反「禁止硬编码颜色」的 token 约定。
+          sx={{ color: 'text.secondary', borderColor: 'divider' }}
         />
         {onAnnotate && (
           <Button size="small" onClick={onAnnotate} sx={{ minWidth: 0, px: 0.75, fontSize: 12 }}>

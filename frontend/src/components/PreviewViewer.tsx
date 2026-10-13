@@ -61,6 +61,8 @@ export function PreviewViewer({ pages, cached }: PreviewViewerProps) {
 
       <Box
         sx={{
+          // color-token-exempt: A4 预览的「纸垫」——容器内只有**白色纸面**（与主题无关的成品纸），
+          // 纸垫必须比纸略暗才能显出纸张边界；跟随主题变深会让白纸失去衬托。设计评审判定非缺陷。
           bgcolor: '#EDEFF2',
           borderRadius: 1,
           p: 1.5,
@@ -88,6 +90,8 @@ export function PreviewViewer({ pages, cached }: PreviewViewerProps) {
                   top: 4,
                   left: 8,
                   color: 'text.secondary',
+                  // color-token-exempt: 页码标签浮在**白色 A4 纸面**之上（不是主题表面），
+                  // 半透明白底是为了让页码在纸面内容上可读；跟随主题变深会在白纸上糊成一块。
                   bgcolor: 'rgba(255,255,255,.75)',
                   px: 0.5,
                   borderRadius: '4px',

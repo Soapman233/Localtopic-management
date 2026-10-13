@@ -25,9 +25,11 @@ export function SessionControls() {
           size="small"
           label={`${user.display_name} · ${ROLE_LABELS[user.role]}`}
           sx={{
-            // 顶栏是主色底，用半透明白保证可读（对比度按顶栏底色计算）
-            color: '#fff',
-            bgcolor: 'rgba(255,255,255,0.18)',
+            // ⚠️ 顶栏已由「主色实底」改为「纸面白」，原先的**白字 + 白色半透明底**
+            //    在白顶栏上等于隐形。改为语义槽：文字取 `text.primary`、底色取 `action.selected`。
+            //    （线上版启用鉴权后才渲染此控件，本地版看不到，故长期未被发现。）
+            color: 'text.primary',
+            bgcolor: 'action.selected',
             maxWidth: 200,
           }}
         />

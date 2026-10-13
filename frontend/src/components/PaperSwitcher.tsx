@@ -37,10 +37,11 @@ export function PaperSwitcher({ papers, currentPaperId, onSwitch, onOpenList, co
           minWidth: compact ? 132 : 260,
           maxWidth: compact ? 200 : 360,
           color: 'inherit',
-          // 深色顶栏上把描边/下拉箭头统一为白色系，保证可读与可点击感。
-          '& .MuiOutlinedInput-notchedOutline': { borderColor: 'rgba(255,255,255,0.5)' },
-          '&:hover .MuiOutlinedInput-notchedOutline': { borderColor: 'rgba(255,255,255,0.85)' },
-          '&.Mui-focused .MuiOutlinedInput-notchedOutline': { borderColor: '#fff' },
+          // ⚠️ 这里曾把描边与下拉箭头**硬写成白色系**（`rgba(255,255,255,0.5)` / `#fff`），
+          //    理由是「深色顶栏」。但顶栏后来改成了**纸面白**（对齐参考截图的设计语言），
+          //    于是白描边压在白底上 —— **输入框描边与键盘焦点环完全不可见**。
+          //    （做「硬编码颜色清零」时才发现的真实缺陷；本地版看不到是因为它一直在浅色顶栏上。）
+          //    现在交回 MUI 默认（取 palette 语义槽），不再硬编码颜色。
           '& .MuiSelect-select': { color: 'inherit' },
           '& .MuiSvgIcon-root': { color: 'inherit' },
         }}
