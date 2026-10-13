@@ -89,7 +89,7 @@
 /* ------------------------------------------------------------------ */
 .lp-block--editable {
   border-radius: 4px;
-  transition: box-shadow 0.12s;
+  transition: box-shadow var(--qb-motion-fast);
 }
 .lp-block--editable:hover {
   box-shadow: 0 0 0 1px #90caf9;
@@ -108,7 +108,7 @@
   line-height: 1;
   user-select: none;
   opacity: 0;
-  transition: opacity 0.12s;
+  transition: opacity var(--qb-motion-fast);
   touch-action: none;
 }
 .lp-block--editable:hover .lp-qhandle,
@@ -128,7 +128,7 @@
   align-items: center;
   gap: 4px;
   opacity: 0;
-  transition: opacity 0.12s;
+  transition: opacity var(--qb-motion-fast);
 }
 .lp-block--editable:hover .lp-qtoolbar,
 .lp-block--editable:focus-within .lp-qtoolbar {
