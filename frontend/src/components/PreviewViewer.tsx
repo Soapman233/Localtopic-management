@@ -63,12 +63,12 @@ export function PreviewViewer({ pages, cached }: PreviewViewerProps) {
         sx={{
           bgcolor: '#EDEFF2',
           borderRadius: 1,
-          p: 2,
+          p: 1.5,
           maxHeight: '70vh',
           overflow: 'auto',
         }}
       >
-        <Stack spacing={2} alignItems="center">
+        <Stack spacing={1.5} alignItems="center">
           {pages.map((page) => (
             <Paper
               key={page.n}

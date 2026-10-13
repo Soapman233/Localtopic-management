@@ -82,6 +82,19 @@
   （`DETACHED_PROCESS` + **不传任何 std 参数**）。
   ⚠️ 构造该反例时**别传 `stdout=DEVNULL`**——那等于给了有效句柄，反证会假失败。
   **"模拟条件"本身也要被验证**。
+- 🔴 **视觉验证必须用真实数据**（2026-10-13 实证）：`shoot_ui.py` 早期用**独立空库**起服务，
+  于是所有截图都是「题库为空」的引导态——**题干/公式/图片/题目卡片一个都没验证过**，等于没验证。
+  现在复制真实交付库到临时数据根（`QB_DB_PATH` 指向副本），源 DOCX 只读。
+  **「页面能渲染」≠「有数据的页面能渲染」**。
+- 🔴 **截图脚本 `goto` 只改 hash 不会重载文档** → React 状态（侧栏折叠分组）**跨页泄漏**，
+  拍出的不是「直接打开该页」的样子。必须带递增 query 强制真实导航。
+- 🔴 **组件级 `sx` 优先级高于主题 `styleOverrides`**（2026-10-13 实证）：筛选栏碎片化在主题层
+  改过、并「基于设计原则」宣布已修复，但 `FilterSidebar` 把边框写在**每个** Accordion 上，
+  把主题修复**整个盖掉**，实际没生效。**只改主题层就下结论 = 错误结论**；
+  改主题必须连带搜一遍组件里有没有同名样式覆盖。
+- ⚠️ **逐元素溢出检测必须排除不可见元素**：关闭态的右侧滑出面板停在 `translateX(100%)`，
+  天然「右边界越界」，不排除就每页稳定报 21 个假阳性、把真实信号淹掉。
+  判据用 `document.scrollWidth > clientWidth`，逐元素取样只用于定位。
 
 ## 8. 版本拆分（editions）与鉴权
 - **一个内核 + 多个外壳**：`bank/` `pipeline/` `webui/` `frontend/` 共享，差异收敛到 `webui/edition.py`（`QB_EDITION`/`QB_HOST`/`QB_PORT`/`QB_AUTH_TOKEN`）。
@@ -93,17 +106,26 @@
   ⚠️ 令牌在 `api/client.ts` **全局自动附加**（逐个函数传 header 必漏）；`useAuth` 缺 Provider **必须抛错**。
 
 ## 9. 前端
-- Vite 5 + React 18 + TS + **MUI 5**（**Tailwind 已彻底移除**）。设计 token 单一来源 `src/theme.ts`；术语唯一来源 `lib/glossary.ts`；四态组件 `LoadingState`/`EmptyState`/`ErrorState`/`ProgressStages`。
-- ⚠️ `vitest` 必须 **2.x**（5.x 与 vite 5 冲突 ERESOLVE）；include 限定 `tests/unit/**`；jsdom 需补 `matchMedia`/`ResizeObserver`/`IntersectionObserver`/`document.fonts` 桩。
+- Vite 5 + React 18 + TS + **MUI 5**（**Tailwind 已彻底移除**）。设计 token 单一来源 `src/theme.ts`；术语唯一来源 `lib/glossary.ts`；路由元数据（标题/面包屑/限宽）唯一来源 `lib/routeMeta.ts`；四态组件 `LoadingState`/`EmptyState`/`ErrorState`/`ProgressStages`。
+- **页面骨架组件（必须复用，别手写标题/面包屑/分区卡片）**：`PageHeader`（`level="page"`→h5/`<h1>`；`level="section"`→h6/`<h2>`，且 **section 默认不派生面包屑**——父页已给过，否则出现两条重复）、`BreadcrumbBar`、`SectionCard`（`variant="card"|"plain"`）、`SlideOver`（右侧滑出，破坏性确认仍用 `ConfirmDialog`）、`CommandPalette`（⌘K）。
+- ⚠️ **内容限宽由 `App.tsx` 按路由统一处理**（设置/导入 1100、详情 1200、工具类全宽），页面内**不要**再自己加 `maxWidth`。
+- ⚠️ `vitest` 必须 **2.x**（5.x 与 vite 5 冲突 ERESOLVE）；include 限定 `tests/unit/**`；jsdom 需补 `matchMedia`/`ResizeObserver`/`IntersectionObserver`/`document.fonts`/`Element.scrollIntoView` 桩。
 - ⚠️ `Suspense` 放 `Outlet` 外层；CSS 不参与 vendor 分包；构建产物清理按 `build.manifest` 判定（按"是否被 index.html 引用"会误删懒加载 chunk）。
 - ⚠️ **对比度 65/65 达 WCAG AA**，门禁接入 `npm run build`（`scripts/check-contrast.mjs`）。
-- ⚠️ **MUI 坑**：`sx` 里 `width`/`height` **不要写数字**（`width:1` 被当 spacing 乘数 → `1366px` 横向溢出，须写 `'1px'`）；`<Drawer>` 顶部内容会被固定 AppBar 遮挡，需 `<Toolbar variant="dense"/>` 占位；`Button` 键盘焦点不可见根因是 `disableElevation`+`ButtonBase outline:0`，已在 `theme.ts` 补焦点环；`subtitle1/2` 默认渲染 `<h6>` 是标题跳级根源。
+- ⚠️ **MUI 坑**：`sx` 里 `width`/`height` **不要写数字**（`width:1` 被当 spacing 乘数 → `1366px` 横向溢出，须写 `'1px'`）；`<Drawer>` 顶部内容会被固定 AppBar 遮挡，需 `<Toolbar variant="dense"/>` 占位；`Button` 键盘焦点不可见根因是 `disableElevation`+`ButtonBase outline:0`，已在 `theme.ts` 补焦点环；`subtitle1/2` 默认渲染 `<h6>` 是标题跳级根源；`Drawer` **不设 `role`**（要显式把 `role="dialog"`+`aria-labelledby` 放 `PaperProps`）；`Tabs` 项多时窄屏会撑破布局，须 `variant="scrollable"`。
 - ⚠️ **视觉回归不要用 `sha256` 判断基线是否被换过**（同代码两次采集字节不完全一致），一律以**像素阈值**为准。
+- **视觉验证工具**：`spike/acceptance/shoot_ui.py`（Playwright 驱动本机 Chrome，**零下载**；真实库副本；`--dark` 深色；桌面 1440 + 移动 390；横向溢出检测）。
 
 ## 10. 当前基线与常用命令
-- 后端 **502 项**（500 通过 / 2 既有失败 / 1 skip）。**2 个既有失败**：`test_edition.TestAuthMiddleware`（500≠200，环境相关，已反证与近期改动无关）。
-- 前端：tsc 0 错误；vitest **31 文件 / 236 测试**全过。
+- 后端 **543 项**（540 通过 / 2 既有失败 / 1 skip）。**2 个既有失败**：`test_edition.TestAuthMiddleware`（500≠200，环境相关，已反证与近期改动无关）。
+- 前端：tsc 0 错误；vitest **44 文件 / 339 测试**全过；对比度 65/65。
+- 截图验收：浅色/深色各 20 页，**横向溢出 0/20**。打包版 `verify_portable_detached.py` 7/7。
+- 打包产物 `dist/题库/`：**65.5 MB**（含 cryptography 的 Rust 扩展 9.4MB + Python 运行时）。
+  **判断产物新鲜度的可靠方法**：比对 `dist/题库/_internal/webui/static/assets/index-*.js` 的 hash 与源码侧是否一致。
+  ⚠️ **重新打包前必须结束占用 `dist/题库` 的进程**（`netstat -ano | grep :8720`），
+  否则 `mv`/`rm` 报「资源被占用」、PyInstaller `--clean` 被沙箱删除守卫拦截 → **静默打包失败、旧 exe 不被替换**。
 - `outputs/bank.db` sha256 `6905955734953c6c…`（64,815,104B）。**导出是只读操作**，导出后 hash/mtime 不变。
+  ⚠️ 本 worktree 的 `outputs/bank.db` 是 **0 字节占位**（真库在 `D:/Open-source project/Localtopic-management/outputs/bank.db`）。
 - API：统一 `{code,data,message}`。服务地址 `http://127.0.0.1:8720`（仅本机）。
 - 命令：`python -m webui`（启动）；`python -m unittest discover -s tests`（全量）；
   `python -m bank.cli {init,import,stats,search,paper,backup,restore,...}`。

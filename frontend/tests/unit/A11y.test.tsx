@@ -139,14 +139,20 @@ describe('页面标题层级（以设置页为例）', () => {
     expect(screen.getAllByRole('heading', { level: 1 })).toHaveLength(1)
   })
 
-  it('区块标题是 h2（不跳级到 h6）', async () => {
+  it('区块标题不跳级：分组为 h2、小节为 h3（均非 h6）', async () => {
     vi.stubGlobal('fetch', vi.fn(async () => jsonResponse(settingsFixture)))
     renderPage(<SettingsPage />)
 
-    const h2s = await screen.findAllByRole('heading', { level: 2 })
-    const texts = h2s.map((h) => h.textContent)
-    expect(texts).toContain('数据库')
-    expect(texts).toContain('导出')
+    const h2s = (await screen.findAllByRole('heading', { level: 2 })).map((h) => h.textContent)
+    // 「常用 / 高级」是分组卡片标题（h2）。
+    expect(h2s).toContain('常用')
+    expect(h2s).toContain('高级')
+    // 组内小节（数据库 / 导出）降为 h3——比旧的「h2 平铺」层级更正确。
+    const h3s = (await screen.findAllByRole('heading', { level: 3 })).map((h) => h.textContent)
+    expect(h3s).toContain('数据库')
+    expect(h3s).toContain('导出')
+    // 全页无 h6 跳级。
+    expect(screen.queryAllByRole('heading', { level: 6 })).toHaveLength(0)
   })
 })
 

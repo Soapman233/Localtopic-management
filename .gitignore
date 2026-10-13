@@ -174,3 +174,5 @@ spike/acceptance/_redact/
 
 spike/acceptance/_shots/
 spike/acceptance/_shots_run/
+
+spike/acceptance/_shots_data/

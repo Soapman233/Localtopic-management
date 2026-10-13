@@ -31,6 +31,7 @@ import { useSearchParams } from 'react-router-dom'
 import { LivePreviewPanel } from '../components/LivePreviewPanel'
 import { ExportDiagnosticsPanel } from '../components/livePreview/ExportDiagnostics'
 import { PreviewViewer } from '../components/PreviewViewer'
+import { PageHeader } from '../components/PageHeader'
 import { EmptyState } from '../components/EmptyState'
 import { ErrorState } from '../components/ErrorState'
 import { LoadingState } from '../components/LoadingState'
@@ -103,9 +104,9 @@ function PaperExportPage({ paperId }: { paperId: number }) {
   if (paperId <= 0) {
     return (
       <Box>
-        <Typography variant="h6" component="h1" gutterBottom>
-          试卷预览
-        </Typography>
+        {/* 与下方主分支**互斥**：任一时刻只渲染一处 `PageHeader`，页面始终恰好一个 h1。
+            `/export` 的面包屑由路由自动派生为「组卷工作台 › 导出中心」。 */}
+        <PageHeader title="导出中心" />
         <EmptyState
           title="尚未选择试卷"
           description="请先在组卷工作台选择一份试卷，或从组卷页点击「导出」进入。"
@@ -125,40 +126,44 @@ function PaperExportPage({ paperId }: { paperId: number }) {
       : allQuestions.filter((q) => !q.answer || !q.answer.trim()).length
 
   return (
-    <Box sx={{ maxWidth: 1200 }}>
-      <Stack direction="row" spacing={1} alignItems="center" flexWrap="wrap" useFlexGap sx={{ mb: 1 }}>
-        <Typography variant="h6" component="h1">
-          试卷预览 · {paperQ.data?.title ?? `试卷 #${paperId}`}
-        </Typography>
-        {/* 三态文案与导出抽屉**同源**（exportGateState + describeExportGate）。 */}
-        {gateState === 'degraded' ? (
-          <Chip size="small" color="warning" variant="outlined" label={describeExportGate('degraded')} />
-        ) : gateState === 'ready' ? (
-          <Chip size="small" color="success" variant="outlined" label={describeExportGate('ready')} />
-        ) : (
-          <Chip size="small" variant="outlined" label={describeExportGate('locked')} />
-        )}
-        <Box sx={{ flex: 1 }} />
-        {/* 返回工作台携带本页卷 ID，工作台据此打开该卷抽屉。 */}
-        <Button
-          size="small"
-          variant="text"
-          startIcon={<ArrowBackIcon />}
-          onClick={backToBuilder}
-          data-testid="back-to-builder"
-        >
-          回到组卷工作台
-        </Button>
-      </Stack>
-
-      {summary && (
-        <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap sx={{ mb: 1 }}>
-          <Chip size="small" label={`题数 ${summary.item_count}`} />
-          <Chip size="small" label={`总分 ${summary.total_score}`} />
-          {summary.unscored_count > 0 && <Chip size="small" color="warning" label={`未设分 ${summary.unscored_count}`} />}
-          {noAnswerCount > 0 && <Chip size="small" color="warning" label={`无答案 ${noAnswerCount}`} />}
-        </Stack>
-      )}
+    <Box>
+      {/* 页面标题区（设计规范 §4 P0）：唯一 h1 + 卷名/摘要元信息 + 门禁三态 + 返回操作。
+          面包屑自动派生为「组卷工作台 › 导出中心」（与侧栏选中态口径一致）。
+          本页**不提供导出提交**——唯一提交入口是组卷页的导出抽屉（§2.4 单一入口）。 */}
+      <PageHeader
+        title="导出中心"
+        meta={
+          <>
+            <span>{paperQ.data?.title ?? `试卷 #${paperId}`}</span>
+            {summary && <span>题数 {summary.item_count}</span>}
+            {summary && <span>总分 {summary.total_score}</span>}
+            {summary && summary.unscored_count > 0 && <span>未设分 {summary.unscored_count}</span>}
+            {noAnswerCount > 0 && <span>无答案 {noAnswerCount}</span>}
+          </>
+        }
+        actions={
+          <>
+            {/* 三态文案与导出抽屉**同源**（exportGateState + describeExportGate）。 */}
+            {gateState === 'degraded' ? (
+              <Chip size="small" color="warning" variant="outlined" label={describeExportGate('degraded')} />
+            ) : gateState === 'ready' ? (
+              <Chip size="small" color="success" variant="outlined" label={describeExportGate('ready')} />
+            ) : (
+              <Chip size="small" variant="outlined" label={describeExportGate('locked')} />
+            )}
+            {/* 返回工作台携带本页卷 ID，工作台据此打开该卷抽屉。 */}
+            <Button
+              size="small"
+              variant="text"
+              startIcon={<ArrowBackIcon />}
+              onClick={backToBuilder}
+              data-testid="back-to-builder"
+            >
+              回到组卷工作台
+            </Button>
+          </>
+        }
+      />
 
       {exportDataQ.isFetching && <Alert severity="info">正在检查当前锁定内容…</Alert>}
       {exportDataQ.isError && (
@@ -181,7 +186,7 @@ function PaperExportPage({ paperId }: { paperId: number }) {
       )}
 
       {/* 预览设置：答案模式 / 模板仅驱动本页预览；导出格式与提交统一留在抽屉（单一入口）。 */}
-      <Paper variant="outlined" sx={{ p: 2, mb: 2 }}>
+      <Paper variant="outlined" sx={{ p: 1.5, mb: 1.5 }}>
         <Stack direction="row" spacing={2} flexWrap="wrap" useFlexGap alignItems="center">
           <Box>
             <Typography variant="caption" color="text.secondary">
@@ -235,14 +240,14 @@ function PaperExportPage({ paperId }: { paperId: number }) {
 
       {/* 过期横幅：保留旧图 + 重新锁定（§Q4） */}
       {previewPages.length > 0 && !unlocked && (
-        <Alert severity="warning" icon={<WarningAmberIcon />} sx={{ mb: 2 }}>
+        <Alert severity="warning" icon={<WarningAmberIcon />} sx={{ mb: 1.5 }}>
           ⚠ 内容已变更，此为旧版本预览，导出已锁定；请点「{GLOSSARY.regeneratePreview}」重新生成。
         </Alert>
       )}
 
       {/* 预览区（先预览再导出） */}
-      <Paper variant="outlined" sx={{ p: 2 }}>
-        <Tabs value={tab} onChange={(_e, v) => setTab(v)} sx={{ mb: 2 }}>
+      <Paper variant="outlined" sx={{ p: 1.5 }}>
+        <Tabs value={tab} onChange={(_e, v) => setTab(v)} sx={{ mb: 1.5 }}>
           <Tab label="像素预览" />
           <Tab label="内容结构预览" />
         </Tabs>

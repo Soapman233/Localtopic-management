@@ -9,11 +9,14 @@
  * 后端提供源图直链并转换为 PNG；转换失败时显示明确提示与修复入口。
  *
  * B4 渐进披露（方案 §3.6）：本页作为「数据维护」Tab 子页嵌入。
- * - 标题层级：父页 h1；本页标题 h2；内部区块 h3。
+ * - 标题层级：父页 h1（`DataMaintenancePage`）；本页标题 `PageHeader level="section"` → h2；内部区块 h3。
  * - 计数与处理进度合成一行；左侧短列表 + 右侧当前项详情，仅挂载当前详情。
  * - 当前项题干默认四行，可按需展开完整文本。
  * - kind / part / 原始技术原因进入调试折叠层；标记已处理与「内容正确」分开表达。
  * - 取数、resolve 提交逻辑一律不变。
+ *
+ * 移动端（<md，实测 390px 视口）：左右双栏改为**上下堆叠**（左栏此前固定 300px，
+ * 右栏被压到 ~10px 并撑宽文档）；内层状态 Tab 加 `scrollable` 防溢出。
  */
 import { useMemo, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
@@ -50,6 +53,8 @@ import { KatexFormula } from '../components/KatexFormula'
 import { EmptyState } from '../components/EmptyState'
 import { ErrorState } from '../components/ErrorState'
 import { LoadingState } from '../components/LoadingState'
+import PageHeader from '../components/PageHeader'
+import SectionCard from '../components/SectionCard'
 import { qk } from '../api/queryKeys'
 
 const PAGE_SIZE = 50
@@ -122,10 +127,7 @@ function ReviewDetail({
         来源：{item.file_name ?? '（未知）'}
       </Typography>
 
-      <Box sx={{ mt: 1.5 }}>
-        <Typography variant="subtitle2" component="h3" gutterBottom>
-          题干
-        </Typography>
+      <SectionCard variant="plain" level="subsection" title="题干" sx={{ mt: 1.5 }}>
         <Typography
           variant="body2"
           sx={
@@ -147,15 +149,12 @@ function ReviewDetail({
             {textExpanded ? '收起题干' : '展开完整题干'}
           </Button>
         )}
-      </Box>
+      </SectionCard>
 
       {item.latex && (
-        <Box sx={{ mt: 1 }}>
-          <Typography variant="subtitle2" component="h3" gutterBottom>
-            当前公式 {item.fid}
-          </Typography>
+        <SectionCard variant="plain" level="subsection" title={`当前公式 ${item.fid}`} sx={{ mt: 1 }}>
           <KatexFormula latex={item.latex} />
-        </Box>
+        </SectionCard>
       )}
       <ReviewPreview key={`${item.id}:${item.preview_url}`} item={item} />
 
@@ -296,17 +295,26 @@ export default function FormulaReviewPage() {
 
   return (
     <Box>
-      <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 1 }} flexWrap="wrap" useFlexGap>
-        <Typography variant="h6" component="h2">待复核公式队列</Typography>
-        <Chip size="small" color="warning" label={`待处理 ${(summary?.open ?? 0).toLocaleString('zh-CN')}`} />
-        <Chip size="small" color="success" variant="outlined" label={`已处理 ${(summary?.resolved ?? 0).toLocaleString('zh-CN')}`} />
-        <Chip size="small" variant="outlined" label={`总计 ${total.toLocaleString('zh-CN')}`} />
-        <Box sx={{ flex: 1 }} />
-        <Typography variant="body2" color="text.secondary">
-          处理进度 {resolvedPct}%（{summary?.resolved ?? 0}/{total}）
-        </Typography>
-      </Stack>
-      <LinearProgress variant="determinate" value={resolvedPct} sx={{ mb: 0.5, height: 8, borderRadius: 4 }} />
+      <PageHeader
+        level="section"
+        title="待复核公式队列"
+        meta={
+          <>
+            <Chip size="small" color="warning" label={`待处理 ${(summary?.open ?? 0).toLocaleString('zh-CN')}`} />
+            <Chip size="small" color="success" variant="outlined" label={`已处理 ${(summary?.resolved ?? 0).toLocaleString('zh-CN')}`} />
+            <Chip size="small" variant="outlined" label={`总计 ${total.toLocaleString('zh-CN')}`} />
+          </>
+        }
+      />
+      <Typography variant="body2" color="text.secondary" sx={{ mb: 0.5 }}>
+        处理进度 {resolvedPct}%（{summary?.resolved ?? 0}/{total}）
+      </Typography>
+      <LinearProgress
+        variant="determinate"
+        value={resolvedPct}
+        color="success"
+        sx={{ mb: 0.5, height: 8, borderRadius: 4 }}
+      />
       <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 2 }}>
         非 OK 公式「可见但不阻塞」主链路；处理进度仅表示已看过，不代表公式内容已核对正确。
       </Typography>
@@ -319,7 +327,16 @@ export default function FormulaReviewPage() {
 
       <Paper variant="outlined" sx={{ p: 2 }}>
         <Stack direction="row" alignItems="center" sx={{ mb: 1 }} flexWrap="wrap" useFlexGap>
-          <Tabs value={tab} onChange={(_e, v) => { setTab(v); setPage(1); resetSelection() }}>
+          {/* 内层状态 Tab 也须可横向滚动：3 个 Tab + 右侧开关在 390px 下排不下时，
+              滚动而非撑宽文档。`minWidth: 0` 允许它收缩（否则 flex 项按内容宽撑开）。 */}
+          <Tabs
+            value={tab}
+            onChange={(_e, v) => { setTab(v); setPage(1); resetSelection() }}
+            variant="scrollable"
+            scrollButtons="auto"
+            allowScrollButtonsMobile
+            sx={{ minWidth: 0, flex: '1 1 auto' }}
+          >
             {tabs.map((t) => (
               <Tab
                 key={t.key}
@@ -333,8 +350,8 @@ export default function FormulaReviewPage() {
               />
             ))}
           </Tabs>
-          <Box sx={{ flex: 1 }} />
           <FormControlLabel
+            sx={{ flexShrink: 0 }}
             control={
               <Switch
                 checked={showResolved}
@@ -364,21 +381,31 @@ export default function FormulaReviewPage() {
         )}
 
         {!listQ.isLoading && !listQ.isError && items.length > 0 && (
-          <Box sx={{ display: 'flex', gap: 2, alignItems: 'flex-start' }}>
+          // 窄屏上下堆叠、宽屏左右分栏（移动端缺陷修复：右栏不再被压成窄条）。
+          <Stack
+            direction={{ xs: 'column', md: 'row' }}
+            spacing={2}
+            alignItems={{ xs: 'stretch', md: 'flex-start' }}
+          >
             {/* 左：短列表 */}
-            <Paper variant="outlined" sx={{ width: 300, flexShrink: 0, maxHeight: '68vh', display: 'flex', flexDirection: 'column' }}>
+            <Paper variant="outlined" sx={{ width: { xs: '100%', md: 300 }, flexShrink: 0, maxHeight: { xs: '50vh', md: '68vh' }, display: 'flex', flexDirection: 'column' }}>
               <List dense sx={{ overflow: 'auto', flex: 1 }}>
                 {items.map((it: ReviewItem) => (
                   <ListItemButton
                     key={it.id}
                     selected={current?.id === it.id}
                     onClick={() => setSelectedId(it.id)}
+                    sx={{ py: 1 }}
                   >
-                    <ListItemText
-                      primary={`题 ${it.number ?? it.question_id ?? '—'}`}
-                      secondary={STATUS_LABEL[it.status ?? ''] ?? it.status ?? '未知'}
-                    />
-                    {it.resolved === 1 && <Chip size="small" variant="outlined" label="已处理" />}
+                    <ListItemText primary={`题 ${it.number ?? it.question_id ?? '—'}`} />
+                    <Stack direction="row" spacing={0.5} alignItems="center" sx={{ flexShrink: 0 }}>
+                      <Chip
+                        size="small"
+                        color={it.resolved ? 'success' : 'warning'}
+                        label={STATUS_LABEL[it.status ?? ''] ?? it.status ?? '未知'}
+                      />
+                      {it.resolved === 1 && <Chip size="small" variant="outlined" label="已处理" />}
+                    </Stack>
                   </ListItemButton>
                 ))}
               </List>
@@ -396,7 +423,7 @@ export default function FormulaReviewPage() {
                 />
               )}
             </Box>
-          </Box>
+          </Stack>
         )}
 
         {pageCount > 1 && (

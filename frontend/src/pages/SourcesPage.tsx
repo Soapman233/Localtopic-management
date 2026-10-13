@@ -7,6 +7,9 @@
  *
  * 关键产品约束（PRD 3.2 / Q3）：年级、教材是**文件级**字段——改一题 = 改该来源文件下全部题。
  * 故保存前必须先经 ``/api/sources/{id}/impact`` 预检影响题数，并二次确认（``confirm=true``）。
+ *
+ * 标题层级：父页 h1（`DataMaintenancePage`）；本页 `PageHeader level="section"` → h2；内部区块 h3。
+ * 移动端：宽表格由 `TableContainer`（`overflow-x: auto`）内部横向滚动，不撑宽文档。
  */
 import { useEffect, useMemo, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
@@ -41,6 +44,8 @@ import { ConfirmDialog } from '../components/ConfirmDialog'
 import { EmptyState } from '../components/EmptyState'
 import { ErrorState } from '../components/ErrorState'
 import { LoadingState } from '../components/LoadingState'
+import PageHeader from '../components/PageHeader'
+import SectionCard from '../components/SectionCard'
 import { qk } from '../api/queryKeys'
 
 /** 判断文件级字段是否缺失（``NULL`` / 空串 / 哨兵值「待补充」）。 */
@@ -181,21 +186,21 @@ function SourceDetailDialog({
               </Collapse>
 
               {/* 该来源内的覆盖率 */}
-              <Typography variant="subtitle2" component="h3" sx={{ mt: 2 }}>
-                该来源覆盖率
-              </Typography>
-              <Stack direction="row" spacing={2} flexWrap="wrap" useFlexGap>
-                <Typography variant="body2">章节 {pctText(detail.coverage.chapter)}</Typography>
-                <Typography variant="body2">题型 {pctText(detail.coverage.qtype)}</Typography>
-                <Typography variant="body2">答案 {pctText(detail.coverage.answer)}</Typography>
-              </Stack>
+              <SectionCard variant="plain" level="subsection" title="该来源覆盖率" sx={{ mt: 2 }}>
+                <Stack direction="row" spacing={2} flexWrap="wrap" useFlexGap>
+                  <Typography variant="body2">章节 {pctText(detail.coverage.chapter)}</Typography>
+                  <Typography variant="body2">题型 {pctText(detail.coverage.qtype)}</Typography>
+                  <Typography variant="body2">答案 {pctText(detail.coverage.answer)}</Typography>
+                </Stack>
+              </SectionCard>
 
               {/* 文件级元数据编辑（P2-3） */}
-              <Paper variant="outlined" sx={{ p: 2, mt: 2 }}>
-                <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 1 }}>
-                  <EditIcon fontSize="small" color="action" />
-                  <Typography variant="subtitle2" component="h3">文件级元数据（年级 / 教材）</Typography>
-                </Stack>
+              <SectionCard
+                level="subsection"
+                sx={{ mt: 2 }}
+                title="文件级元数据（年级 / 教材）"
+                actions={<EditIcon fontSize="small" color="action" />}
+              >
                 <Alert severity="warning" sx={{ mb: 1 }}>
                   年级 / 教材属于<strong>来源文件级</strong>字段：修改将影响该文件下全部{' '}
                   <strong>{detail.questions_count}</strong> 道题（不是只改一道）。保存前会再次确认。
@@ -239,24 +244,28 @@ function SourceDetailDialog({
                     保存文件级元数据
                   </Button>
                 </Stack>
-              </Paper>
+              </SectionCard>
 
               {/* 题目 id 预览 */}
-              <Typography variant="subtitle2" component="h3" sx={{ mt: 2 }}>
-                题目预览（前 {detail.question_ids_preview.length} 题）
-              </Typography>
-              <Stack direction="row" spacing={0.5} flexWrap="wrap" useFlexGap>
-                {detail.question_ids_preview.map((qid) => (
-                  <Chip
-                    key={qid}
-                    size="small"
-                    variant="outlined"
-                    label={`题 ${qid}`}
-                    onClick={() => navigate(`/question/${qid}`)}
-                    sx={{ cursor: 'pointer' }}
-                  />
-                ))}
-              </Stack>
+              <SectionCard
+                variant="plain"
+                level="subsection"
+                sx={{ mt: 2 }}
+                title={`题目预览（前 ${detail.question_ids_preview.length} 题）`}
+              >
+                <Stack direction="row" spacing={0.5} flexWrap="wrap" useFlexGap>
+                  {detail.question_ids_preview.map((qid) => (
+                    <Chip
+                      key={qid}
+                      size="small"
+                      variant="outlined"
+                      label={`题 ${qid}`}
+                      onClick={() => navigate(`/question/${qid}`)}
+                      sx={{ cursor: 'pointer' }}
+                    />
+                  ))}
+                </Stack>
+              </SectionCard>
             </Box>
           )}
         </DialogContent>
@@ -311,16 +320,21 @@ export default function SourcesPage() {
 
   return (
     <Box>
-      <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 1 }} flexWrap="wrap" useFlexGap>
-        <Typography variant="h6" component="h2">来源文件管理</Typography>
-        <Chip size="small" label={`文件 ${totalFiles}`} />
-        <Chip
-          size="small"
-          color={missingFiles > 0 ? 'warning' : 'success'}
-          variant={missingFiles > 0 ? 'filled' : 'outlined'}
-          label={`元数据缺失 ${missingFiles}`}
-        />
-      </Stack>
+      <PageHeader
+        level="section"
+        title="来源文件管理"
+        meta={
+          <>
+            <Chip size="small" label={`文件 ${totalFiles}`} />
+            <Chip
+              size="small"
+              color={missingFiles > 0 ? 'warning' : 'success'}
+              variant={missingFiles > 0 ? 'filled' : 'outlined'}
+              label={`元数据缺失 ${missingFiles}`}
+            />
+          </>
+        }
+      />
 
       <Alert severity="info" sx={{ mb: 2 }}>
         共 {totalFiles} 份来源文件；其中 <strong>{missingFiles}</strong> 份的年级 / 教材元数据缺失
@@ -381,7 +395,11 @@ export default function SourcesPage() {
             >
               来源文件列表：文件名、学段/学科、年级、教材、题量、公式与元数据状态
             </Box>
-            <TableHead>
+            {/* 表头底色区分：用语义槽 `action.hover`（随明暗模式自适应，不新增色值）。
+                `nowrap` 让表头单行显示（窄屏下由 TableContainer 内部横向滚动承载）。
+                sx 命中 `& .MuiTableCell-head`，特异性高于 stickyHeader 的 `.MuiTableCell-stickyHeader`，
+                可覆盖其 `background.paper`。 */}
+            <TableHead sx={{ '& .MuiTableCell-head': { bgcolor: 'action.hover', fontWeight: 600, whiteSpace: 'nowrap' } }}>
               <TableRow>
                 <TableCell>文件名</TableCell>
                 <TableCell>学段/学科</TableCell>

@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react'
-import { Suspense, useEffect, useState } from 'react'
+import { Suspense, lazy, useEffect, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   AppBar,
@@ -26,6 +26,7 @@ import {
 } from '@mui/material'
 import MenuIcon from '@mui/icons-material/Menu'
 import SearchIcon from '@mui/icons-material/Search'
+import AddIcon from '@mui/icons-material/Add'
 import UploadFileIcon from '@mui/icons-material/UploadFile'
 import EditNoteIcon from '@mui/icons-material/EditNote'
 import StorageIcon from '@mui/icons-material/Storage'
@@ -34,6 +35,8 @@ import ExpandLessIcon from '@mui/icons-material/ExpandLess'
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore'
 import { Outlet, useLocation } from 'react-router-dom'
 import { useAppNavigate } from './lib/navigation'
+import { contentMaxWidthFor, documentTitleForPath, normalizePath } from './lib/routeMeta'
+import { GLOSSARY } from './lib/glossary'
 import api from './api/client'
 import { qk } from './api/queryKeys'
 import ErrorBoundary from './components/ErrorBoundary'
@@ -46,6 +49,19 @@ import { useSettingsStore } from './store/settingsStore'
 import type { HealthData, Paper } from './api/types'
 
 const DRAWER_WIDTH = 232
+
+/**
+ * P2 两个全局面板**懒加载**。
+ *
+ * 它们只在被打开时才需要，但 `App.tsx` 是**入口 chunk** 的一部分——静态 import 会把
+ * 这约 7KB 直接压进首屏。首屏 JS 体积是本项目的硬指标（方案门禁 30,800 字节），
+ * 没有理由让「按 ⌘K 才出现」的面板拖慢每一次冷启动。
+ *
+ * 代价：首次打开会多一次本地 chunk 拉取（本机 HTTP，可忽略），
+ * 且因条件挂载而**没有关闭动画**（滑出面板瞬时收起，观感可接受）。
+ */
+const CommandPalette = lazy(() => import('./components/CommandPalette'))
+const SlideOver = lazy(() => import('./components/SlideOver'))
 
 export interface NavItem {
   path: string
@@ -120,47 +136,14 @@ export const SETTINGS_ITEM: NavItem = {
  */
 export const NAV_ITEMS: NavItem[] = [...NAV_GROUPS.flatMap((g) => g.items), SETTINGS_ITEM]
 
-/** 站点基础标题（与 `index.html` 的 `<title>` 一致）。 */
-export const BASE_TITLE = '初中物理 · 题库与组卷'
-
 /**
- * **独立的路由标题表**（B1 硬性要求 6）。
+ * 路由元数据（标题表 / 文档标题 / 面包屑 / 内容限宽）已抽到 `lib/routeMeta`。
  *
- * 为什么不复用导航项：导航项只覆盖侧栏 5 项，但文档标题还要覆盖**不在侧栏**的页面
- * （题目详情、导出中心）与**维护子页**（/manage/* 四个具体页）。
- * 前缀按**由长到短**排列，`find` 首个命中即为最具体匹配（`manage/stats` 不会退化成 `manage`）。
+ * 抽出的原因：面包屑与限宽都要按 pathname 派生，若留在本文件，
+ * 页面组件（懒加载 chunk）就得反向 import 外壳，形成依赖倒置。
+ * 这里**保留同名 re-export**，既有测试与调用方无需改动。
  */
-export const ROUTE_TITLES: ReadonlyArray<{ prefix: string; title: string }> = [
-  { prefix: 'manage/knowledge', title: '知识点复核' },
-  { prefix: 'manage/formula-review', title: '公式复核' },
-  { prefix: 'manage/sources', title: '来源文件' },
-  { prefix: 'manage/stats', title: '题库统计' },
-  { prefix: 'manage', title: '数据维护' },
-  { prefix: 'question', title: '题目详情' },
-  { prefix: 'import', title: '导入试卷' },
-  { prefix: 'builder', title: '组卷工作台' },
-  { prefix: 'search', title: '找题' },
-  { prefix: 'export', title: '导出中心' },
-  { prefix: 'settings', title: '系统设置' },
-]
-
-/** 归一化路径：去掉首尾斜杠，便于「完整路径 / 分段前缀」比较。 */
-function normalizePath(pathname: string): string {
-  return pathname.replace(/^\/+/, '').replace(/\/+$/, '')
-}
-
-/**
- * 由路由路径推导**文档标题**（P5-3：路由变化时同步 `document.title`）。
- *
- * 本函数是**纯函数、无副作用**，导出以便单测（不变量：已知路由 → 「页面名 · 初中物理题库」；
- * 维护子页显示具体标题，如「公式复核 · 初中物理题库」；未知 → 基础标题）。
- * 标题来源是**独立的路由标题表** `ROUTE_TITLES`，不依赖导航项。
- */
-export function documentTitleForPath(pathname: string): string {
-  const clean = normalizePath(pathname)
-  const hit = ROUTE_TITLES.find((r) => clean === r.prefix || clean.startsWith(`${r.prefix}/`))
-  return hit ? `${hit.title} · 初中物理题库` : BASE_TITLE
-}
+export { BASE_TITLE, ROUTE_TITLES, documentTitleForPath, normalizePath } from './lib/routeMeta'
 
 /**
  * 由 pathname 派生**当前应高亮的导航项 path**（B1 硬性要求 5）。
@@ -321,6 +304,9 @@ export default function App() {
     document.title = documentTitleForPath(location.pathname)
   }, [location.pathname])
 
+  // 内容区最大宽度（设计规范 §4 P0）：由 pathname 派生，`null` = 不限宽（工具类页面）。
+  const contentMaxWidth = contentMaxWidthFor(location.pathname)
+
   // ---- P1-6：「我的试卷」提升为全站可达 ----
   // 试卷切换器从组卷页顶部提升到全局 AppBar，任意页面都能切换 / 新建试卷。
   // 数据来源仍是 react-query（`qk.papers()`，与组卷页共用同一份缓存）；**唯一状态来源是 paperStore**。
@@ -329,6 +315,10 @@ export default function App() {
   const setTargetSectionId = usePaperStore((s) => s.setTargetSectionId)
   const [paperListOpen, setPaperListOpen] = useState(false)
   const [newPaperTitle, setNewPaperTitle] = useState('')
+  // P2：新建试卷走右侧滑出面板（保留背景上下文），不再挤在切换抽屉里填一行输入框。
+  const [newPaperOpen, setNewPaperOpen] = useState(false)
+  // P2：⌘K / Ctrl+K 全局快速跳转。
+  const [paletteOpen, setPaletteOpen] = useState(false)
   const papersQ = useQuery({ queryKey: qk.papers(), queryFn: () => listPapers() })
   // 防御性兜底：接口异常/契约变化时避免把非数组当列表（如后端错误体）。
   const papers: Paper[] = Array.isArray(papersQ.data) ? papersQ.data : []
@@ -348,8 +338,23 @@ export default function App() {
       qc.invalidateQueries({ queryKey: qk.papers() })
       switchPaper(p.id)
       setNewPaperTitle('')
+      setNewPaperOpen(false)
     },
   })
+
+  // P2：⌘K（macOS）/ Ctrl+K（Windows·Linux）唤起快速跳转。
+  // 挂在 window 上而不是某个容器：老师在任何页面、任何焦点位置都该能唤起。
+  // 阻止默认行为是必须的——浏览器/部分扩展会占用 Ctrl+K。
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && !e.altKey && e.key.toLowerCase() === 'k') {
+        e.preventDefault()
+        setPaletteOpen((v) => !v)
+      }
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [])
 
   /** 统一导航动作：跳转 +（窄屏时）收起临时抽屉。 */
   const handleNavigate = (path: string) => {
@@ -427,6 +432,18 @@ export default function App() {
               初中物理 · 题库与组卷
             </Typography>
           </Box>
+          {/* P2：快速跳转入口。**必须有一个可点击的入口**——
+              快捷键（⌘K）在手机上根本不存在，只给快捷键等于移动端没有这个功能。 */}
+          <Tooltip title={`${GLOSSARY.paletteTitle}（⌘K / Ctrl+K）`}>
+            <IconButton
+              color="inherit"
+              size="small"
+              aria-label={GLOSSARY.paletteTitle}
+              onClick={() => setPaletteOpen(true)}
+            >
+              <SearchIcon fontSize="small" />
+            </IconButton>
+          </Tooltip>
           {/* P1-6：试卷切换器提升到全局顶栏，任意页面可切换 / 新建试卷（窄屏自动收窄）。 */}
           <PaperSwitcher
             papers={papers}
@@ -506,22 +523,21 @@ export default function App() {
           <Typography id="paper-switch-drawer-title" variant="subtitle1" component="h2" gutterBottom>
             切换试卷
           </Typography>
-          <Stack direction="row" spacing={1} sx={{ mb: 1 }}>
-            <TextField
-              size="small"
-              label="新建试卷标题"
-              value={newPaperTitle}
-              onChange={(e) => setNewPaperTitle(e.target.value)}
-              fullWidth
-            />
-            <Button
-              variant="contained"
-              disabled={createPaperMut.isPending}
-              onClick={() => createPaperMut.mutate(newPaperTitle.trim() || '未命名试卷')}
-            >
-              新建
-            </Button>
-          </Stack>
+          {/* P2：新建改为右侧滑出面板——切换抽屉只负责「切换」一件事，
+              混进一个输入框 + 按钮会让这个抽屉的职责变模糊。 */}
+          <Button
+            variant="outlined"
+            size="small"
+            fullWidth
+            startIcon={<AddIcon />}
+            sx={{ mb: 1 }}
+            onClick={() => {
+              setPaperListOpen(false)
+              setNewPaperOpen(true)
+            }}
+          >
+            {GLOSSARY.newPaperTitle}
+          </Button>
           <Divider sx={{ my: 1 }} />
           {papersQ.isLoading && (
             <Typography variant="body2" color="text.secondary">
@@ -545,7 +561,7 @@ export default function App() {
           </List>
           {papers.length === 0 && !papersQ.isLoading && !papersQ.isError && (
             <Typography variant="body2" color="text.secondary">
-              还没有试卷，在上方输入标题新建一份。
+              还没有试卷，点上方「新建试卷」创建一份。
             </Typography>
           )}
         </Box>
@@ -568,27 +584,92 @@ export default function App() {
         }}
       >
         <Toolbar variant="dense" />
-        <HealthBanner />
-        {/* 阶段 4：只读账号提示（**仅线上版只读角色可见**，本地版为空）。 */}
-        <SessionNotice />
-        {/* 页面级错误边界：单页异常不再整站白屏；切换路由自动重置。 */}
-        <ErrorBoundary resetKeys={[location.pathname]}>
-          {/* P5-1 路由级代码分割的加载态边界。
-              Suspense 放在 App 外壳**内部**、仅包住 <Outlet/>，而不是包住整个 <App/>：
-              这样懒加载页面 chunk 下载期间，顶栏 / 侧栏 / 试卷切换器**保持挂载不闪动**，
-              只有内容区显示统一的加载态（`LoadingState`），既无白屏也不会整页重排。
-              外层保留 ErrorBoundary：懒加载 chunk 拉取失败（动态 import reject）会作为
-              渲染错误冒泡到它，走项目既有的错误 UI，而不是卡在加载态。 */}
-          <Suspense fallback={<LoadingState label="页面加载中…" />}>
-            {/* 页面切换过渡的锚点（实施方案 §5）：只给**页面内容**做淡入淡出，
-                顶栏 / 侧栏 / 全局 Drawer 保持静止（root 过渡已关闭）。
-                用稳定 class 而非随机 key，避免动效导致页面重挂载。 */}
-            <div className="qb-route-content">
-              <Outlet />
-            </div>
-          </Suspense>
-        </ErrorBoundary>
+        {/* 内容限宽（设计规范 §4 P0「内容最大宽度」）：
+            正文类页面（设置 / 导入 / 单题详情）限宽居中——内容以阅读为主，
+            过宽会让视线长距离横移；工具类页面（组卷 / 找题 / 导出 / 维护）返回 null，
+            保持全宽（限宽会挤压双栏工作区与宽表格）。
+            横幅一并放进限宽容器，避免「横幅通栏、内容居中」的错位观感。 */}
+        <Box sx={{ maxWidth: contentMaxWidth ?? 'none', mx: 'auto', width: '100%' }}>
+          <HealthBanner />
+          {/* 阶段 4：只读账号提示（**仅线上版只读角色可见**，本地版为空）。 */}
+          <SessionNotice />
+          {/* 页面级错误边界：单页异常不再整站白屏；切换路由自动重置。 */}
+          <ErrorBoundary resetKeys={[location.pathname]}>
+            {/* P5-1 路由级代码分割的加载态边界。
+                Suspense 放在 App 外壳**内部**、仅包住 <Outlet/>，而不是包住整个 <App/>：
+                这样懒加载页面 chunk 下载期间，顶栏 / 侧栏 / 试卷切换器**保持挂载不闪动**，
+                只有内容区显示统一的加载态（`LoadingState`），既无白屏也不会整页重排。
+                外层保留 ErrorBoundary：懒加载 chunk 拉取失败（动态 import reject）会作为
+                渲染错误冒泡到它，走项目既有的错误 UI，而不是卡在加载态。 */}
+            <Suspense fallback={<LoadingState label="页面加载中…" />}>
+              {/* 页面切换过渡的锚点（实施方案 §5）：只给**页面内容**做淡入淡出，
+                  顶栏 / 侧栏 / 全局 Drawer 保持静止（root 过渡已关闭）。
+                  用稳定 class 而非随机 key，避免动效导致页面重挂载。 */}
+              <div className="qb-route-content">
+                <Outlet />
+              </div>
+            </Suspense>
+          </ErrorBoundary>
+        </Box>
       </Box>
+
+      {/* ---- P2 浮层（放在 JSX 最后）------------------------------------
+          两个理由：
+          1. 浮层在 DOM 顺序上靠后更符合「覆盖在内容之上」的直觉；
+          2. `tests/unit/CodeSplitting.test.tsx` 断言 App.tsx 里**第一个** `<Suspense>`
+             必须位于 ErrorBoundary 之内并包住 `<Outlet/>`（路由加载态不变量）。
+             把这两个懒加载浮层放在前面会让该断言找到错误的 Suspense。 */}
+
+      {/* 全局快速跳转（⌘K / 顶栏放大镜）。 */}
+      {paletteOpen && (
+        <Suspense fallback={null}>
+          <CommandPalette
+            open
+            onClose={() => setPaletteOpen(false)}
+            onNavigate={(to) => navigate(to)}
+          />
+        </Suspense>
+      )}
+
+      {/* 新建试卷：右侧滑出面板（保留背景上下文；破坏性确认仍用 Dialog）。 */}
+      {newPaperOpen && (
+        <Suspense fallback={null}>
+          <SlideOver
+            open
+            onClose={() => setNewPaperOpen(false)}
+            title={GLOSSARY.newPaperTitle}
+            description={GLOSSARY.newPaperDescription}
+            labelledById="new-paper-slideover-title"
+            actions={
+              <Button
+                variant="contained"
+                size="small"
+                disabled={createPaperMut.isPending}
+                onClick={() => createPaperMut.mutate(newPaperTitle.trim() || '未命名试卷')}
+              >
+                {GLOSSARY.newPaperCreate}
+              </Button>
+            }
+          >
+            <TextField
+              autoFocus
+              fullWidth
+              label={GLOSSARY.newPaperNameLabel}
+              placeholder={GLOSSARY.newPaperNamePlaceholder}
+              value={newPaperTitle}
+              onChange={(e) => setNewPaperTitle(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') createPaperMut.mutate(newPaperTitle.trim() || '未命名试卷')
+              }}
+            />
+            {createPaperMut.isError && (
+              <Alert severity="error" sx={{ mt: 2 }}>
+                新建失败，请确认后端服务已启动后重试。
+              </Alert>
+            )}
+          </SlideOver>
+        </Suspense>
+      )}
     </Box>
   )
 }

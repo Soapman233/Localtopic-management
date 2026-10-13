@@ -201,6 +201,30 @@ export const GLOSSARY = {
     + '请勿在公共网络下使用。',
   /** 证书指纹标签（供人工核对）。 */
   lanCertFingerprint: '证书指纹',
+
+  // ---- 全局快速跳转（⌘K / Ctrl+K，设计规范 §4 P2）---------------------- //
+  /** 面板标题。 */
+  paletteTitle: '快速跳转',
+  /** 输入框占位提示。 */
+  palettePlaceholder: '输入页面名，或直接输入关键词搜题…',
+  /** 无匹配结果。 */
+  paletteEmpty: '没有匹配的页面',
+  /** 快捷键提示（显示在面板底部）。 */
+  paletteShortcutHint: '↑↓ 选择 · Enter 打开 · Esc 关闭',
+  /** 输入框可访问名。 */
+  paletteInputLabel: '快速跳转或搜索',
+
+  // ---- 新建试卷（SlideOver，设计规范 §4 P2）--------------------------- //
+  /** 面板标题。 */
+  newPaperTitle: '新建试卷',
+  /** 面板说明。 */
+  newPaperDescription: '新建后会自动切换到这份试卷，并回到组卷工作台。',
+  /** 标题输入框标签。 */
+  newPaperNameLabel: '试卷标题',
+  /** 标题输入框占位。 */
+  newPaperNamePlaceholder: '例如：第 3 章单元测验',
+  /** 提交按钮。 */
+  newPaperCreate: '创建并开始组卷',
 } as const
 
 /** 单题「快照锁定」提示（用于 Tooltip / 单行徽章）。 */
@@ -288,6 +312,15 @@ export function describeMentionScope(): string {
 /** 「给技术人员的信息」折叠区标题（对应内部「技术详情」）。 */
 export function describeTechnicalInfo(): string {
   return GLOSSARY.technicalInfo
+}
+
+/**
+ * 快速跳转面板里「搜索题目」这一条的动作文案。
+ *
+ * 为什么放在这里：这句话要同时出现在面板条目与读屏播报里，内联两处必然走样。
+ */
+export function describePaletteSearch(query: string): string {
+  return `搜索题目「${query}」`
 }
 
 /** 导入功能被关闭时的教师语言（替代含内部开关名的后端 message）。 */

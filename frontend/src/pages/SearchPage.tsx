@@ -10,6 +10,7 @@ import {
   Box,
   Button,
   CircularProgress,
+  Collapse,
   Dialog,
   DialogActions,
   DialogContent,
@@ -20,7 +21,12 @@ import {
   Stack,
   TextField,
   Typography,
+  useMediaQuery,
+  useTheme,
 } from '@mui/material'
+import FilterListIcon from '@mui/icons-material/FilterList'
+import RestartAltIcon from '@mui/icons-material/RestartAlt'
+import { PageHeader } from '../components/PageHeader'
 import { FilterSidebar } from '../components/FilterSidebar'
 import { CoverageBanner } from '../components/CoverageBanner'
 import { GradeGapNotice } from '../components/GradeGapNotice'
@@ -32,12 +38,14 @@ import { useCoverageQuery, useFacetsQuery, useSearchQuery } from '../hooks/useSe
 import { addQuestions, createPaper, listPapers } from '../api/papers'
 import { setDifficulty } from '../api/questions'
 import { DIFFICULTIES, type SearchItem } from '../api/types'
+import type { SearchParams } from '../api/search'
 import { usePaperStore } from '../store/paperStore'
 import { useUiStore } from '../store/uiStore'
 import { useSettingsStore } from '../store/settingsStore'
 import { notify } from '../lib/feedback'
 import { isDebugMode } from '../lib/glossary'
 import { useAppNavigate } from '../lib/navigation'
+import { useSearchParams } from 'react-router-dom'
 import { usePermissionGuard } from '../hooks/usePermission'
 import { useQuestionFilters } from '../hooks/useQuestionFilters'
 import { qk } from '../api/queryKeys'
@@ -72,6 +80,49 @@ function useListAnimationEnabled(itemIds: number[], page: number): boolean {
     setEnabled(next)
   }, [itemIds, page])
   return enabled
+}
+
+/** 维度筛选键 → 中文名（用于页头「当前筛选摘要」）。 */
+const FILTER_DIM_LABELS: ReadonlyArray<readonly [keyof SearchParams, string]> = [
+  ['stage', '学段'],
+  ['subject', '学科'],
+  ['grade', '年级'],
+  ['textbook', '教材'],
+  ['chapter', '章节'],
+  ['qtype', '题型'],
+  ['difficulty', '难度'],
+]
+
+/** 「待补充」桶筛选键 → 中文名。 */
+const FILTER_MISSING_LABELS: ReadonlyArray<readonly [keyof SearchParams, string]> = [
+  ['grade_missing', '年级待补充'],
+  ['textbook_missing', '教材待补充'],
+  ['chapter_missing', '章节待补充'],
+  ['qtype_missing', '题型待补充'],
+  ['difficulty_missing', '难度待补充'],
+]
+
+/**
+ * 当前生效筛选条件 → 可读摘要片段（纯表现层，**不改任何检索语义**）。
+ *
+ * 只读地罗列 `filters` / `strictKp` 里已生效的条件，用于页头元信息行与窄屏
+ * 「筛选」按钮上的数量徽标；不参与任何请求参数构造。
+ */
+function activeFilterParts(filters: SearchParams, strictKp: boolean): string[] {
+  const parts: string[] = []
+  if (filters.keyword) parts.push(`关键词「${filters.keyword}」`)
+  for (const [key, label] of FILTER_DIM_LABELS) {
+    const v = filters[key]
+    if (typeof v === 'string' && v) parts.push(`${label} ${v}`)
+  }
+  for (const [key, label] of FILTER_MISSING_LABELS) {
+    if (filters[key]) parts.push(label)
+  }
+  if (filters.has_answer) parts.push('仅看有答案')
+  if (filters.has_analysis) parts.push('仅看有解析')
+  if (filters.needs_review) parts.push('仅看含待复核公式')
+  if (strictKp) parts.push('仅看已确认知识点')
+  return parts
 }
 
 /** 难度标注对话框（P1-4 单题入口）。 */
@@ -201,6 +252,12 @@ export default function SearchPage() {
   const { currentPaperId, targetSectionId, setCurrentPaperId } = usePaperStore()
   const { coverageDismissed, setCoverageDismissed, strictKp, setStrictKp } = useUiStore()
 
+  // 窄屏（<md，即 <900px）时筛选栏收进可折叠面板，默认收起；桌面保持常驻左栏。
+  // 折叠状态用**本地 state**（不进 store）：它只是这一屏的临时视图开关。
+  const theme = useTheme()
+  const isNarrowFilters = useMediaQuery(theme.breakpoints.down('md'))
+  const [filtersOpen, setFiltersOpen] = useState(false)
+
   // 检索条件状态（关键词防抖 / URL 同步 / query 与 facets 参数）——与组卷页共用同一实现（§1.6）。
   const {
     keywordInput,
@@ -215,8 +272,31 @@ export default function SearchPage() {
     hasActiveFilters,
   } = useQuestionFilters({ pageSize: PAGE_SIZE })
 
+  // 只读地取当前 URL 查询串，用于消费「外部带进来的关键词」（见下方 effect）。
+  const [searchParams] = useSearchParams()
+
   const [annotateTarget, setAnnotateTarget] = useState<SearchItem | null>(null)
   const [pickOpen, setPickOpen] = useState(false)
+
+  // P2：接受「从外部带关键词进来」——全局快速跳转（⌘K）会跳到 `/search?keyword=xxx`。
+  //
+  // 为什么需要这个 effect：`useQuestionFilters` 只在**挂载时**从 URL 还原条件
+  // （它的契约是「条件 → URL」单向同步）。若老师**本来就在找题页**，再经 ⌘K 搜一次
+  // 不会让组件重挂载，URL 上的新 keyword 就没人消费；更糟的是 hook 的写回 effect
+  // 会把刚写进去的 `keyword` 覆盖掉（表现为「跳过来但关键词没了」）。
+  //
+  // 稳定性：应用后 `filters.keyword === urlKeyword`，本 effect 再跑也会被守卫拦住，
+  // 不会与「输入框防抖 → 写回 URL」形成回环。
+  const urlKeyword = searchParams.get('keyword') ?? ''
+  useEffect(() => {
+    if (urlKeyword && urlKeyword !== (filters.keyword ?? '')) {
+      setKeywordInput(urlKeyword)
+      setFilters((f) => ({ ...f, keyword: urlKeyword }))
+      setPage(1)
+    }
+    // 只依赖 urlKeyword：filters 变化由守卫兜住，避免每次筛选都重跑。
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [urlKeyword])
   // P1-3：批量加题——待加入的题目 id（无当前试卷时先选/建卷）+ 已勾选的题目 id。
   const [pendingAddIds, setPendingAddIds] = useState<number[]>([])
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set())
@@ -281,6 +361,22 @@ export default function SearchPage() {
 
   const total = searchQ.data?.total ?? 0
   const items = searchQ.data?.items ?? []
+  // 当前生效筛选的可读摘要（页头元信息行 + 窄屏「筛选」按钮数量徽标）。
+  const filterParts = useMemo(() => activeFilterParts(filters, strictKp), [filters, strictKp])
+  const filterSummary = filterParts.length > 0 ? filterParts.join(' · ') : '全部题目'
+  // 筛选栏 props（桌面左栏 / 窄屏折叠面板共用同一份；切换筛选一律把页码归 1）。
+  const sidebarProps = {
+    facets: facetsQ.data,
+    loading: facetsQ.isLoading,
+    filters,
+    onChange: (patch: Partial<SearchParams>) => {
+      setFilters((f) => ({ ...f, ...patch }))
+      setPage(1)
+    },
+    strictKp,
+    onStrictKpChange: setStrictKp,
+    onReset: resetFilters,
+  }
   // 题卡列表的稳定 ID 序列（引用随数据变化，避免每次渲染都重算动效开关）。
   const itemIds = useMemo(() => items.map((i) => i.id), [items])
   const listAnimationEnabled = useListAnimationEnabled(itemIds, page)
@@ -291,18 +387,57 @@ export default function SearchPage() {
 
   return (
     <Box>
-      <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 1.5 }} flexWrap="wrap" useFlexGap>
-        <Typography variant="h6" component="h1" sx={{ flexShrink: 0 }}>
-          检索题库
-        </Typography>
-        <TextField
-          size="small"
-          placeholder="搜索题干关键词"
-          value={keywordInput}
-          onChange={(e) => setKeywordInput(e.target.value)}
-          sx={{ minWidth: 320, flex: 1 }}
-        />
-      </Stack>
+      <PageHeader
+        title="找题"
+        meta={
+          <>
+            <span>
+              共 <strong>{total.toLocaleString('zh-CN')}</strong> 题
+            </span>
+            <span aria-hidden>·</span>
+            <span>
+              已选 <strong>{selectedIds.size}</strong> 题
+            </span>
+            <span aria-hidden>·</span>
+            <span>{filterSummary}</span>
+            {searchQ.isFetching && <CircularProgress size={14} />}
+          </>
+        }
+        actions={
+          <>
+            {/* 窄屏（<md）才出现：筛选栏收进可折叠面板，默认收起。 */}
+            {isNarrowFilters && (
+              <Button
+                variant="outlined"
+                startIcon={<FilterListIcon />}
+                onClick={() => setFiltersOpen((v) => !v)}
+                aria-expanded={filtersOpen}
+                aria-controls="search-filter-panel"
+                data-testid="toggle-filters"
+              >
+                筛选{filterParts.length > 0 ? `（${filterParts.length}）` : ''}
+              </Button>
+            )}
+            <Button
+              variant="outlined"
+              startIcon={<RestartAltIcon />}
+              onClick={resetFilters}
+              disabled={!hasActiveFilters && keywordInput.trim() === ''}
+            >
+              重置筛选
+            </Button>
+          </>
+        }
+      />
+
+      <TextField
+        size="small"
+        placeholder="搜索题干关键词"
+        value={keywordInput}
+        onChange={(e) => setKeywordInput(e.target.value)}
+        fullWidth
+        sx={{ mb: 1.5 }}
+      />
 
       <CoverageBanner
         coverage={coverageQ.data ?? facetsQ.data?.coverage}
@@ -331,28 +466,19 @@ export default function SearchPage() {
         </Alert>
       )}
 
+      {/* 窄屏：筛选栏收进可折叠面板（默认收起），由页头「筛选」按钮开合；桌面常驻左栏。 */}
+      {isNarrowFilters && (
+        <Collapse in={filtersOpen} timeout="auto" unmountOnExit>
+          <Box id="search-filter-panel" sx={{ mb: 2 }}>
+            <FilterSidebar {...sidebarProps} fullWidth />
+          </Box>
+        </Collapse>
+      )}
+
       <Box sx={{ display: 'flex', gap: 2, alignItems: 'flex-start' }}>
-        <FilterSidebar
-          facets={facetsQ.data}
-          loading={facetsQ.isLoading}
-          filters={filters}
-          onChange={(patch) => {
-            setFilters((f) => ({ ...f, ...patch }))
-            setPage(1)
-          }}
-          strictKp={strictKp}
-          onStrictKpChange={setStrictKp}
-          onReset={resetFilters}
-        />
+        {!isNarrowFilters && <FilterSidebar {...sidebarProps} />}
 
         <Box sx={{ flex: 1, minWidth: 0 }}>
-          <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 1 }}>
-            <Typography variant="body2" color="text.secondary">
-              共 <strong>{total.toLocaleString('zh-CN')}</strong> 题
-            </Typography>
-            {searchQ.isFetching && <CircularProgress size={16} />}
-          </Stack>
-
           <GradeGapNotice
             gap={searchQ.data?.grade_gap}
             filters={filters}

@@ -6,6 +6,13 @@
  * 渐进披露（方案 §3.9）：日常会用到的设置（数据库路径、导出目录、默认模板、
  * 外观、局域网访问）默认可见可改；仅「公式渲染（KaTeX）」属高级项，
  * **默认只读**，需显式点「编辑高级设置」解锁后才可修改。
+ *
+ * 布局约定（设计规范 §4 P0）
+ * -------------------------
+ * - 页主标题走 `PageHeader`（`level="page"` → 唯一 h1），**不手写 h1**；
+ * - 「常用 / 高级」两组用 `SectionCard` 分组卡片承载；卡片内部再分小节时用
+ *   `variant="plain"`（仅标题行 + 分隔线），避免「卡片套卡片」；
+ * - 内容限宽由 `App.tsx` 按路由统一处理（/settings → 1100px 居中），页面内不再自加 maxWidth。
  */
 import { useEffect, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
@@ -13,10 +20,8 @@ import {
   Alert,
   Box,
   Button,
-  Divider,
   FormControlLabel,
   MenuItem,
-  Paper,
   Select,
   Stack,
   Switch,
@@ -30,6 +35,8 @@ import type { SettingsData } from '../api/types'
 import { ErrorState } from '../components/ErrorState'
 import { LoadingState } from '../components/LoadingState'
 import LanAccessPanel from '../components/LanAccessPanel'
+import PageHeader from '../components/PageHeader'
+import SectionCard from '../components/SectionCard'
 import { qk } from '../api/queryKeys'
 
 interface FormState {
@@ -53,20 +60,6 @@ function toForm(s: SettingsData): FormState {
     theme_primary: String(s.theme?.primary ?? '#2F63EA'),
     theme_dark: Boolean(s.theme?.dark),
   }
-}
-
-/** 分组小标题（非 heading，避免进入标题大纲）。 */
-function GroupLabel({ children }: { children: string }) {
-  return (
-    <Typography
-      variant="overline"
-      color="text.secondary"
-      display="block"
-      sx={{ letterSpacing: 1, mb: 0.5 }}
-    >
-      {children}
-    </Typography>
-  )
 }
 
 /** P9 系统设置页。 */
@@ -104,7 +97,7 @@ export default function SettingsPage() {
   if (settingsQ.isError) {
     return (
       <Box>
-        <Typography variant="h6" component="h1" gutterBottom>系统设置</Typography>
+        <PageHeader title="系统设置" level="page" />
         <ErrorState
           error={settingsQ.error}
           title="加载设置失败"
@@ -116,9 +109,7 @@ export default function SettingsPage() {
   if (settingsQ.isLoading || form === null) {
     return (
       <Box>
-        <Typography variant="h6" component="h1" gutterBottom>
-          系统设置
-        </Typography>
+        <PageHeader title="系统设置" level="page" />
         <LoadingState label="正在加载设置…" />
       </Box>
     )
@@ -128,10 +119,8 @@ export default function SettingsPage() {
     setForm((f) => (f ? { ...f, [key]: value } : f))
 
   return (
-    <Box sx={{ maxWidth: 760 }}>
-      <Typography variant="h6" component="h1" gutterBottom>
-        系统设置
-      </Typography>
+    <Box>
+      <PageHeader title="系统设置" level="page" />
 
       {toast && (
         <Alert severity={toast.kind} sx={{ mb: 2 }} onClose={() => setToast(null)}>
@@ -140,107 +129,102 @@ export default function SettingsPage() {
       )}
 
       {/* ── 常用（默认可见可改） ───────────────────────────────────── */}
-      <GroupLabel>常用</GroupLabel>
-
-      {/* 数据库 */}
-      <Paper variant="outlined" sx={{ p: 2, mb: 2 }}>
-        <Typography variant="subtitle2" component="h2" gutterBottom>
-          数据库
-        </Typography>
-        <TextField
-          label="数据库路径（bank.db）"
-          size="small"
-          fullWidth
-          value={form.db_path}
-          onChange={(e) => set('db_path', e.target.value)}
-        />
-        <Alert severity="warning" sx={{ mt: 1 }}>
-          修改数据库路径后需<strong>重启服务</strong>方可生效；指向不存在的库将无法检索 / 编辑。
-        </Alert>
-      </Paper>
-
-      {/* 导出 */}
-      <Paper variant="outlined" sx={{ p: 2, mb: 2 }}>
-        <Typography variant="subtitle2" component="h2" gutterBottom>
-          导出
-        </Typography>
-        <Stack spacing={2}>
-          <TextField
-            label="默认导出目录"
-            size="small"
-            fullWidth
-            value={form.export_dir}
-            onChange={(e) => set('export_dir', e.target.value)}
-          />
-          <Box>
-            <Typography variant="caption" color="text.secondary">
-              默认模板
-            </Typography>
-            <Select
+      <SectionCard title="常用" sx={{ mb: 2 }}>
+        <Stack spacing={2.5}>
+          {/* 数据库 */}
+          <SectionCard title="数据库" variant="plain" level="subsection">
+            <TextField
+              label="数据库路径（bank.db）"
               size="small"
-              value={form.default_template}
-              onChange={(e) => set('default_template', e.target.value)}
-              sx={{ display: 'block', minWidth: 200 }}
-            >
-              {TEMPLATES.map((t) => (
-                <MenuItem key={t} value={t}>
-                  {t}
-                </MenuItem>
-              ))}
-            </Select>
-            {/* P0-2：默认模板已被「新建试卷」消费（组卷页 / 检索页建卷时读取），不再是空配置。 */}
-            <Typography variant="caption" color="text.secondary">
-              新建试卷时默认套用的模板。
-            </Typography>
-          </Box>
-        </Stack>
-      </Paper>
+              fullWidth
+              value={form.db_path}
+              onChange={(e) => set('db_path', e.target.value)}
+            />
+            <Alert severity="warning" sx={{ mt: 1 }}>
+              修改数据库路径后需<strong>重启服务</strong>方可生效；指向不存在的库将无法检索 / 编辑。
+            </Alert>
+          </SectionCard>
 
-      {/* 外观 */}
-      <Paper variant="outlined" sx={{ p: 2, mb: 2 }}>
-        <Typography variant="subtitle2" component="h2" gutterBottom>
-          外观
-        </Typography>
-        <Stack direction="row" spacing={2} alignItems="center" flexWrap="wrap" useFlexGap>
-          <Box>
-            <Typography variant="caption" color="text.secondary">
-              主色
-            </Typography>
-            <Stack direction="row" spacing={1} alignItems="center">
-              <input
-                type="color"
-                aria-label="主色"
-                value={form.theme_primary}
-                onChange={(e) => set('theme_primary', e.target.value)}
-                style={{ width: 48, height: 32, border: 'none', background: 'none' }}
-              />
+          {/* 导出 */}
+          <SectionCard title="导出" variant="plain" level="subsection">
+            <Stack spacing={2}>
               <TextField
+                label="默认导出目录"
                 size="small"
-                value={form.theme_primary}
-                onChange={(e) => set('theme_primary', e.target.value)}
-                sx={{ width: 140 }}
+                fullWidth
+                value={form.export_dir}
+                onChange={(e) => set('export_dir', e.target.value)}
+              />
+              <Box>
+                <Typography variant="caption" color="text.secondary" display="block">
+                  默认模板
+                </Typography>
+                {/* ⚠️ 移动端修复：根节点**不要**写 display:block + minWidth，
+                    否则 MUI Select 根从 inline-flex 变 block，内部 content-box 的
+                    .MuiSelect-select 会「先撑满父宽、再加自身 padding」而横向溢出。
+                    用 fullWidth（根保持 inline-flex + width:100%）即可自适应窄屏。 */}
+                <Select
+                  size="small"
+                  fullWidth
+                  value={form.default_template}
+                  onChange={(e) => set('default_template', e.target.value)}
+                  sx={{ mt: 0.5 }}
+                >
+                  {TEMPLATES.map((t) => (
+                    <MenuItem key={t} value={t}>
+                      {t}
+                    </MenuItem>
+                  ))}
+                </Select>
+                {/* P0-2：默认模板已被「新建试卷」消费（组卷页 / 检索页建卷时读取），不再是空配置。 */}
+                <Typography variant="caption" color="text.secondary" display="block" sx={{ mt: 0.5 }}>
+                  新建试卷时默认套用的模板。
+                </Typography>
+              </Box>
+            </Stack>
+          </SectionCard>
+
+          {/* 外观 */}
+          <SectionCard title="外观" variant="plain" level="subsection">
+            <Stack direction="row" spacing={2} alignItems="center" flexWrap="wrap" useFlexGap>
+              <Box>
+                <Typography variant="caption" color="text.secondary" display="block">
+                  主色
+                </Typography>
+                <Stack direction="row" spacing={1} alignItems="center">
+                  <input
+                    type="color"
+                    aria-label="主色"
+                    value={form.theme_primary}
+                    onChange={(e) => set('theme_primary', e.target.value)}
+                    style={{ width: 48, height: 32, border: 'none', background: 'none' }}
+                  />
+                  <TextField
+                    size="small"
+                    value={form.theme_primary}
+                    onChange={(e) => set('theme_primary', e.target.value)}
+                    sx={{ width: 140 }}
+                  />
+                </Stack>
+              </Box>
+              <FormControlLabel
+                control={<Switch checked={form.theme_dark} onChange={(e) => set('theme_dark', e.target.checked)} />}
+                label="深色模式"
               />
             </Stack>
-          </Box>
-          <FormControlLabel
-            control={<Switch checked={form.theme_dark} onChange={(e) => set('theme_dark', e.target.checked)} />}
-            label="深色模式"
-          />
+          </SectionCard>
         </Stack>
-      </Paper>
+      </SectionCard>
 
-      {/* 局域网访问（方案 A）：手机 / 其他设备访问，属常用项，始终可用 */}
+      {/* 局域网访问（方案 A）：手机 / 其他设备访问，属常用项，始终可用。
+          该组件自带卡片外框（Paper），故作为独立卡片紧邻「常用」组，避免卡片套卡片。 */}
       <LanAccessPanel />
 
       {/* ── 高级（默认只读，显式解锁） ─────────────────────────────── */}
-      <Divider sx={{ my: 2 }} />
-      <GroupLabel>高级</GroupLabel>
-
-      <Paper variant="outlined" sx={{ p: 2, mb: 2 }}>
-        <Stack direction="row" alignItems="center" justifyContent="space-between" spacing={1}>
-          <Typography variant="subtitle2" component="h2">
-            公式渲染（KaTeX）
-          </Typography>
+      <SectionCard
+        title="高级"
+        meta="默认只读"
+        actions={
           <Button
             size="small"
             variant={advancedEditing ? 'text' : 'outlined'}
@@ -249,42 +233,45 @@ export default function SettingsPage() {
           >
             {advancedEditing ? '完成' : '编辑高级设置'}
           </Button>
-        </Stack>
-        <Typography variant="caption" color="text.secondary" display="block" sx={{ mt: 0.5 }}>
+        }
+        sx={{ mb: 2 }}
+      >
+        <Typography variant="caption" color="text.secondary" display="block">
           高级设置默认只读，避免误改影响公式渲染；点「编辑高级设置」后可修改。
         </Typography>
-        {/* P0-2：这两个开关已真正生效——保存后经 main.tsx 的 syncFrom 镜像到 settingsStore，
-            由 KatexFormula 渲染时读取；「默认模板」同理被建卷流程消费。不再是「点了没用」的假开关。 */}
-        <Box sx={{ mt: 1 }}>
-          <FormControlLabel
-            disabled={!advancedEditing}
-            control={
-              <Switch
-                checked={form.katex_throw_on_error}
-                onChange={(e) => set('katex_throw_on_error', e.target.checked)}
-              />
-            }
-            label="渲染失败时抛出错误（关闭则降级为红色源码）"
-          />
-        </Box>
-        <Box>
-          <FormControlLabel
-            disabled={!advancedEditing}
-            control={
-              <Switch checked={form.katex_strict} onChange={(e) => set('katex_strict', e.target.checked)} />
-            }
-            label="严格模式（对非标准 LaTeX 语法告警）"
-          />
-        </Box>
-        {advancedEditing && (
-          <Alert severity="info" sx={{ mt: 1 }}>
-            保存后立即生效：作用于试卷预览与导出中的公式渲染。
-          </Alert>
-        )}
-      </Paper>
+        <SectionCard title="公式渲染（KaTeX）" variant="plain" level="subsection" sx={{ mt: 1.5 }}>
+          {/* P0-2：这两个开关已真正生效——保存后经 main.tsx 的 syncFrom 镜像到 settingsStore，
+              由 KatexFormula 渲染时读取；「默认模板」同理被建卷流程消费。不再是「点了没用」的假开关。 */}
+          <Box>
+            <FormControlLabel
+              disabled={!advancedEditing}
+              control={
+                <Switch
+                  checked={form.katex_throw_on_error}
+                  onChange={(e) => set('katex_throw_on_error', e.target.checked)}
+                />
+              }
+              label="渲染失败时抛出错误（关闭则降级为红色源码）"
+            />
+          </Box>
+          <Box>
+            <FormControlLabel
+              disabled={!advancedEditing}
+              control={
+                <Switch checked={form.katex_strict} onChange={(e) => set('katex_strict', e.target.checked)} />
+              }
+              label="严格模式（对非标准 LaTeX 语法告警）"
+            />
+          </Box>
+          {advancedEditing && (
+            <Alert severity="info" sx={{ mt: 1 }}>
+              保存后立即生效：作用于试卷预览与导出中的公式渲染。
+            </Alert>
+          )}
+        </SectionCard>
+      </SectionCard>
 
-      <Divider sx={{ mb: 2 }} />
-      <Stack direction="row" spacing={2} alignItems="center">
+      <Stack direction="row" spacing={2} alignItems="center" sx={{ mt: 2 }}>
         <Button
           variant="contained"
           startIcon={<SaveIcon />}

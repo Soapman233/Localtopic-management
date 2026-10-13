@@ -22,7 +22,9 @@ import {
   Drawer,
   ListItemButton,
   ListItemText,
+  MenuItem,
   Pagination,
+  Select,
   Snackbar,
   Stack,
   TextField,
@@ -53,6 +55,8 @@ import { ConfirmDialog } from '../components/ConfirmDialog'
 import { PaperPanel, type PaperActions } from '../components/PaperPanel'
 import { LivePreviewPanel } from '../components/LivePreviewPanel'
 import { ExportDrawer } from '../components/ExportDrawer'
+import { PageHeader } from '../components/PageHeader'
+import { SectionCard } from '../components/SectionCard'
 import AnimatedList from '../components/AnimatedList'
 import { EmptyState } from '../components/EmptyState'
 import { ErrorState } from '../components/ErrorState'
@@ -92,6 +96,10 @@ import { qk } from '../api/queryKeys'
 const PAGE_SIZE = 15
 /** 排版视图缩放（仅展示；测量层不受影响）。A4 宽 ≈ 794px × 0.72 ≈ 572px，适配右栏。 */
 const LAYOUT_SCALE = 0.72
+
+/** 试卷级设置选项（与 `PaperPanel` 同口径；上移到右栏「试卷设置」卡片后仍为唯一来源）。 */
+const TEMPLATES = ['考试', '测验', '作业']
+const ANSWER_MODES = ['学生版', '答案解析版', '仅答案']
 
 /** 组卷页所需的全部写操作（以后端返回整卷为准）。
  *
@@ -169,6 +177,8 @@ export default function PaperBuilderPage() {
 
   const [drawerOpen, setDrawerOpen] = useState(false)
   const [newTitle, setNewTitle] = useState('')
+  // 试卷标题就地编辑草稿（从 PaperPanel 上移到右栏「试卷设置」卡片，业务语义不变）。
+  const [titleDraft, setTitleDraft] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [errorDiagnostics, setErrorDiagnostics] = useState<ExportDiagnostics | null>(null)
   const [exportOpen, setExportOpen] = useState(false)
@@ -408,90 +418,194 @@ export default function PaperBuilderPage() {
   const diag = exportDataQ.data?.diagnostics
   const contentBlocked = Boolean(diag && !diag.export_allowed)
 
+  // 当前试卷摘要（题数 / 总分 / 未设分题数）——同时供页头 meta 与「试卷设置」卡片 meta 复用。
+  const summary = paperQ.data?.summary
+  const paperSummaryMeta = summary
+    ? `题数 ${summary.item_count} · 总分 ${summary.total_score}` +
+      (summary.unscored_count > 0 ? ` · 未设分 ${summary.unscored_count}` : '')
+    : '选择或新建一份试卷后开始组卷'
+
+  // 「内容检查」卡片标题右侧元信息：与既有四态口径一致（检查中 / 阻断 / 提示 / 通过 / 失败）。
+  const contentCheckMeta = exportDataQ.isFetching ? (
+    <Chip component="span" size="small" variant="outlined" label="正在检查内容…" />
+  ) : diag ? (
+    contentBlocked ? (
+      <Button
+        size="small"
+        color="error"
+        variant="outlined"
+        onClick={() => setDiagOpen((o) => !o)}
+        aria-expanded={diagOpen}
+        aria-controls="builder-diagnostics"
+        data-testid="builder-content-blocked"
+      >
+        需处理 {diag.blocker_count} 项
+      </Button>
+    ) : diag.warning_count > 0 ? (
+      <Button
+        size="small"
+        color="warning"
+        variant="outlined"
+        onClick={() => setDiagOpen((o) => !o)}
+        aria-expanded={diagOpen}
+        aria-controls="builder-diagnostics"
+      >
+        {diag.warning_count} 条提示
+      </Button>
+    ) : (
+      <Chip component="span" size="small" color="success" variant="outlined" label="内容检查通过" />
+    )
+  ) : exportDataQ.isError ? (
+    <Chip component="span" size="small" color="error" variant="outlined" label="内容检查失败" />
+  ) : null
+
+  // 右栏「分区卡片」外观：宽屏内联 → 独立卡片；窄屏（右栏进抽屉）→ 仅标题行，避免卡片套卡片。
+  const sectionVariant: 'card' | 'plain' = narrow ? 'plain' : 'card'
+
   // 右栏内容（宽屏内联；窄屏放进右侧抽屉，P1-1）。抽成变量避免重复 JSX。
+  //
+  // ★ 1366×768 双栏可用性判定（可复算，非「看起来没问题」）：
+  //  1. `narrow` = MUI `down('lg')` = `@media (max-width:1199.95px)` → 1366 命中 false ⇒ 右栏内联、双栏成立；
+  //  2. 内容可用宽 = 1366 − 侧栏 232（App `DRAWER_WIDTH`）− main 内边距 2×32（`p: { md: 4 }` = 32px）= **1070px**；
+  //  3. 右栏（排版视图）= `clamp(360px, 34vw, 620px)` = 34vw = **464px**；
+  //     左栏 = 1070 − 16（列间距 `gap: 2`）− 464 = **590px > 0**（题卡区仍可用）；
+  //  4. 固定宽合计 232 + 64 + 16 + 464 = **776 < 1366**，且左栏 `flex:1 minWidth:0`、右栏 `flexShrink:0`
+  //     ⇒ `documentElement.scrollWidth ≤ clientWidth`，**不产生横向溢出**。
   const rightPanel = (
     <Box
       sx={{
         // P0-3：右栏宽度改为**自适应**（原为固定 640 / 420，会在 1366 把左栏题库压到 ≈166px）。
-        // 宽屏（≥1200px）用 clamp：下限保证右栏可用，上限沿用原 640（排版）/ 420（清单）。
-        // 1366 下 34vw≈464px → 左栏≈606px，结果区较原先明显变宽；1920 时封顶 640，不再无谓变宽。
+        // 宽屏（≥1200px）用 clamp：下限保证右栏可用，上限 620（排版）/ 420（清单）收紧，给左栏让宽。
         width: narrow
           ? '100%'
           : builderView === 'layout'
-            ? 'clamp(360px, 34vw, 640px)'
+            ? 'clamp(360px, 34vw, 620px)'
             : 'clamp(320px, 30vw, 420px)',
         flexShrink: 0,
         minHeight: 0,
         display: 'flex',
         flexDirection: 'column',
+        gap: 1.5,
       }}
     >
-      {/* 右栏一行（§3.1）：排版/清单 + 内容检查状态；「约 N 页」由 LivePreviewPanel 工具条给出。 */}
-      <Stack direction="row" spacing={1} alignItems="center" flexWrap="wrap" useFlexGap sx={{ mb: 1 }}>
-        <ToggleButtonGroup
-          size="small"
-          exclusive
-          value={builderView}
-          onChange={(_e, v: 'layout' | 'list' | null) => v && setBuilderView(v)}
-        >
-          <ToggleButton value="layout" data-testid="view-layout">排版</ToggleButton>
-          <ToggleButton value="list" data-testid="view-list">清单</ToggleButton>
-        </ToggleButtonGroup>
-        <Box sx={{ flex: 1 }} />
-        {exportDataQ.isFetching ? (
-          <Chip size="small" variant="outlined" label="正在检查内容…" />
-        ) : diag ? (
-          contentBlocked ? (
-            <Button
+      {/* 分区卡片 1：试卷设置（标题 / 模板 / 答案模式 / 加入目标；视图切换在标题行右侧操作区）。
+          「约 N 页」由 LivePreviewPanel 工具条给出。 */}
+      <SectionCard
+        variant={sectionVariant}
+        title="试卷设置"
+        meta={paperSummaryMeta}
+        actions={
+          <ToggleButtonGroup
+            size="small"
+            exclusive
+            value={builderView}
+            onChange={(_e, v: 'layout' | 'list' | null) => v && setBuilderView(v)}
+          >
+            <ToggleButton value="layout" data-testid="view-layout">排版</ToggleButton>
+            <ToggleButton value="list" data-testid="view-list">清单</ToggleButton>
+          </ToggleButtonGroup>
+        }
+      >
+        {paperId == null ? (
+          <Typography variant="body2" color="text.secondary">
+            还没有试卷。点右上角「试卷面板」新建或选择一份试卷。
+          </Typography>
+        ) : !paperQ.data ? (
+          <LoadingState dense label="加载试卷设置…" />
+        ) : (
+          <Stack direction="row" spacing={1} alignItems="center" flexWrap="wrap" useFlexGap>
+            <TextField
               size="small"
-              color="error"
-              variant="outlined"
-              onClick={() => setDiagOpen((o) => !o)}
-              aria-expanded={diagOpen}
-              aria-controls="builder-diagnostics"
-              data-testid="builder-content-blocked"
-            >
-              需处理 {diag.blocker_count} 项
-            </Button>
-          ) : diag.warning_count > 0 ? (
-            <Button
+              variant="standard"
+              value={titleDraft ?? paperQ.data.title}
+              onChange={(e) => setTitleDraft(e.target.value)}
+              onBlur={() => {
+                if (titleDraft != null && titleDraft.trim() && titleDraft !== paperQ.data?.title) {
+                  mut.patch.mutate({ title: titleDraft.trim() })
+                }
+                setTitleDraft(null)
+              }}
+              sx={{ flex: 1, minWidth: 140 }}
+              inputProps={{ 'aria-label': '试卷标题' }}
+            />
+            <Select
               size="small"
-              color="warning"
-              variant="outlined"
-              onClick={() => setDiagOpen((o) => !o)}
-              aria-expanded={diagOpen}
-              aria-controls="builder-diagnostics"
+              value={paperQ.data.template}
+              onChange={(e) => mut.patch.mutate({ template: e.target.value })}
+              inputProps={{ 'aria-label': '模板' }}
+              sx={{ minWidth: 96 }}
             >
-              {diag.warning_count} 条提示
+              {TEMPLATES.map((t) => (
+                <MenuItem key={t} value={t}>
+                  {t}
+                </MenuItem>
+              ))}
+            </Select>
+            <Select
+              size="small"
+              value={paperQ.data.answer_mode}
+              onChange={(e) => mut.patch.mutate({ answer_mode: e.target.value })}
+              inputProps={{ 'aria-label': '答案模式' }}
+              sx={{ minWidth: 128 }}
+            >
+              {ANSWER_MODES.map((m) => (
+                <MenuItem key={m} value={m}>
+                  {m}
+                </MenuItem>
+              ))}
+            </Select>
+            <Select
+              size="small"
+              value={targetSectionId ?? ''}
+              onChange={(e) => setTargetSectionId(e.target.value === '' ? null : Number(e.target.value))}
+              displayEmpty
+              inputProps={{ 'aria-label': '加入目标' }}
+              sx={{ minWidth: 140 }}
+            >
+              <MenuItem value="">加入目标：卷末/未分组</MenuItem>
+              {(paperQ.data.sections ?? []).map((s) => (
+                <MenuItem key={s.id} value={s.id}>
+                  加入目标：{s.name}
+                </MenuItem>
+              ))}
+            </Select>
+            <Button size="small" variant="outlined" onClick={() => setDrawerOpen(true)}>
+              试卷管理
             </Button>
-          ) : (
-            <Chip size="small" color="success" variant="outlined" label="内容检查通过" />
-          )
-        ) : exportDataQ.isError ? (
-          <Chip size="small" color="error" variant="outlined" label="内容检查失败" />
-        ) : null}
-      </Stack>
+          </Stack>
+        )}
+      </SectionCard>
 
-      {/* 内容检查失败：保留既有错误契约（含重试）。 */}
-      {exportDataQ.isError && (
-        <Alert severity="error" sx={{ mb: 1 }} action={<Button onClick={() => exportDataQ.refetch()}>重试</Button>}>
-          内容检查失败：{(exportDataQ.error as Error).message}
-        </Alert>
-      )}
+      {/* 分区卡片 2：内容检查（阻断 / 提示按钮展开逐条问题与来源）。 */}
+      <SectionCard variant={sectionVariant} title="内容检查" meta={contentCheckMeta}>
+        {/* 内容检查失败：保留既有错误契约（含重试）。 */}
+        {exportDataQ.isError && (
+          <Alert severity="error" sx={{ mb: 1 }} action={<Button onClick={() => exportDataQ.refetch()}>重试</Button>}>
+            内容检查失败：{(exportDataQ.error as Error).message}
+          </Alert>
+        )}
+        {/* 诊断展开层：仅阻断 / 有提示时按需展开，收回常驻纵向空间。 */}
+        {paperId != null && exportDataQ.data && diagOpen && (
+          <Box id="builder-diagnostics" sx={{ maxHeight: '35vh', overflow: 'auto' }}>
+            <ExportDiagnosticsPanel paperId={paperId} data={exportDataQ.data} onRevised={() => setExportOpen(false)} />
+          </Box>
+        )}
+        {!exportDataQ.isError && !(paperId != null && exportDataQ.data && diagOpen) && (
+          <Typography variant="caption" color="text.secondary">
+            {contentBlocked
+              ? '存在阻断项，点上方「需处理」展开逐条问题与来源。'
+              : '当前内容检查通过；如有提示，可点上方按钮展开查看。'}
+          </Typography>
+        )}
+      </SectionCard>
 
-      {/* 诊断展开层：仅阻断 / 有提示时按需展开，收回常驻纵向空间。 */}
-      {paperId != null && exportDataQ.data && diagOpen && (
-        <Box id="builder-diagnostics" sx={{ maxHeight: '35vh', overflow: 'auto', mb: 1 }}>
-          <ExportDiagnosticsPanel paperId={paperId} data={exportDataQ.data} onRevised={() => setExportOpen(false)} />
-        </Box>
-      )}
-
-      {builderView === 'layout' ? (
-        <Box sx={{ flex: 1, minHeight: 0, overflow: 'auto' }}>
-          {paperId == null ? (
+      {/* 视图内容（排版 / 清单）。自身滚动，避免整页纵向增长。 */}
+      <Box sx={{ flex: 1, minHeight: 0, overflow: 'auto' }}>
+        {builderView === 'layout' ? (
+          paperId == null ? (
             <EmptyState
               title="还没有试卷"
-              description="点右上角「试卷列表」新建或选择一份试卷。"
+              description="点右上角「试卷面板」新建或选择一份试卷。"
               actionLabel="打开试卷列表"
               onAction={() => setDrawerOpen(true)}
             />
@@ -514,53 +628,70 @@ export default function PaperBuilderPage() {
               onScoreChange={(itemId, score) => mut.score.mutate({ itemId, score })}
               onRemove={(itemId) => handleRemove(itemId)}
             />
-          ) : null}
-        </Box>
-      ) : (
-        <PaperPanel
-          paper={paperQ.data ?? null}
-          contentQuestions={exportDataQ.data?.sections.flatMap(s => s.questions)}
-          loading={paperQ.isLoading}
-          error={paperQ.isError ? (paperQ.error as Error).message : null}
-          actions={actions}
-          targetSectionId={targetSectionId}
-          onTargetSectionChange={setTargetSectionId}
-          onOpenDrawer={() => setDrawerOpen(true)}
-          onOpenDetail={(qid) => navigate(`/question/${qid}`)}
-        />
-      )}
+          ) : null
+        ) : (
+          <PaperPanel
+            paper={paperQ.data ?? null}
+            contentQuestions={exportDataQ.data?.sections.flatMap(s => s.questions)}
+            loading={paperQ.isLoading}
+            error={paperQ.isError ? (paperQ.error as Error).message : null}
+            actions={actions}
+            onOpenDrawer={() => setDrawerOpen(true)}
+            onOpenDetail={(qid) => navigate(`/question/${qid}`)}
+          />
+        )}
+      </Box>
     </Box>
   )
 
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', height: 'calc(100vh - 96px)' }}>
-      {/* P5-3：组卷工作台是双栏工具页、无可见大标题。补一个**仅供读屏**的 h1，
-          保证每页都有唯一 h1（视觉版式零变化，纯语义补充）。
-
-          ⚠️ `width`/`height` 必须写**显式 `'1px'` 字符串**，不能写数字 `1`：
-          MUI 的 `sx` 会把数字当 spacing 乘数处理，实测 `width: 1` 产出的是
-          `width: 1366px`（= 视口宽），导致该 h1 撑出 **248px 横向溢出**
-          （`documentElement.scrollWidth 1614 > clientWidth 1366`）。
-          由 `.tmp_verify` 的交互走查脚本发现，浏览器实测确认。 */}
-      <Typography
-        variant="h6"
-        component="h1"
-        sx={{
-          position: 'absolute',
-          top: 0,
-          left: 0,
-          width: '1px',
-          height: '1px',
-          p: 0,
-          m: '-1px',
-          border: 0,
-          overflow: 'hidden',
-          clip: 'rect(0 0 0 0)',
-          whiteSpace: 'nowrap',
-        }}
-      >
-        组卷工作台
-      </Typography>
+      {/* 页面标题区（设计规范 §4 P0）：**唯一 h1** + 试卷摘要元信息 + 主操作。
+          `/builder` 是侧栏顶层页，`PageHeader` 自动派生的面包屑为空（不渲染），故可无条件放。
+          原先「无可见大标题 + 仅供读屏的绝对定位 h1」的做法已由本组件取代（仍恰好一个 h1）。
+          导出提交仍**唯一**走右侧抽屉（`setExportOpen(true)`），页头不放第二个提交入口。 */}
+      <PageHeader
+        title="组卷工作台"
+        meta={paperSummaryMeta}
+        // 外层是固定高度的 flex 列（双栏内部滚动）；标题区不可被压缩，避免短视口下被挤扁。
+        sx={{ flexShrink: 0 }}
+        actions={
+          <>
+            {/* P1-1 / P0-3：紧凑视口（<1440）下提供筛选栏开合，便于把宽度让给题目列表 */}
+            {compact && (
+              <Button
+                variant={filtersOpen ? 'contained' : 'outlined'}
+                startIcon={<FilterListIcon />}
+                onClick={() => setFiltersOpen((v) => !v)}
+                data-testid="toggle-filters"
+              >
+                筛选
+              </Button>
+            )}
+            {/* 窄屏（<1200）右栏折叠为抽屉，用此按钮唤起试卷面板。 */}
+            {narrow && (
+              <Button
+                variant="outlined"
+                startIcon={<ListAltIcon />}
+                disabled={paperId == null}
+                onClick={() => setRightOpen(true)}
+                data-testid="open-paper-panel"
+              >
+                试卷面板
+              </Button>
+            )}
+            <Button
+              variant="contained"
+              startIcon={<FileDownloadIcon />}
+              disabled={paperId == null}
+              onClick={() => setExportOpen(true)}
+              data-testid="builder-export-button"
+            >
+              导出
+            </Button>
+          </>
+        }
+      />
 
       {/* 首启引导（Phase 2.4）：题库为空时引导导入第一份旧卷（可关闭；有数据不显示）。 */}
       <FirstRunImportGuide />
@@ -578,45 +709,6 @@ export default function PaperBuilderPage() {
           当前窗口较窄，已折叠试卷面板；建议将窗口拉宽至 1200px 以上，使用双栏「边组边看」。
         </Alert>
       )}
-
-      {/* 顶部工具条（P3）：筛选 / 试卷面板 / 导出。试卷切换器已提升至全局顶栏（P1-6）。 */}
-      <Box sx={{ mb: 1 }}>
-        <Stack direction="row" spacing={1} alignItems="center" flexWrap="wrap" useFlexGap>
-          {/* P1-1 / P0-3：紧凑视口（<1440）下提供筛选栏开合，便于把宽度让给题目列表 */}
-          {compact && (
-            <Button
-              variant={filtersOpen ? 'contained' : 'outlined'}
-              startIcon={<FilterListIcon />}
-              onClick={() => setFiltersOpen((v) => !v)}
-              data-testid="toggle-filters"
-            >
-              筛选
-            </Button>
-          )}
-          {/* 弹性占位：试卷切换器移走后，把「试卷面板 / 导出」推到右侧，避免留空洞。 */}
-          <Box sx={{ flex: 1 }} />
-          {narrow && (
-            <Button
-              variant="outlined"
-              startIcon={<ListAltIcon />}
-              disabled={paperId == null}
-              onClick={() => setRightOpen(true)}
-              data-testid="open-paper-panel"
-            >
-              试卷面板
-            </Button>
-          )}
-          <Button
-            variant="contained"
-            startIcon={<FileDownloadIcon />}
-            disabled={paperId == null}
-            onClick={() => setExportOpen(true)}
-            data-testid="builder-export-button"
-          >
-            导出
-          </Button>
-        </Stack>
-      </Box>
 
       <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={onDragEnd}>
         <Box sx={{ display: 'flex', gap: 2, flex: 1, minHeight: 0 }}>

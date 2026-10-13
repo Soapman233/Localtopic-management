@@ -7,8 +7,8 @@
  * 3. 补齐 jsdom **实测缺失**的浏览器 API —— 否则 MUI 组件挂载即崩。
  *
  * 缺失项（本机 jsdom@30.1.2 实测）：`matchMedia` / `ResizeObserver` /
- * `IntersectionObserver` / `document.fonts`。`requestAnimationFrame`、`scrollTo`、
- * `getComputedStyle` 原生即有，无需补。
+ * `IntersectionObserver` / `document.fonts` / `Element.scrollIntoView`。
+ * `requestAnimationFrame`、`scrollTo`、`getComputedStyle` 原生即有，无需补。
  */
 import '@testing-library/jest-dom/vitest'
 import { afterEach, vi } from 'vitest'
@@ -80,6 +80,13 @@ if (typeof document !== 'undefined' && !document.fonts) {
       clear: vi.fn(),
     },
   })
+}
+
+// 5) Element.scrollIntoView：jsdom 未实现（调用即 `TypeError: not a function`）。
+//    凡是「让当前高亮项滚进可视区」的组件（如 ⌘K 快速跳转面板）都会踩到，
+//    在真实浏览器里是正常 API，故这里补空实现而非改产品代码。
+if (typeof Element !== 'undefined' && !Element.prototype.scrollIntoView) {
+  Element.prototype.scrollIntoView = function scrollIntoView(): void {}
 }
 
 afterEach(() => {

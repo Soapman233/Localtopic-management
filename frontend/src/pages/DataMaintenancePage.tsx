@@ -11,13 +11,15 @@
  * - **非活动 Tab 不挂载**：`Outlet` 只渲染当前子路由，四套查询 / 表单不会同时运行。
  * - 子页面在 `Suspense` 内懒加载（router 层已 `lazy`），加载态复用全站统一 `LoadingState`。
  *
- * ⚠️ 边界：本页只做「容器 + Tab 导航」。四个子页组件**本轮不改内部**，
- * 其标题层级（h1→h2 下沉）由后续批次负责；当前子页仍各自渲染自己的标题。
+ * ⚠️ 边界：本页只做「容器 + Tab 导航」。四个子页各自用 `PageHeader level="section"`
+ * 渲染 h2 标题（父页 h1 由本页 `PageHeader level="page"` 提供），
+ * 全页**有且仅有一个 h1**（B4 批次修过的「双 h1」缺陷防线）。
  */
 import { Suspense } from 'react'
-import { Box, Tab, Tabs, Typography } from '@mui/material'
+import { Box, Tab, Tabs } from '@mui/material'
 import { Outlet, useLocation, useNavigate } from 'react-router-dom'
 import LoadingState from '../components/LoadingState'
+import PageHeader from '../components/PageHeader'
 
 /** 一个维护 Tab：`value` 同时用作 URL 段（`/manage/<value>`）与 Tab 标识。 */
 export interface MaintenanceTab {
@@ -55,14 +57,17 @@ export default function DataMaintenancePage() {
 
   return (
     <Box>
-      <Typography variant="h5" component="h1" gutterBottom>
-        数据维护
-      </Typography>
+      {/* 页面主标题（语义 h1）：全页唯一 h1。面包屑由 PageHeader 按路由自动派生。 */}
+      <PageHeader title="数据维护" level="page" />
+      {/* Tab 条移动端防溢出：`scrollable` + `scrollButtons="auto"` + `allowScrollButtonsMobile`
+          是 MUI 官方做法——4 个 Tab 在 390px 视口下横向排不下时**在条内横向滚动**，
+          而不是把文档撑宽（实测过：撑宽会导致整页横向滚动，越界元素为 MuiTab-root）。 */}
       <Tabs
         value={active}
         onChange={(_, value: string) => navigate(`/manage/${value}`)}
         aria-label="数据维护分区"
         variant="scrollable"
+        scrollButtons="auto"
         allowScrollButtonsMobile
       >
         {MAINTENANCE_TABS.map((tab) => (

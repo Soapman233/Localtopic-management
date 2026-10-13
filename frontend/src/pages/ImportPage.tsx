@@ -36,6 +36,7 @@ import { describeImportError } from '../api/errors'
 import { useJob } from '../hooks/useJob'
 import { ErrorState } from '../components/ErrorState'
 import { LoadingState } from '../components/LoadingState'
+import PageHeader from '../components/PageHeader'
 import { ProgressStages } from '../components/ProgressStages'
 import {
   describeImportDisabled,
@@ -163,9 +164,11 @@ export default function ImportPage() {
 
   return (
     <Box>
-      <Typography variant="h6" component="h1" gutterBottom>
-        导入试卷
-      </Typography>
+      <PageHeader
+        title="导入试卷"
+        meta="导入是唯一的建库途径。"
+        level="page"
+      />
 
       {statusQ.isLoading && <LoadingState label="正在检查导入功能…" />}
       {statusQ.isError && (

@@ -33,6 +33,12 @@ function previewText(item: SearchItem): string {
   return t || '（无题干文本）'
 }
 
+/**
+ * 结果卡元信息行的统一 Chip 样式：**字号与高度一致**，避免「有的用 caption 文字、
+ * 有的用 Chip」的杂糅观感（元信息内容与含义不变，只统一表现层）。
+ */
+const META_CHIP_SX = { fontSize: 12, height: 22 } as const
+
 /** 答案/解析状态：优先用后端下发的布尔标志，其次按字段推断；**都拿不到则返回 undefined**。
  *
  * `GET /api/search` 现已下发 item 的 `has_answer` / `has_analysis`（B2 已修），此处取其值；
@@ -107,17 +113,26 @@ export function QuestionCard({
               />
             </Tooltip>
           )}
-          <Typography variant="caption" color="text.secondary">
-            题 {item.number || item.id}
-          </Typography>
-          {item.qtype && <Chip size="small" label={item.qtype} variant="outlined" />}
-          <Typography variant="caption" color="text.secondary">
-            章节 {item.chapter || '待补充'}
-          </Typography>
+          <Chip size="small" variant="outlined" label={`题 ${item.number || item.id}`} sx={META_CHIP_SX} />
+          {item.qtype && <Chip size="small" variant="outlined" label={item.qtype} sx={META_CHIP_SX} />}
+          <Chip
+            size="small"
+            variant="outlined"
+            label={`章节 ${item.chapter || '待补充'}`}
+            sx={META_CHIP_SX}
+          />
           {item.file_name && (
-            <Typography variant="caption" color="text.secondary" noWrap sx={{ maxWidth: 220 }}>
-              来源 {item.file_name}
-            </Typography>
+            <Chip
+              size="small"
+              variant="outlined"
+              label={`来源 ${item.file_name}`}
+              title={item.file_name}
+              sx={{
+                ...META_CHIP_SX,
+                maxWidth: 240,
+                '& .MuiChip-label': { overflow: 'hidden', textOverflow: 'ellipsis' },
+              }}
+            />
           )}
         </Stack>
 

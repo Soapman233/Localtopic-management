@@ -1,27 +1,26 @@
-/** 右栏试卷面板（P0-7/P0-8/P0-9 / PRD 3.1）。
+/** 右栏试卷面板（P0-7/P0-8/P0-9 / PRD 3.1）——**「清单」视图的列表主体**。
  *
  * 按大题分区展示；每题一行，行内 `⋮` 菜单（上移/下移/移除/设分/详情）；
  * 支持拖拽排序（同大题内，由组卷页的 DndContext 驱动）；
- * 底部**实时汇总**：题数、总分、未设分题数、**无答案题数预警**；
- * 「题库已更新但本卷仍用旧版」的提示 + 「刷新快照」按钮（快照锁定语义的 UI 表达）。
+ * 保留「题库已更新但本卷仍用旧版」的提示 + 「刷新快照」按钮（快照锁定语义的 UI 表达）。
+ *
+ * ⚠️ 页面级对齐（设计规范 §4 P0「分区卡片」）后，**试卷标题 / 模板 / 答案模式 / 加入目标 /
+ * 实时汇总**已上移到 `PaperBuilderPage` 右栏的「试卷设置」分区卡片（宽屏内联、窄屏抽屉内均可见），
+ * 本组件只负责**列表主体**（大题分组 + 条目 + 预警 + 对话框），避免同一设置在两处出现。
  *
  * ⚠️ 状态一致性：所有写操作**以后端返回的整卷为准**（前端不做乐观累加）。
  */
-import { useEffect, useMemo, useState } from 'react'
+import { useMemo, useState } from 'react'
 import {
   Alert,
   Box,
   Button,
-  Collapse,
   Dialog,
   DialogActions,
   DialogContent,
   DialogTitle,
-  Divider,
   IconButton,
-  MenuItem,
   Paper,
-  Select,
   Stack,
   TextField,
   Typography,
@@ -30,8 +29,6 @@ import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline'
 import AddIcon from '@mui/icons-material/Add'
 import EditIcon from '@mui/icons-material/Edit'
 import RefreshIcon from '@mui/icons-material/Refresh'
-import SettingsIcon from '@mui/icons-material/Settings'
-import ExpandMoreIcon from '@mui/icons-material/ExpandMore'
 import { useDroppable } from '@dnd-kit/core'
 import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable'
 import type { Paper as PaperModel, PaperItem, PaperSection, ExportQuestion } from '../api/types'
@@ -42,10 +39,6 @@ import { EmptyState } from './EmptyState'
 import { ErrorState } from './ErrorState'
 import { LoadingState } from './LoadingState'
 import { GLOSSARY, describeSnapshotStale } from '../lib/glossary'
-import { usePaperStore } from '../store/paperStore'
-
-const TEMPLATES = ['考试', '测验', '作业']
-const ANSWER_MODES = ['学生版', '答案解析版', '仅答案']
 
 export interface PaperActions {
   addQuestions: (questionIds: number[], sectionId?: number | null) => void
@@ -57,6 +50,7 @@ export interface PaperActions {
   moveSection: (sectionId: number, position: number) => void
   deleteSection: (sectionId: number, force: boolean) => void
   refreshSnapshots: () => void
+  /** 试卷级元数据写操作；当前由 `PaperBuilderPage` 的「试卷设置」卡片直接消费。 */
   updatePaper: (patch: PaperPatchBody) => void
 }
 
@@ -65,8 +59,6 @@ export interface PaperPanelProps {
   loading: boolean
   error?: string | null
   actions: PaperActions
-  targetSectionId: number | null
-  onTargetSectionChange: (id: number | null) => void
   onOpenDrawer: () => void
   onOpenDetail: (questionId: number) => void
   contentQuestions?: ExportQuestion[]
@@ -93,14 +85,12 @@ function groupItems(ordered: PaperItem[], sections: PaperSection[]): Group[] {
   return out
 }
 
-/** 右栏试卷面板。 */
+/** 右栏试卷面板（清单视图列表主体）。 */
 export function PaperPanel({
   paper,
   loading,
   error,
   actions,
-  targetSectionId,
-  onTargetSectionChange,
   onOpenDrawer,
   onOpenDetail,
   contentQuestions,
@@ -108,22 +98,10 @@ export function PaperPanel({
   const [scoreEdit, setScoreEdit] = useState<{ itemId: number; value: string } | null>(null)
   const [newSection, setNewSection] = useState<string | null>(null)
   const [rename, setRename] = useState<{ id: number; name: string } | null>(null)
-  const [titleDraft, setTitleDraft] = useState<string | null>(null)
-  // §3.1：模板 / 答案模式 / 加入目标收进「试卷设置」展开层（默认收起），收回常驻纵向空间。
-  const [settingsOpen, setSettingsOpen] = useState(false)
   // 删除大题二次确认（P0-1）：单击不再直接 force 删除，先确认（显示该大题题数）。
   const [confirmSection, setConfirmSection] = useState<{ id: number; name: string; count: number } | null>(null)
 
   const { setNodeRef, isOver } = useDroppable({ id: 'paper-dropzone', data: { type: 'paper-panel' } })
-
-  // L6：`targetSectionId` 是持久化的——目标大题被删除后它仍指向不存在的 id，
-  // 老师点「加入」时题目会落到不存在的大题、被后端拒绝。此处（本组件能拿到最新
-  // 大题列表）在每次 sections 变化后调用 store 守卫，失效即置 null（回到「卷末/未分组」）。
-  const validateTargetSection = usePaperStore((s) => s.validateTargetSection)
-  useEffect(() => {
-    if (!paper) return
-    validateTargetSection((paper.sections ?? []).map((s) => s.id))
-  }, [paper, validateTargetSection])
 
   const ordered = useMemo(
     () => (paper?.items ?? []).slice().sort((a, b) => a.seq - b.seq),
@@ -151,7 +129,7 @@ export function PaperPanel({
           <EmptyState
             dense
             title="还没有试卷"
-            description="点右上角「切换试卷」新建或选择一份试卷。"
+            description="点右上角「试卷面板」新建或选择一份试卷。"
           />
         )}
         <Button sx={{ mt: 2 }} variant="outlined" onClick={onOpenDrawer}>
@@ -164,7 +142,6 @@ export function PaperPanel({
   const items = ordered
   const noAnswerCount = items.filter((i) => !i.has_answer).length
   const staleCount = items.filter(isStale).length
-  const summary = paper.summary
 
   return (
     <Paper
@@ -179,82 +156,6 @@ export function PaperPanel({
         borderColor: isOver ? 'primary.main' : 'divider',
       }}
     >
-      {/* 试卷元数据（P0-9） */}
-      <Stack direction="row" spacing={1} alignItems="center" sx={{ mb: 1 }} flexWrap="wrap" useFlexGap>
-        <TextField
-          size="small"
-          variant="standard"
-          value={titleDraft ?? paper.title}
-          onChange={(e) => setTitleDraft(e.target.value)}
-          onBlur={() => {
-            if (titleDraft != null && titleDraft.trim() && titleDraft !== paper.title) {
-              actions.updatePaper({ title: titleDraft.trim() })
-            }
-            setTitleDraft(null)
-          }}
-          sx={{ flex: 1, minWidth: 140 }}
-        />
-        <Button size="small" onClick={onOpenDrawer}>
-          试卷管理
-        </Button>
-      </Stack>
-      {/* 试卷设置（§3.1）：模板 / 答案模式 / 加入目标默认收起，需要时展开；业务语义不变。 */}
-      <Box sx={{ mb: 1 }}>
-        <Button
-          size="small"
-          startIcon={<SettingsIcon />}
-          endIcon={<ExpandMoreIcon sx={{ transform: settingsOpen ? 'rotate(180deg)' : 'none', transition: 'transform .15s' }} />}
-          onClick={() => setSettingsOpen((o) => !o)}
-          aria-expanded={settingsOpen}
-          aria-controls="paper-settings-panel"
-          data-testid="toggle-paper-settings"
-        >
-          试卷设置
-        </Button>
-        <Collapse in={settingsOpen} id="paper-settings-panel">
-          <Stack direction="row" spacing={1} sx={{ mt: 1 }} flexWrap="wrap" useFlexGap>
-            <Select
-              size="small"
-              value={paper.template}
-              onChange={(e) => actions.updatePaper({ template: e.target.value })}
-              sx={{ minWidth: 96 }}
-            >
-              {TEMPLATES.map((t) => (
-                <MenuItem key={t} value={t}>
-                  {t}
-                </MenuItem>
-              ))}
-            </Select>
-            <Select
-              size="small"
-              value={paper.answer_mode}
-              onChange={(e) => actions.updatePaper({ answer_mode: e.target.value })}
-              sx={{ minWidth: 128 }}
-            >
-              {ANSWER_MODES.map((m) => (
-                <MenuItem key={m} value={m}>
-                  {m}
-                </MenuItem>
-              ))}
-            </Select>
-            <Select
-              size="small"
-              value={targetSectionId ?? ''}
-              onChange={(e) => onTargetSectionChange(e.target.value === '' ? null : Number(e.target.value))}
-              displayEmpty
-              sx={{ minWidth: 140 }}
-            >
-              <MenuItem value="">加入目标：卷末/未分组</MenuItem>
-              {(paper.sections ?? []).map((s) => (
-                <MenuItem key={s.id} value={s.id}>
-                  加入目标：{s.name}
-                </MenuItem>
-              ))}
-            </Select>
-          </Stack>
-        </Collapse>
-      </Box>
-
       {/* 预警：无答案（尤其解析版） */}
       {paper.answer_mode === '答案解析版' && noAnswerCount > 0 && (
         <Alert severity="warning" sx={{ mb: 1, py: 0.25 }}>
@@ -356,23 +257,6 @@ export function PaperPanel({
           新增大题
         </Button>
       </Box>
-
-      {/* 实时汇总（P0-8）。导出统一由工作台顶部「导出」按钮打开抽屉（单一入口，§2.4）。 */}
-      <Divider sx={{ my: 1 }} />
-      <Stack direction="row" spacing={2} alignItems="center" flexWrap="wrap" useFlexGap>
-        <Typography variant="body2">
-          题数 <strong>{summary.item_count}</strong>
-        </Typography>
-        <Typography variant="body2">
-          总分 <strong>{summary.total_score}</strong>
-        </Typography>
-        <Typography variant="body2" color={summary.unscored_count > 0 ? 'warning.main' : 'text.secondary'}>
-          未设分 <strong>{summary.unscored_count}</strong> 题
-        </Typography>
-        <Typography variant="body2" color={noAnswerCount > 0 ? 'warning.main' : 'text.secondary'}>
-          无答案 <strong>{noAnswerCount}</strong> 题
-        </Typography>
-      </Stack>
 
       {/* 设分对话框 */}
       <Dialog open={scoreEdit !== null} onClose={() => setScoreEdit(null)}>

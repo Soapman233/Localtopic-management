@@ -10,10 +10,14 @@
  * ``/api/labels/decision/preview`` 预检影响条数，再以 ``confirm=true`` 提交。
  *
  * B4 渐进披露（方案 §3.5）：本页作为「数据维护」Tab 子页嵌入。
- * - 标题层级：父页 h1；本页标题 h2；内部区块 h3。
+ * - 标题层级：父页 h1（`DataMaintenancePage`）；本页标题 `PageHeader level="section"` → h2；内部区块 h3。
  * - 口径说明默认收成一行 + 「口径说明」折叠；CSV 收进「批量处理」菜单。
  * - 标签按待复核降序，可只看有待复核；未选择时给出待复核最多的前五个标签。
  * - 取数、预检、提交逻辑一律不变。
+ *
+ * 移动端（<md，实测 390px 视口）：左右双栏改为**上下堆叠**——此前左栏固定 340px、
+ * 右栏被压成 ~2px 竖条（文字一列一个字符），且右栏内容最小宽度撑宽文档
+ * （`document.scrollWidth` 446 > 390）。堆叠后两栏各占满宽度，溢出消失。
  */
 import { useMemo, useRef, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
@@ -31,7 +35,6 @@ import {
   Menu,
   MenuItem,
   Pagination,
-  Paper,
   Stack,
   Switch,
   TextField,
@@ -51,12 +54,14 @@ import {
   previewDecision,
 } from '../api/labels'
 import type { DecisionBody } from '../api/labels'
-import type { LabelDecisionPreview, LabelImportResult } from '../api/types'
+import type { LabelDecisionPreview, LabelImportResult, LabelSummaryRow } from '../api/types'
 import { ConfirmDialog } from '../components/ConfirmDialog'
 import { LabelStatusBadge } from '../components/StatusBadges'
 import { EmptyState } from '../components/EmptyState'
 import { ErrorState } from '../components/ErrorState'
 import { LoadingState } from '../components/LoadingState'
+import PageHeader from '../components/PageHeader'
+import SectionCard from '../components/SectionCard'
 import { qk } from '../api/queryKeys'
 
 const ITEM_PAGE_SIZE = 50
@@ -65,6 +70,50 @@ const STATUS_TABS: { key: string; label: string }[] = [
   { key: '已确认', label: '已确认' },
   { key: '已否决', label: '已否决' },
 ]
+
+/**
+ * 标签行的状态计数徽章。
+ *
+ * 左「标签汇总」与右「待复核最多的标签」共用同一个组件——此前两处对同一份数据
+ * 一处渲染裸数字、一处渲染「待复核 N」，元信息口径不一致。统一为「待/确/否 + 数量」。
+ */
+function LabelCountChips({ row }: { row: LabelSummaryRow }) {
+  return (
+    <Stack direction="row" spacing={0.5} sx={{ flexShrink: 0 }}>
+      {row.pending > 0 && <Chip size="small" color="warning" label={`待 ${row.pending}`} />}
+      {row.confirmed > 0 && (
+        <Chip size="small" color="success" variant="outlined" label={`确 ${row.confirmed}`} />
+      )}
+      {row.rejected > 0 && <Chip size="small" variant="outlined" label={`否 ${row.rejected}`} />}
+    </Stack>
+  )
+}
+
+/**
+ * 标签列表行（两处列表共用，保证**行高与元信息呈现一致**）。
+ *
+ * 元信息统一：关联数走 `ListItemText` 的 `secondary`（body2 / text.secondary），
+ * 状态计数走 `Chip`——两种载体各司其职，不混用。
+ */
+function LabelListRow({
+  row,
+  selected,
+  onClick,
+}: {
+  row: LabelSummaryRow
+  selected?: boolean
+  onClick: () => void
+}) {
+  return (
+    <ListItemButton selected={selected} onClick={onClick} sx={{ py: 1 }}>
+      <ListItemText
+        primary={row.label_name}
+        secondary={`关联 ${row.total.toLocaleString('zh-CN')} 条`}
+      />
+      <LabelCountChips row={row} />
+    </ListItemButton>
+  )
+}
 
 /** P5 知识点复核页。 */
 export default function KnowledgeReviewPage() {
@@ -172,55 +221,61 @@ export default function KnowledgeReviewPage() {
 
   return (
     <Box>
-      <Stack direction="row" alignItems="center" spacing={2} sx={{ mb: 1 }} flexWrap="wrap" useFlexGap>
-        <Typography variant="h6" component="h2">知识点复核</Typography>
-        <Chip size="small" color="warning" variant="outlined" label={`待复核 ${(counts['待复核'] ?? 0).toLocaleString('zh-CN')}`} />
-        <Chip size="small" color="success" variant="outlined" label={`已确认 ${(counts['已确认'] ?? 0).toLocaleString('zh-CN')}`} />
-        <Chip size="small" label={`已否决 ${(counts['已否决'] ?? 0).toLocaleString('zh-CN')}`} />
-        <Box sx={{ flex: 1 }} />
-        <Button
-          size="small"
-          variant="outlined"
-          startIcon={<FileDownloadIcon />}
-          onClick={(e) => setMenuAnchor(e.currentTarget)}
-          aria-haspopup="menu"
-          aria-expanded={menuAnchor !== null}
+      <PageHeader
+        level="section"
+        title="知识点复核"
+        meta={
+          <>
+            <Chip size="small" color="warning" variant="outlined" label={`待复核 ${(counts['待复核'] ?? 0).toLocaleString('zh-CN')}`} />
+            <Chip size="small" color="success" variant="outlined" label={`已确认 ${(counts['已确认'] ?? 0).toLocaleString('zh-CN')}`} />
+            <Chip size="small" label={`已否决 ${(counts['已否决'] ?? 0).toLocaleString('zh-CN')}`} />
+          </>
+        }
+        actions={
+          <Button
+            size="small"
+            variant="outlined"
+            startIcon={<FileDownloadIcon />}
+            onClick={(e) => setMenuAnchor(e.currentTarget)}
+            aria-haspopup="menu"
+            aria-expanded={menuAnchor !== null}
+          >
+            批量处理
+          </Button>
+        }
+      />
+      <Menu anchorEl={menuAnchor} open={menuAnchor !== null} onClose={() => setMenuAnchor(null)}>
+        <MenuItem
+          component="a"
+          href={exportReviewUrl('待复核')}
+          download
+          onClick={() => setMenuAnchor(null)}
         >
-          批量处理
-        </Button>
-        <Menu anchorEl={menuAnchor} open={menuAnchor !== null} onClose={() => setMenuAnchor(null)}>
-          <MenuItem
-            component="a"
-            href={exportReviewUrl('待复核')}
-            download
-            onClick={() => setMenuAnchor(null)}
-          >
-            导出待复核 CSV
-          </MenuItem>
-          <MenuItem
-            disabled={importMut.isPending}
-            onClick={() => {
-              setMenuAnchor(null)
-              fileRef.current?.click()
-            }}
-          >
-            <FileUploadIcon fontSize="small" style={{ marginRight: 8 }} />
-            导入复核 CSV
-          </MenuItem>
-        </Menu>
-        <input
-          ref={fileRef}
-          type="file"
-          accept=".csv,text/csv"
-          style={{ display: 'none' }}
-          aria-label="选择要导入的复核 CSV 文件"
-          onChange={(e) => {
-            const f = e.target.files?.[0]
-            if (f) importMut.mutate(f)
-            e.target.value = ''
+          导出待复核 CSV
+        </MenuItem>
+        <MenuItem
+          disabled={importMut.isPending}
+          onClick={() => {
+            setMenuAnchor(null)
+            fileRef.current?.click()
           }}
-        />
-      </Stack>
+        >
+          <FileUploadIcon fontSize="small" style={{ marginRight: 8 }} />
+          导入复核 CSV
+        </MenuItem>
+      </Menu>
+      <input
+        ref={fileRef}
+        type="file"
+        accept=".csv,text/csv"
+        style={{ display: 'none' }}
+        aria-label="选择要导入的复核 CSV 文件"
+        onChange={(e) => {
+          const f = e.target.files?.[0]
+          if (f) importMut.mutate(f)
+          e.target.value = ''
+        }}
+      />
 
       {/* 口径说明收成一行；详细说明（含严格模式入口）按需展开 */}
       <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 1 }} flexWrap="wrap" useFlexGap>
@@ -265,10 +320,28 @@ export default function KnowledgeReviewPage() {
         </Alert>
       )}
 
-      <Box sx={{ display: 'flex', gap: 2, alignItems: 'flex-start' }}>
+      {/* 窄屏上下堆叠、宽屏左右分栏（移动端缺陷修复：右栏不再被压成竖条）。 */}
+      <Stack
+        direction={{ xs: 'column', md: 'row' }}
+        spacing={2}
+        alignItems={{ xs: 'stretch', md: 'flex-start' }}
+      >
         {/* 左：标签汇总 */}
-        <Paper variant="outlined" sx={{ width: 340, flexShrink: 0, maxHeight: '72vh', display: 'flex', flexDirection: 'column' }}>
-          <Box sx={{ p: 1.5, pb: 1 }}>
+        <SectionCard
+          title="标签"
+          meta={`共 ${labels.length} 个`}
+          level="subsection"
+          sx={{
+            width: { xs: '100%', md: 340 },
+            flexShrink: 0,
+            maxHeight: { xs: '60vh', md: '72vh' },
+            display: 'flex',
+            flexDirection: 'column',
+          }}
+          // SectionCard 的 `disablePadding` 当前未生效，用 contentSx 显式清内边距并让列表可滚动。
+          contentSx={{ p: 0, flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }}
+        >
+          <Box sx={{ px: 2, py: 1.5, pb: 1 }}>
             <TextField
               size="small"
               fullWidth
@@ -279,7 +352,7 @@ export default function KnowledgeReviewPage() {
             />
             <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mt: 0.5 }}>
               <Typography variant="caption" color="text.secondary">
-                共 {labels.length} 个标签（点击查看逐条）
+                点击查看逐条
               </Typography>
               <FormControlLabel
                 control={
@@ -322,35 +395,23 @@ export default function KnowledgeReviewPage() {
               </Box>
             )}
             {labels.map((l) => (
-              <ListItemButton
+              <LabelListRow
                 key={l.label_id}
+                row={l}
                 selected={selected === l.label_name}
                 onClick={() => {
                   setSelected(l.label_name)
                   setPage(1)
                 }}
-              >
-                <ListItemText
-                  primary={l.label_name}
-                  secondary={`关联 ${l.total.toLocaleString('zh-CN')} 条`}
-                />
-                <Stack direction="row" spacing={0.5}>
-                  {l.pending > 0 && <Chip size="small" color="warning" label={l.pending} />}
-                  {l.confirmed > 0 && <Chip size="small" color="success" variant="outlined" label={l.confirmed} />}
-                  {l.rejected > 0 && <Chip size="small" label={l.rejected} />}
-                </Stack>
-              </ListItemButton>
+              />
             ))}
           </List>
-        </Paper>
+        </SectionCard>
 
         {/* 右：逐条复核 / 未选择时的入口 */}
         <Box sx={{ flex: 1, minWidth: 0 }}>
           {!selected ? (
-            <Paper variant="outlined" sx={{ p: 2 }}>
-              <Typography variant="subtitle1" component="h3" gutterBottom>
-                待复核最多的标签
-              </Typography>
+            <SectionCard title="待复核最多的标签" level="subsection">
               {topPending.length === 0 ? (
                 <EmptyState
                   title="请选择一个知识点标签"
@@ -359,59 +420,55 @@ export default function KnowledgeReviewPage() {
               ) : (
                 <List dense>
                   {topPending.map((l) => (
-                    <ListItemButton
+                    <LabelListRow
                       key={l.label_id}
+                      row={l}
                       onClick={() => {
                         setSelected(l.label_name)
                         setPage(1)
                       }}
-                    >
-                      <ListItemText
-                        primary={l.label_name}
-                        secondary={`关联 ${l.total.toLocaleString('zh-CN')} 条`}
-                      />
-                      <Chip size="small" color="warning" label={`待复核 ${l.pending}`} />
-                    </ListItemButton>
+                    />
                   ))}
                 </List>
               )}
               <Typography variant="caption" color="text.secondary">
                 也可从左侧完整列表选择任意标签。
               </Typography>
-            </Paper>
+            </SectionCard>
           ) : (
-            <Paper variant="outlined" sx={{ p: 2 }}>
-              <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 1 }} flexWrap="wrap" useFlexGap>
-                <Typography variant="subtitle1" component="h3" fontWeight={600}>
-                  {selected}
-                </Typography>
-                {selectedRow && (
-                  <Typography variant="body2" color="text.secondary">
-                    关联 {selectedRow.total} · 待复核 {selectedRow.pending} · 已确认 {selectedRow.confirmed} · 已否决 {selectedRow.rejected}
-                  </Typography>
-                )}
-                <Box sx={{ flex: 1 }} />
-                <Button
-                  size="small"
-                  color="success"
-                  variant="outlined"
-                  startIcon={<CheckCircleOutlineIcon />}
-                  disabled={decideMut.isPending}
-                  onClick={() => openBatch('确认')}
-                >
-                  批量确认待复核
-                </Button>
-                <Button
-                  size="small"
-                  color="error"
-                  variant="outlined"
-                  startIcon={<CancelOutlinedIcon />}
-                  disabled={decideMut.isPending}
-                  onClick={() => openBatch('否决')}
-                >
-                  批量否决待复核
-                </Button>
-              </Stack>
+            <SectionCard
+              title={selected}
+              level="subsection"
+              meta={
+                selectedRow
+                  ? `关联 ${selectedRow.total} · 待复核 ${selectedRow.pending} · 已确认 ${selectedRow.confirmed} · 已否决 ${selectedRow.rejected}`
+                  : undefined
+              }
+              actions={
+                <>
+                  <Button
+                    size="small"
+                    color="success"
+                    variant="outlined"
+                    startIcon={<CheckCircleOutlineIcon />}
+                    disabled={decideMut.isPending}
+                    onClick={() => openBatch('确认')}
+                  >
+                    批量确认待复核
+                  </Button>
+                  <Button
+                    size="small"
+                    color="error"
+                    variant="outlined"
+                    startIcon={<CancelOutlinedIcon />}
+                    disabled={decideMut.isPending}
+                    onClick={() => openBatch('否决')}
+                  >
+                    批量否决待复核
+                  </Button>
+                </>
+              }
+            >
 
               <Stack direction="row" spacing={1} sx={{ mb: 1 }} role="group" aria-label="逐条复核状态">
                 {STATUS_TABS.map((t) => (
@@ -492,10 +549,10 @@ export default function KnowledgeReviewPage() {
                   <Pagination page={page} count={itemPageCount} onChange={(_e, p) => setPage(p)} color="primary" />
                 </Stack>
               )}
-            </Paper>
+            </SectionCard>
           )}
         </Box>
-      </Box>
+      </Stack>
 
       {/* 批量二次确认：显示影响条数 */}
       <ConfirmDialog
