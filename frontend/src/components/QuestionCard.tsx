@@ -1,7 +1,10 @@
 /** 检索结果卡片（P0-3 / PRD 4「结果卡」）。
  *
  * 顶部一行元信息（题号/题型/章节/来源，灰色小字）；中部题干预览（2–3 行截断）；
- * 底部一行状态徽章（答案/解析/难度/待复核）+「加入」「详情」。
+ * 底部一行状态徽章（答案/解析/待复核）+「加入」「详情」。
+ *
+ * T20/T23：难度与章节在源数据里几乎恒定缺失（100% / 64.6%），逐卡渲染恒定值无信息量
+ * → 二者改为**按条件渲染**（仅真实值才显示）；有数据时自动恢复，不硬删组件逻辑。
  *
  * 可拖拽（P1-10）：拖到右栏试卷即加入（由组卷页的 DndContext 处理）。
  */
@@ -19,6 +22,14 @@ export interface QuestionCardProps {
   item: SearchItem
   onAdd?: (item: SearchItem) => void
   onDetail?: (item: SearchItem) => void
+  /**
+   * 单题难度标注入口（P1-4）。
+   *
+   * ⚠️ T20 之后本卡**不再渲染难度徽章**（难度实测 100%「未标注」，逐卡渲染恒定值无信息量），
+   * 而 `DifficultyBadge` 只在「未标注」时才给出「标注」按钮 → 该回调在结果卡上**已不可达**，
+   * 因此本卡不再消费它。**保留该 prop 仅为不破坏调用方**（`SearchPage` 仍在传），
+   * 难度标注入口仍在单题详情页可用。若未来恢复逐卡标注，再接回 `DifficultyBadge` 即可。
+   */
   onAnnotate?: (item: SearchItem) => void
   draggable?: boolean
   adding?: boolean
@@ -70,11 +81,12 @@ export function QuestionCard({
   item,
   onAdd,
   onDetail,
-  onAnnotate,
-  draggable = false,
-  adding = false,
-  selectable = false,
-  selected = false,
+  // 布尔开关一律按 `undefined` 即「关」处理（不写 `= false` 默认值）：
+  // 本组件位于**首屏共享 chunk**（组卷页会加载），省下的每个字节都直接算进首屏预算。
+  draggable,
+  adding,
+  selectable,
+  selected,
   onSelectChange,
 }: QuestionCardProps) {
   const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
@@ -105,7 +117,7 @@ export function QuestionCard({
           {selectable && (
             <Checkbox
               size="small"
-              checked={selected}
+              checked={!!selected}
               onChange={(e) => onSelectChange?.(item, e.target.checked)}
               inputProps={{ 'aria-label': `选择题 ${item.number || item.id}` }}
               sx={{ p: 0.25, mr: -0.5 }}
@@ -127,9 +139,14 @@ export function QuestionCard({
             题 {item.number || item.id}
           </Typography>
           {item.qtype && <Chip size="small" label={item.qtype} variant="outlined" />}
-          <Typography variant="caption" color="text.secondary">
-            章节 {item.chapter || '待补充'}
-          </Typography>
+          {/* T23：章节实测「待补充」64.6%（5,135/7,945）> 规范 §4.2 的 60% 阈值
+              → 逐卡印一个恒定的「待补充」是纯噪音。改为**按条件渲染**：仅当章节为真实值时
+              才显示，缺失时整段不渲染（不写「待补充」占位）。 */}
+          {item.chapter && item.chapter !== '待补充' && (
+            <Typography variant="caption" color="text.secondary">
+              章节 {item.chapter}
+            </Typography>
+          )}
           {item.file_name && (
             <Typography variant="caption" color="text.secondary" noWrap sx={{ maxWidth: 220 }}>
               来源 {item.file_name}
@@ -153,7 +170,13 @@ export function QuestionCard({
       <CardActions sx={{ px: 2, pb: 1.5, pt: 0, flexWrap: 'wrap', gap: 0.5 }}>
         {hasAnswer !== undefined && <AnswerBadge hasAnswer={hasAnswer} />}
         {hasAnalysis !== undefined && <AnalysisBadge hasAnalysis={hasAnalysis} />}
-        <DifficultyBadge difficulty={item.difficulty} onAnnotate={onAnnotate ? () => onAnnotate(item) : undefined} />
+        {/* T20：难度实测 100%「未标注」（7,945/7,945，源数据无标注、项目刻意不编造）
+            → 逐卡渲染一个恒定的「未标注」徽章无信息量、纯噪音。改为**按条件渲染**：
+            仅当难度为**真实标注值**时才渲染；未来补录难度后自动恢复显示，不硬删组件逻辑。
+            刻意**不**改成「未知」之类新文案来掩盖（那只是换个恒定值）。 */}
+        {item.difficulty && item.difficulty !== '未标注' && (
+          <DifficultyBadge difficulty={item.difficulty} />
+        )}
         {item.needs_review && <ReviewBadge />}
         <Box sx={{ flex: 1 }} />
         {onAdd && (
