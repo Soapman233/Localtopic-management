@@ -25,7 +25,7 @@ python-multipart==0.0.32     # 表单/文件上传（知识点复核的 CSV 导�
 pywin32==312
 Pillow==12.3.0
 pypdfium2==5.14.0
-pypdf==6.19.0
+pypdf==6.20.0
 
 # --- 旧式公式（MathType OLE）解析 -------------------------------------------
 olefile==0.47
