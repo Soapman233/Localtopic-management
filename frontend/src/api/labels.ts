@@ -94,7 +94,8 @@ export async function importReviewCsv(file: File, force = false): Promise<LabelI
   }
 
   const text = await resp.text()
-  let envelope: { code?: number; data?: LabelImportResult; message?: string } | null = null
+  // try/catch 两条路径都会赋值，初值 `= null` 是死赋值（no-useless-assignment），故不写初值。
+  let envelope: { code?: number; data?: LabelImportResult; message?: string } | null
   try {
     envelope = text ? JSON.parse(text) : null
   } catch {

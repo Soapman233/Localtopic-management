@@ -160,7 +160,8 @@ export function FormulaText({
       last = m.index + m[0].length
     }
     if (last < src.length) {
-      out.push(<span key={`t${key++}`}>{src.slice(last)}</span>)
+      // 末段：这是最后一次使用 key，自增结果此后不再被读取，故不自增（no-useless-assignment）。
+      out.push(<span key={`t${key}`}>{src.slice(last)}</span>)
     }
     return out
   }, [text, formulas, displayMode])

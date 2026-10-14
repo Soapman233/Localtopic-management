@@ -122,7 +122,8 @@ async function request<T>(
   }
 
   const text = await resp.text()
-  let envelope: ApiEnvelope<T> | null = null
+  // try/catch 两条路径都会赋值，初值 `= null` 是死赋值（no-useless-assignment），故不写初值。
+  let envelope: ApiEnvelope<T> | null
   try {
     envelope = text ? (JSON.parse(text) as ApiEnvelope<T>) : null
   } catch {
