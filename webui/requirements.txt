@@ -1,5 +1,5 @@
 # webui 后端依赖声明（均已在 kb 环境验证可用）
-fastapi>=0.125.0          # HTTP 框架（用户已确认引入）
+fastapi>=0.143.0          # HTTP 框架（用户已确认引入）
 uvicorn[standard]>=0.30   # ASGI 服务器
 pydantic>=1.10            # 数据校验（当前环境 1.10.26，FastAPI 0.125 已实测兼容）
 python-multipart>=0.0.9   # 文件上传（CSV 导入复核决定）
