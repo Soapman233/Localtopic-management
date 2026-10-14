@@ -3,10 +3,23 @@ name: CI
 # 说明：
 #  * `frontend` 任务在 Linux 上跑完整前端校验（类型检查 / 回归测试 / 生产构建），
 #    自包含、无外部依赖。
-#  * `backend` 任务在 **windows-latest** 上只做**语法与导入冒烟**：
-#    完整后端测试依赖本机 Microsoft Word / WPS 与 editor_sdk 服务，
-#    GitHub 托管 runner 不提供，故不在 CI 中运行（避免制造假失败）。
-#    后端全量测试请在本地按 README 执行。
+#  * `backend` 任务在 **windows-latest** 上跑：
+#      1) 语法与导入冒烟（compileall + import + 路由数）；
+#      2) **完整后端测试**（`python -m unittest discover -s tests`，基线 436 项）。
+#
+#    为什么后端「完整测试」能在 CI 跑（本轮实测结论）：
+#      * 不依赖 Office：涉及 DOCX/PDF 渲染的用例都在 `_mcp_rpc` / `_mcp_post` /
+#        `_ensure_editor_sdk` / `render_plan_to_docx` 层做了 mock。实测在进程内
+#        拦截 `win32com` 的 Dispatch/DispatchEx、并令 editor_sdk 端口不可达后，
+#        436 项仍全部通过。
+#      * 不依赖私有交付数据：`outputs/bank.db` 未入库，各用例自建临时库；仅
+#        `tests/test_edition.py` 的鉴权中间件用例走 app 默认库路径，需要一个
+#        **已建 schema 的空库**，故前置 `python -m bank.cli init` 建空库即可。
+#      * 必须 Windows runner：`requirements.txt` 含仅 Windows 可用的 `pywin32`。
+#
+#    真正依赖本机 Word/WPS 的端到端渲染用例（`tests/test_webui_api.py` 的
+#    `TestRenderE2E`）默认 skip，仅当设置 `WEBUI_E2E=1` 才运行；CI 不设置，
+#    故不会制造假失败。完整 Office 端到端验证请按 README 在本地执行。
 
 on:
   push:
@@ -48,7 +61,7 @@ jobs:
         run: npm run build
 
   backend:
-    name: 后端（语法与导入冒烟，Windows）
+    name: 后端（语法冒烟 + 完整测试，Windows）
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
@@ -70,3 +83,13 @@ jobs:
         run: |
           python -c "import bank, pipeline, webui; print('imports ok')"
           python -c "from webui.app import create_app; app = create_app(); print('routes:', len(app.openapi()['paths']))"
+
+      - name: 初始化空库（建 schema，供走默认库路径的用例使用）
+        env:
+          PYTHONUTF8: '1'
+        run: python -m bank.cli init
+
+      - name: 后端测试（unittest，基线 436 项）
+        env:
+          PYTHONUTF8: '1'
+        run: python -m unittest discover -s tests
