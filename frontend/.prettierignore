@@ -1,0 +1,23 @@
+# Prettier 忽略清单（渐进启用：不要一次性 format 全仓）
+# 只忽略**生成物 / 依赖 / 第三方**，源码与配置保持可格式化。
+
+node_modules/
+dist/
+build/
+.vite/
+
+# 前端构建输出（由 `npm run build` 生成）
+../webui/static/
+
+# 锁文件与产物（由工具生成，不手改）
+package-lock.json
+coverage/
+*.log
+
+# Vite 热更新残留的时间戳配置（非源码）
+vite.config.ts.timestamp-*.mjs
+
+# 已有独立格式约定、不交给 Prettier 的文件
+*.min.js
+*.min.css
+tests/**/*.cjs

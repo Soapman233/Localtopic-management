@@ -1,0 +1,32 @@
+# =============================================================================
+# Dependabot 依赖巡检配置
+# =============================================================================
+# 说明：
+#   * 本项目是**单人 / 小团队**维护的私有工具，**按月**巡检即可（每周太吵）。
+#   * 只开 **pip**（requirements.txt）与 **npm**（frontend）两组生态。
+#   * ⚠️ 依赖升级仍**必须**在 Windows + 本机 Word/WPS 环境实测导出链路，
+#     自动 PR **不等于**可以自动合并。
+# =============================================================================
+version: 2
+updates:
+  # --- Python 后端依赖（requirements.txt）----------------------------------
+  - package-ecosystem: "pip"
+    directory: "/"
+    schedule:
+      interval: "monthly"
+    open-pull-requests-limit: 3
+    commit-message:
+      prefix: "chore(deps)"
+    labels:
+      - "dependencies"
+
+  # --- 前端依赖（frontend/package.json）------------------------------------
+  - package-ecosystem: "npm"
+    directory: "/frontend"
+    schedule:
+      interval: "monthly"
+    open-pull-requests-limit: 3
+    commit-message:
+      prefix: "chore(deps)"
+    labels:
+      - "dependencies"

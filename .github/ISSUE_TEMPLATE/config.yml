@@ -1,0 +1,10 @@
+# Issue 模板选择器配置
+# 保持"空白 Issue"可用（有些问题不适合套模板），并引导安全问题走私密渠道。
+blank_issues_enabled: true
+contact_links:
+  - name: 🔒 报告安全漏洞（私密）
+    url: https://github.com/Soapman233/Localtopic-management/security/advisories/new
+    about: 安全漏洞请勿用公开 Issue，请走 GitHub Security Advisories 私密渠道。
+  - name: 📖 先读 README / 贡献指南
+    url: https://github.com/Soapman233/Localtopic-management/blob/main/README.md
+    about: 安装、数据初始化与常见问题见 README；开发约定见 AGENTS.md。

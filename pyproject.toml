@@ -1,0 +1,79 @@
+# =============================================================================
+# pyproject.toml —— **仅用于集中工具配置**（Ruff / coverage）
+# =============================================================================
+# ⚠️ 重要：本文件**不是**打包元数据。
+#   * 本项目是**面向特定人群的应用**，**不是**对外发布的库；
+#   * 这里**刻意不写** `[project]` / `[build-system]`，**没有** `setup.py`，
+#     **不发布到 PyPI**。若有人用 `pip install .` 会失败，这是**有意为之**。
+#   * 依赖清单见 `requirements.txt`；后端测试**保持 `unittest`**（不迁 pytest）。
+#
+# 说明：
+#   * 下面只是"如果装了对应工具，就按这里的约定跑"——**不接入任何强制门禁**，
+#     也不接云端覆盖率上报（本机生成报告即可）。
+# =============================================================================
+
+# -----------------------------------------------------------------------------
+# Ruff —— Python 静态检查 / 导入排序（可选工具，未接入 CI）
+# -----------------------------------------------------------------------------
+# 用法（需自行安装 `pip install ruff`，本项目当前未强制）：
+#   ruff check .            # 只检查，不改文件
+#   ruff check --diff .     # 预览将要修改的内容
+[tool.ruff]
+# 与 requirements.txt 的本机实测环境一致（Python 3.13）
+target-version = "py313"
+line-length = 120
+# 不检查生成物、虚拟环境与临时目录
+extend-exclude = [
+    ".venv",
+    "venv",
+    "node_modules",
+    "webui/static",
+    "outputs",
+    ".qa_*",
+    ".tmp_*",
+    "pipeline/vendor",   # 第三方 vendor 代码（mtef-py 等），不做风格约束
+]
+
+[tool.ruff.lint]
+# 默认规则集（E4/E7/E9/F）+ 常用补充；**不启用会大量报错的规则**，
+# 以便在既有代码上"渐进"启用，而不是一次性推翻。
+select = ["E4", "E7", "E9", "F", "I", "UP", "B"]
+# 说明：
+#   * 未选 `E501`（行长）——本仓库存在**刻意的长行**（如长字符串/注释表格），
+#     强行限制会制造无意义 diff；
+#   * `I` 导入排序、`UP` pyupgrade、`B` flake8-bugbear。
+ignore = [
+    "B008",   # 允许在默认参数中调用函数（FastAPI 依赖注入 `Depends(...)` 需要）
+]
+
+[tool.ruff.lint.isort]
+known-first-party = ["bank", "pipeline", "webui"]
+
+# -----------------------------------------------------------------------------
+# coverage.py —— 本机覆盖率报告（**不设强制阈值**，**不上报云端**）
+# -----------------------------------------------------------------------------
+# 用法（需自行安装 `pip install coverage`，本项目当前未强制）：
+#   coverage run -m unittest discover -s tests
+#   coverage report -m
+[tool.coverage.run]
+branch = true
+# 只统计业务代码；测试与临时目录不计入
+source = ["bank", "pipeline", "webui"]
+omit = [
+    "tests/*",
+    "spike/*",
+    "*/__pycache__/*",
+    "pipeline/vendor/*",   # 第三方 vendor 代码不纳入覆盖率
+]
+
+[tool.coverage.report]
+# ⚠️ **刻意不设 `fail_under`**：不设阈值，避免"覆盖率没到 X% 就卡提交"。
+#    需要时先跑一次拿**基线**，再据此决定是否加阈值。
+show_missing = true
+skip_covered = false
+exclude_lines = [
+    "pragma: no cover",
+    "if __name__ == .__main__.:",
+    "raise NotImplementedError",
+    "if TYPE_CHECKING:",
+]
